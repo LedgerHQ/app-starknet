@@ -1,0 +1,23 @@
+[package]
+name = "nano-app-starknet"
+version = "0.1.0"
+edition = "2021"
+authors = ["yogh333"]
+
+[dependencies]
+nanos_sdk = { path = "../ledger-nanos-sdk/" } 
+nanos_ui = { path = "../ledger-nanos-ui/" } 
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = 'z' 
+lto = true
+
+[package.metadata.nanos]
+curve = "stark256"
+path = "m/2645'/1195502025'/1148870696'/0'/0'/0"
+flags = "0"
+icon = "crab.gif"

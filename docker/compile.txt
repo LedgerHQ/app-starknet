@@ -1,0 +1,5 @@
+docker run --rm -ti -v $(pwd)/app:/app ledger-app-builder:latest
+cd cargo-ledger
+cargo install --path .
+cd ../nano-app-starknet/
+cargo ledger nanos -- --message-format=json
