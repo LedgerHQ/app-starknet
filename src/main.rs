@@ -108,7 +108,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins) -> Result<(), Reply> {
 
     match ins {
         Ins::GetVersion => {
-            nanos_sdk::exit_app(0)
+            let version_major = env!("CARGO_PKG_VERSION_MAJOR").parse::<u8>().unwrap();
+            let version_minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap();
+            let version_patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
+            comm.append([version_major, version_minor, version_patch].as_slice())
         }
         Ins::GetPubkey => {
             let data = comm.get_data()?;
