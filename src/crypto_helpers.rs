@@ -1,6 +1,7 @@
 use nanos_sdk::ecc::{Stark256, ECPublicKey};
 use nanos_sdk::io::SyscallError;
 
+pub const EIP2645_PATH_LENGTH: usize = 6;
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
 /// with every step encoded with 4 bytes (total length = 6 x 4 = 24 bytes)
 pub const EIP2645_PATH_BYTES_LENGTH: usize = 24;
@@ -16,11 +17,14 @@ pub enum HelperError {
 
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn detecdsa_sign(
-    dpath: &[u32],
+    bytes_path: &[u8],
     m: &[u8]
 ) -> Result<([u8; 32], [u8; 32]) , HelperError> {
 
-    match Stark256::from_path(dpath).deterministic_sign(m) {
+    let mut path = [0u32; EIP2645_PATH_LENGTH];
+    get_derivation_path(bytes_path, &mut path[..]).unwrap();
+
+    match Stark256::from_path(&path[..]).deterministic_sign(m) {
         Ok(s) => {
             let der = s.0;
             let mut r = [0u8; 32];
@@ -32,9 +36,13 @@ pub fn detecdsa_sign(
     }
 }
 
-pub fn get_pubkey(derivation_path: &[u32]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
-    
-    let private_key = Stark256::from_path(derivation_path);
+/// Helper function that retrieves public key
+pub fn get_pubkey(bytes_path: &[u8]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
+
+    let mut path = [0u32; EIP2645_PATH_LENGTH];
+    get_derivation_path(bytes_path, &mut path[..]).unwrap();
+
+    let private_key = Stark256::from_path(&path[..]);
 
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
@@ -42,7 +50,7 @@ pub fn get_pubkey(derivation_path: &[u32]) -> Result<ECPublicKey<65, 'W'>, Sysca
     }
 }
 
-pub fn get_derivation_path(buf: &[u8], path: &mut [u32]) -> Result<(),  HelperError>  {
+fn get_derivation_path(buf: &[u8], path: &mut [u32]) -> Result<(),  HelperError>  {
 
     match buf.len() {
         EIP2645_PATH_BYTES_LENGTH => {

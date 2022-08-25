@@ -111,30 +111,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins) -> Result<(), Reply> {
             nanos_sdk::exit_app(0)
         }
         Ins::GetPubkey => {
-            let data_path = comm.get_data()?;
-            let mut path: [u32; 6] = [0u32; 6];
-            get_derivation_path(data_path, &mut path[..]).unwrap();
-            let pubkey = get_pubkey(&path[..]).unwrap();
+            let data = comm.get_data()?;
+            let pubkey = get_pubkey(data).unwrap();
             let key = pubkey.to_bytes();
             comm.append(&key)
         }
         Ins::Sign => {
             let p1 = comm.get_p1();
             let data = comm.get_data()?;
-            let (data_path, hash) = data.split_at(24);
-            let mut path: [u32; 6] = [0u32; 6];
-            get_derivation_path(data_path, &mut path[..]).unwrap();
+            let (path, hash) = data.split_at(24);
             let out = if p1 > 0 {
                 match sign_ui(hash).unwrap() {
                     true => {
-                        let signature = detecdsa_sign(&path, hash);
+                        let signature = detecdsa_sign(path, hash);
                         Some(signature.unwrap())
                     },
                     false => None
                 }
             }
             else {
-                Some(detecdsa_sign(&path, hash).unwrap())
+                Some(detecdsa_sign(path, hash).unwrap())
             };
             if let Some(o) = out {
                 comm.append(&o.0[..]);
