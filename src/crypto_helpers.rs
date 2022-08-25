@@ -10,6 +10,7 @@ pub const EIP2645_PATH_PREFIX: u32 = 2147486293;
 #[derive(Debug)]
 pub enum HelperError {
     UnvalidPathError,
+    SignError,
     GenericError,
 }
 
@@ -17,20 +18,18 @@ pub enum HelperError {
 pub fn detecdsa_sign(
     dpath: &[u32],
     m: &[u8]
-) -> Result<([u8; 32], [u8; 32]) , u32> {
+) -> Result<([u8; 32], [u8; 32]) , HelperError> {
 
-    let der_signature = match Stark256::from_path(dpath).deterministic_sign(m) {
-        Ok(s) => s.0,
-        Err(_) => [0u8; 72]
-    };
-
-    let mut r = [0u8; 32];
-    let mut s = [0u8; 32];
-
-    convert_der_to_rs(&der_signature[..], &mut r, &mut s).unwrap();
-
-    Ok((r, s))
-
+    match Stark256::from_path(dpath).deterministic_sign(m) {
+        Ok(s) => {
+            let der = s.0;
+            let mut r = [0u8; 32];
+            let mut s = [0u8; 32];
+            convert_der_to_rs(&der[..], &mut r, &mut s).unwrap();
+            Ok((r, s))
+        },
+        Err(_) => Err(HelperError::SignError)
+    }
 }
 
 pub fn get_pubkey(derivation_path: &[u32]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
