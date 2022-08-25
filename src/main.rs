@@ -36,7 +36,7 @@ fn menu_example() {
 /// This is the UI flow for signing, composed of a scroller
 /// to read the incoming message, a panel that requests user
 /// validation, and an exit message.
-fn sign_ui(message: &[u8]) -> Result<Option<[u8; 72]>, SyscallError> {
+fn sign_ui(message: &[u8]) -> Result<bool, SyscallError> {
     ui::popup("Message review");
 
     {
@@ -47,12 +47,11 @@ fn sign_ui(message: &[u8]) -> Result<Option<[u8; 72]>, SyscallError> {
     }
 
     if ui::Validator::new("Sign ?").ask() {
-        let (sig, _sig_len) = detecdsa_sign(message).unwrap();
-        //ui::popup("Done !");
-        Ok(Some(sig))
+        ui::SingleMessage::new("S t a r k n e t").show();
+        Ok(true)
     } else {
-        //ui::popup("Cancelled");
-        Ok(None)
+        ui::SingleMessage::new("S t a r k n e t").show();
+        Ok(false)
     }
 }
 
@@ -120,9 +119,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins) -> Result<(), Reply> {
             comm.append(&key)
         }
         Ins::Sign => {
-            let out = sign_ui(comm.get_data()?)?;
+            let p1 = comm.get_p1();
+            let data = comm.get_data()?;
+            let (data_path, hash) = data.split_at(24);
+            let mut path: [u32; 6] = [0u32; 6];
+            get_derivation_path(data_path, &mut path[..]).unwrap();
+            let out = if p1 > 0 {
+                match sign_ui(hash).unwrap() {
+                    true => {
+                        let signature = detecdsa_sign(&path, hash);
+                        Some(signature.unwrap())
+                    },
+                    false => None
+                }
+            }
+            else {
+                Some(detecdsa_sign(&path, hash).unwrap())
+            };
             if let Some(o) = out {
-                comm.append(&o)
+                comm.append(&o.0[..]);
+                comm.append(&o.1[..])
             }
         }
         Ins::Menu => menu_example(),
