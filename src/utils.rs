@@ -2,11 +2,11 @@ use core::char;
 
 /// Convert to hex. Returns a static buffer of 64 bytes
 #[inline]
-pub fn to_hex(m: &[u8]) -> Result<[u8; 64], ()> {
-    if 2 * m.len() > 64 {
+pub fn to_hex<const N: usize>(m: &[u8]) -> Result<[u8; N], ()> {
+    if 2 * m.len() > N {
         return Err(());
     }
-    let mut hex = [0u8; 64];
+    let mut hex = [0u8; N];
     let mut i = 0;
     for c in m {
         let c0 = char::from_digit((c >> 4).into(), 16).unwrap();

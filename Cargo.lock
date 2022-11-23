@@ -15,7 +15,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fff2a6927b3bb87f9595d67196a70493f627687a71d87a0d692242c33f58c11"
 
 [[package]]
-name = "nano-app-starknet"
+name = "nano-rapp-starknet"
 version = "0.1.0"
 dependencies = [
  "nanos_sdk",
@@ -28,6 +28,7 @@ version = "0.2.0"
 dependencies = [
  "cc",
  "num-traits",
+ "rand_core",
 ]
 
 [[package]]
@@ -45,3 +46,9 @@ checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "rand_core"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
