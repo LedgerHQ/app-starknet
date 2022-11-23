@@ -87,96 +87,96 @@ const PEDERSEN_POINTS: [ECPoint; 4] = [
 ];
 
 pub fn pedersen_hash(a: &[u8], b:&[u8]) -> [u8; 32] {
-		
-	debug_print("Pedersen: IN\n");
-	
-	unsafe { cx_bn_lock(32,0); }
-
-	/* shift point */
+    
+    debug_print("Pedersen: IN\n");
+    
+    unsafe { cx_bn_lock(32,0); }
+    
+    /* shift point */
     let mut sp: cx_ecpoint_t = Default::default();
 
-	debug_print("Pedersen: Alloc Shift point \n");
-	let sp_x = PEDERSEN_SHIFT.x;
+    debug_print("Pedersen: Alloc Shift point \n");
+    let sp_x = PEDERSEN_SHIFT.x;
     let sp_y = PEDERSEN_SHIFT.y;
-	unsafe { 
+    unsafe { 
         cx_ecpoint_alloc(&mut sp as *mut cx_ecpoint_t, CX_CURVE_Stark256);
         cx_ecpoint_init (&mut sp as *mut cx_ecpoint_t, sp_x.as_ptr(), 32, sp_y.as_ptr(), 32); 
     }
-	
+    
     let (a0, a1) = a.split_at(1);
     let (b0, b1) = b.split_at(1);
-
-	double_accum_ec_mul(&mut sp, a1, 31, b1, 31, 0);
-	double_accum_ec_mul(&mut sp, a0, 1, b0, 1, 1); 
+    
+    double_accum_ec_mul(&mut sp, a1, 31, b1, 31, 0);
+    double_accum_ec_mul(&mut sp, a0, 1, b0, 1, 1); 
 	
-	debug_print("Pedersen: Export\n");
+    debug_print("Pedersen: Export\n");
     let mut res: [u8;32] = [0;32];
     let mut tmp: [u8;32] = [0;32];
-	unsafe { 
+    unsafe {
         cx_ecpoint_export(&sp as *const cx_ecpoint_t, res.as_mut_ptr(), 32, tmp.as_mut_ptr(), 32);
         cx_ecpoint_destroy(&mut sp as *mut cx_ecpoint_t); 
-        cx_bn_unlock(); 
+        cx_bn_unlock();
     }
     debug_print("Pedersen: OUT\n");
-	res
+    res
 }
 
 fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u8], len2: usize, idx: usize)
 {
-	debug_print("Pedersen: Alloc P0/1 \n");
-	let px = PEDERSEN_POINTS[idx].x;
-	let py = PEDERSEN_POINTS[idx].y;
+    debug_print("Pedersen: Alloc P0/1 \n");
+    let px = PEDERSEN_POINTS[idx].x;
+    let py = PEDERSEN_POINTS[idx].y;
     let mut p: cx_ecpoint_t = Default::default();
 	
-    unsafe { 
+    unsafe {
         cx_ecpoint_alloc(&mut p as *mut cx_ecpoint_t, CX_CURVE_Stark256);
-        cx_ecpoint_init(&mut p as *mut cx_ecpoint_t, px.as_ptr(), 32, py.as_ptr(), 32); 
+        cx_ecpoint_init(&mut p as *mut cx_ecpoint_t, px.as_ptr(), 32, py.as_ptr(), 32);
     }
 
-	debug_print("Pedersen: Alloc P2/3\n");
-	let qx = PEDERSEN_POINTS[idx + 2].x;
-	let qy = PEDERSEN_POINTS[idx + 2].y;
+    debug_print("Pedersen: Alloc P2/3\n");
+    let qx = PEDERSEN_POINTS[idx + 2].x;
+    let qy = PEDERSEN_POINTS[idx + 2].y;
     let mut q: cx_ecpoint_t = Default::default();
 	
-    unsafe { 
+    unsafe {
         cx_ecpoint_alloc(&mut q as *mut cx_ecpoint_t, CX_CURVE_Stark256);
-        cx_ecpoint_init(&mut q as *mut cx_ecpoint_t, qx.as_ptr(), 32, qy.as_ptr(), 32); 
+        cx_ecpoint_init(&mut q as *mut cx_ecpoint_t, qx.as_ptr(), 32, qy.as_ptr(), 32);
     }
 
     let mut pad1: [u8; 32] = [0;32];
     let mut pad2: [u8; 32] = [0;32];
-
+    
     let allzero1 = buf1.iter().all(|&x| x == 0);
     let allzero2 = buf2.iter().all(|&x| x == 0);
 
-	if !allzero1 && !allzero2 {
-		debug_print("Pedersen: Alloc R0\n");
+    if !allzero1 && !allzero2 {
+        debug_print("Pedersen: Alloc R0\n");
         pad1[(32-len1)..].copy_from_slice(&buf1[..len1]);
         pad2[(32-len2)..].copy_from_slice(&buf2[..len2]);
         let mut r: cx_ecpoint_t = Default::default();
-		unsafe { 
-            cx_ecpoint_alloc(&mut r as *mut cx_ecpoint_t, CX_CURVE_Stark256); 
+        unsafe {
+            cx_ecpoint_alloc(&mut r as *mut cx_ecpoint_t, CX_CURVE_Stark256);
             cx_ecpoint_double_scalarmul(&mut r as *mut cx_ecpoint_t, &mut p as *mut cx_ecpoint_t, &mut q as *mut cx_ecpoint_t, pad1.as_ptr(), 32, pad2.as_ptr(), 32);
             cx_ecpoint_add(h as *mut cx_ecpoint_t, h as *const cx_ecpoint_t, &r as *const cx_ecpoint_t);
             cx_ecpoint_destroy(&mut r as *mut cx_ecpoint_t);
         }
-	} else {
-		if !allzero1 {
+    } else {
+        if !allzero1 {
             pad1[32 - len1..].copy_from_slice(&buf1[..len1]);
-			unsafe { 
+            unsafe {
                 cx_ecpoint_rnd_scalarmul(&mut p as *mut cx_ecpoint_t, pad1.as_ptr(), 32);
-                cx_ecpoint_add(h as *mut cx_ecpoint_t, h as *const cx_ecpoint_t, &p as *const cx_ecpoint_t); 
+                cx_ecpoint_add(h as *mut cx_ecpoint_t, h as *const cx_ecpoint_t, &p as *const cx_ecpoint_t);
             }
-		}
-		else if !allzero2 {
-			pad2[32 - len2..].copy_from_slice(&buf2[..len2]);
-            unsafe { 
+        }
+        else if !allzero2 {
+            pad2[32 - len2..].copy_from_slice(&buf2[..len2]);
+            unsafe {
                 cx_ecpoint_rnd_scalarmul(&mut q as *mut cx_ecpoint_t, pad2.as_ptr(), 32);
-			    cx_ecpoint_add(h as *mut cx_ecpoint_t, h as *const cx_ecpoint_t, &q as *const cx_ecpoint_t); 
+                cx_ecpoint_add(h as *mut cx_ecpoint_t, h as *const cx_ecpoint_t, &q as *const cx_ecpoint_t);
             }
-		}
-	}
-	unsafe { 
+        }
+    }
+    unsafe {
         cx_ecpoint_destroy(&mut p as *mut cx_ecpoint_t);
         cx_ecpoint_destroy(&mut q as *mut cx_ecpoint_t);
     }
