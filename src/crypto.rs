@@ -23,12 +23,6 @@ pub fn detecdsa_sign(
     m: &[u8]
 ) -> Result<([u8; 32], [u8; 32]) , CryptoError> {
 
-    /*debug_print("Hash: \n");
-    let mut m_hash:[u8; 65] = utils::to_hex(m).unwrap();
-    m_hash[64] = '\n' as u8;
-    let s = from_utf8(&m_hash).unwrap();
-    debug_print(s);*/
-
     match Stark256::from_path(path).deterministic_sign(m) {
         Ok(s) => {
             let der = s.0;

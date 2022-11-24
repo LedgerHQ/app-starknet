@@ -17,3 +17,26 @@ pub fn to_hex<const N: usize>(m: &[u8]) -> Result<[u8; N], ()> {
     }
     Ok(hex)
 }
+
+
+#[cfg(feature = "debug")]
+pub mod print {
+
+    use nanos_sdk::debug_print;
+
+    pub fn printf(s: &str) {
+        debug_print(s);
+    }
+    
+    pub fn printf_slice<const N: usize>(tab: &[u8]) {
+        let hex: [u8; N] = super::to_hex(tab).unwrap();
+        let m = core::str::from_utf8(&hex).unwrap();
+        debug_print(m);
+    }
+}
+
+#[cfg(feature = "device")]
+pub mod print {
+    pub fn printf(s: &str) {}
+    pub fn printf_slice<const N: usize>(tab: &[u8]) {}
+}

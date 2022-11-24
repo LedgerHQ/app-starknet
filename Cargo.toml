@@ -5,8 +5,14 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-nanos_sdk = { path = "../ledger-nanos-sdk/", features = ["speculos"] } 
+#nanos_sdk = { path = "../ledger-nanos-sdk/", features = ["speculos"] }
+nanos_sdk = { path = "../ledger-nanos-sdk/" }  
 nanos_ui = { path = "../ledger-nanos-ui/" }
+
+[features]
+default = [ "debug" ]
+debug = ["nanos_sdk/speculos"]
+device = []
 
 [profile.dev]
 panic = "abort"

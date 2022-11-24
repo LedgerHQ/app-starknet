@@ -1,4 +1,3 @@
-use nanos_sdk::debug_print;
 use nanos_sdk::bindings::{
     cx_ecpoint_alloc,
     cx_ecpoint_init,
@@ -12,6 +11,8 @@ use nanos_sdk::bindings::{
     cx_ecpoint_t,
     CX_CURVE_Stark256
 };
+
+use crate::utils::print::{printf_slice, printf};
 
 /* EC points */
 struct ECPoint {
@@ -88,14 +89,19 @@ const PEDERSEN_POINTS: [ECPoint; 4] = [
 
 pub fn pedersen_hash(a: &[u8], b:&[u8]) -> [u8; 32] {
     
-    debug_print("Pedersen: IN\n");
-    
+    printf("Pedersen: IN\n");
+    printf("a = ");
+    printf_slice::<64>(a);
+    printf("\n");
+    printf("b = ");
+    printf_slice::<64>(b);
+    printf("\n");
     unsafe { cx_bn_lock(32,0); }
     
     /* shift point */
     let mut sp: cx_ecpoint_t = Default::default();
 
-    debug_print("Pedersen: Alloc Shift point \n");
+    printf("Pedersen: Alloc Shift point \n");
     let sp_x = PEDERSEN_SHIFT.x;
     let sp_y = PEDERSEN_SHIFT.y;
     unsafe { 
@@ -109,7 +115,7 @@ pub fn pedersen_hash(a: &[u8], b:&[u8]) -> [u8; 32] {
     double_accum_ec_mul(&mut sp, a1, 31, b1, 31, 0);
     double_accum_ec_mul(&mut sp, a0, 1, b0, 1, 1); 
 	
-    debug_print("Pedersen: Export\n");
+    printf("Pedersen: Export\n");
     let mut res: [u8;32] = [0;32];
     let mut tmp: [u8;32] = [0;32];
     unsafe {
@@ -117,13 +123,13 @@ pub fn pedersen_hash(a: &[u8], b:&[u8]) -> [u8; 32] {
         cx_ecpoint_destroy(&mut sp as *mut cx_ecpoint_t); 
         cx_bn_unlock();
     }
-    debug_print("Pedersen: OUT\n");
+    printf("Pedersen: OUT\n");
     res
 }
 
 fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u8], len2: usize, idx: usize)
 {
-    debug_print("Pedersen: Alloc P0/1 \n");
+    printf("Pedersen: Alloc P0/1 \n");
     let px = PEDERSEN_POINTS[idx].x;
     let py = PEDERSEN_POINTS[idx].y;
     let mut p: cx_ecpoint_t = Default::default();
@@ -133,7 +139,7 @@ fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u
         cx_ecpoint_init(&mut p as *mut cx_ecpoint_t, px.as_ptr(), 32, py.as_ptr(), 32);
     }
 
-    debug_print("Pedersen: Alloc P2/3\n");
+    printf("Pedersen: Alloc P2/3\n");
     let qx = PEDERSEN_POINTS[idx + 2].x;
     let qy = PEDERSEN_POINTS[idx + 2].y;
     let mut q: cx_ecpoint_t = Default::default();
@@ -150,7 +156,7 @@ fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u
     let allzero2 = buf2.iter().all(|&x| x == 0);
 
     if !allzero1 && !allzero2 {
-        debug_print("Pedersen: Alloc R0\n");
+        printf("Pedersen: Alloc R0\n");
         pad1[(32-len1)..].copy_from_slice(&buf1[..len1]);
         pad2[(32-len2)..].copy_from_slice(&buf2[..len2]);
         let mut r: cx_ecpoint_t = Default::default();

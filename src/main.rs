@@ -8,10 +8,11 @@ mod context;
 use core::str::from_utf8;
 use crypto::*;
 //use nanos_sdk::buttons::ButtonEvent;
-use nanos_sdk::{io, debug_print};
+use nanos_sdk::io;
 use nanos_sdk::io::SyscallError;
-
 use nanos_ui::ui;
+
+use crate::utils::print::printf;
 
 use context::{Ctx, RequestType};
 
@@ -47,7 +48,7 @@ extern "C" fn sample_main() {
     // Draw some 'welcome' screen
     ui::SingleMessage::new(WELCOME_SCREEN).show();
 
-    debug_print("Instantiate Ctx \n");
+    printf("Instantiate Ctx \n");
     let mut ctx: Ctx = Ctx::new();
 
     loop {        
@@ -56,7 +57,7 @@ extern "C" fn sample_main() {
         match comm.next_event() {
             //io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
             io::Event::Command(ins) => {
-                debug_print("event\n");
+                printf("event\n");
                 match handle_apdu(&mut comm, ins, &mut ctx) {
                     Ok(()) => comm.reply_ok(),
                     Err(sw) => comm.reply(sw),
@@ -92,7 +93,7 @@ use nanos_sdk::io::Reply;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
-    debug_print("process APDU\n");
+    printf("process APDU\n");
 
     if comm.rx == 0 {
         return Err(io::StatusWords::NothingReceived.into());
@@ -164,7 +165,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             }
         }  
         Ins::PedersenHash => {
-            debug_print("Compute Pedersen");
+            printf("Compute Pedersen");
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
             let (a, b) = data.split_at(32);
