@@ -6,15 +6,21 @@ mod utils;
 mod context;
 
 use core::str::from_utf8;
-use crypto::*;
+
+use crypto::{
+    detecdsa_sign, 
+    pedersen, 
+    get_pubkey, 
+    get_derivation_path
+};
+use utils::print::printf;
+use context::{Ctx, RequestType};
+
 //use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
-use nanos_sdk::io::SyscallError;
 use nanos_ui::ui;
 
-use crate::utils::print::printf;
 
-use context::{Ctx, RequestType};
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
@@ -23,12 +29,12 @@ const WELCOME_SCREEN: &str = "S T A R K N E T";
 /// This is the UI flow for signing, composed of a scroller
 /// to read the incoming message, a panel that requests user
 /// validation, and an exit message.
-fn sign_ui(message: &[u8]) -> Result<bool, SyscallError> {
+fn sign_ui(message: &[u8]) -> Result<bool, io::SyscallError> {
 
     ui::popup("Message review:");
     {
-        let hex: [u8; 64] = utils::to_hex(message).map_err(|_| SyscallError::Overflow)?;
-        let m = from_utf8(&hex).map_err(|_| SyscallError::InvalidParameter)?;
+        let hex: [u8; 64] = utils::to_hex(message).map_err(|_| io::SyscallError::Overflow)?;
+        let m = from_utf8(&hex).map_err(|_| io::SyscallError::InvalidParameter)?;
         ui::MessageScroller::new(m).event_loop();
     }
 
@@ -169,7 +175,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
             let (a, b) = data.split_at(32);
-            let hash = pedersen::pedersen_hash(a, b);
+            let hash = crypto::pedersen::pedersen_hash(a, b);
             comm.append(&hash[..]);
         }
     }

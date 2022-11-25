@@ -11,7 +11,7 @@ nanos_ui = { path = "../ledger-nanos-ui/" }
 
 [features]
 default = [ "debug" ]
-debug = ["nanos_sdk/speculos"]
+debug = ["nanos_sdk/speculos", "nanos_ui/speculos"]
 device = []
 
 [profile.dev]
