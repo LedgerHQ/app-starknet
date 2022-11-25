@@ -2,11 +2,11 @@ use core::char;
 
 /// Convert to hex. Returns a static buffer of 64 bytes
 #[inline]
-pub fn to_hex(m: &[u8]) -> Result<[u8; 64], ()> {
-    if 2 * m.len() > 64 {
+pub fn to_hex<const N: usize>(m: &[u8]) -> Result<[u8; N], ()> {
+    if 2 * m.len() > N {
         return Err(());
     }
-    let mut hex = [0u8; 64];
+    let mut hex = [0u8; N];
     let mut i = 0;
     for c in m {
         let c0 = char::from_digit((c >> 4).into(), 16).unwrap();
@@ -16,4 +16,27 @@ pub fn to_hex(m: &[u8]) -> Result<[u8; 64], ()> {
         i += 2;
     }
     Ok(hex)
+}
+
+
+#[cfg(feature = "debug")]
+pub mod print {
+
+    use nanos_sdk::debug_print;
+
+    pub fn printf(s: &str) {
+        debug_print(s);
+    }
+    
+    pub fn printf_slice<const N: usize>(tab: &[u8]) {
+        let hex: [u8; N] = super::to_hex(tab).unwrap();
+        let m = core::str::from_utf8(&hex).unwrap();
+        debug_print(m);
+    }
+}
+
+#[cfg(feature = "device")]
+pub mod print {
+    pub fn printf(s: &str) {}
+    pub fn printf_slice<const N: usize>(tab: &[u8]) {}
 }
