@@ -4,8 +4,7 @@
 mod crypto;
 mod utils;
 mod context;
-
-use core::str::from_utf8;
+mod display;
 
 use crypto::{
     detecdsa_sign, 
@@ -20,39 +19,14 @@ use context::{Ctx, RequestType};
 use nanos_sdk::io;
 use nanos_ui::ui;
 
-
-
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
-
-const WELCOME_SCREEN: &str = "S T A R K N E T";
-
-/// This is the UI flow for signing, composed of a scroller
-/// to read the incoming message, a panel that requests user
-/// validation, and an exit message.
-fn sign_ui(message: &[u8]) -> Result<bool, io::SyscallError> {
-
-    ui::popup("Message review:");
-    {
-        let hex: [u8; 64] = utils::to_hex(message).map_err(|_| io::SyscallError::Overflow)?;
-        let m = from_utf8(&hex).map_err(|_| io::SyscallError::InvalidParameter)?;
-        ui::MessageScroller::new(m).event_loop();
-    }
-
-    if ui::Validator::new("Sign ?").ask() {
-        ui::SingleMessage::new(WELCOME_SCREEN).show();
-        Ok(true)
-    } else {
-        ui::SingleMessage::new(WELCOME_SCREEN).show();
-        Ok(false)
-    }
-}
 
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
 
     // Draw some 'welcome' screen
-    ui::SingleMessage::new(WELCOME_SCREEN).show();
+    ui::SingleMessage::new(display::WELCOME_SCREEN).show();
 
     printf("Instantiate Ctx \n");
     let mut ctx: Ctx = Ctx::new();
@@ -68,6 +42,8 @@ extern "C" fn sample_main() {
                     Ok(()) => comm.reply_ok(),
                     Err(sw) => comm.reply(sw),
                 }
+                ui::clear_screen();
+                ui::SingleMessage::new(display::WELCOME_SCREEN).show();
             },
             _ => (),
         }
@@ -144,7 +120,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 _ => {
                     let mut out: Option<([u8;32], [u8;32])> = None;
                     if p2 > 0 {
-                        match sign_ui(data) {
+                        match display::sign_ui(data) {
                             Ok(v) => {
                                 if v {
                                     let signature = detecdsa_sign(ctx.bip32_path.as_ref(), data);
@@ -175,7 +151,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
             let (a, b) = data.split_at(32);
-            let hash = crypto::pedersen::pedersen_hash(a, b);
+            let hash = pedersen::pedersen_hash(a, b);
             comm.append(&hash[..]);
         }
     }
