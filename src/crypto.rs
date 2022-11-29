@@ -1,6 +1,11 @@
 use nanos_sdk::ecc::{Stark256, ECPublicKey};
 use nanos_sdk::io::SyscallError;
 
+use crate::context::{
+    FieldElement,
+    Ctx
+};
+
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
 /// with every step encoded with 4 bytes (total length = 6 x 4 = 24 bytes)
 const EIP2645_PATH_BYTES_LENGTH: usize = 24;
@@ -18,18 +23,13 @@ pub enum CryptoError {
 }
 
 /// Helper function that signs with ECDSA in deterministic nonce
-pub fn detecdsa_sign(
-    path: &[u32],
-    m: &[u8]
-) -> Result<([u8; 32], [u8; 32]) , CryptoError> {
+pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 
-    match Stark256::from_path(path).deterministic_sign(m) {
+    match Stark256::from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash_info.m_hash.value.as_ref()) {
         Ok(s) => {
             let der = s.0;
-            let mut r = [0u8; 32];
-            let mut s = [0u8; 32];
-            convert_der_to_rs(&der[..], &mut r, &mut s).unwrap();
-            Ok((r, s))
+            convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
+            Ok(())
         },
         Err(_) => Err(CryptoError::SignError)
     }
@@ -59,14 +59,6 @@ pub fn get_derivation_path(buf: &mut &[u8], path: &mut [u32]) -> Result<(),  Cry
                 path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
             }
 
-            /*let mut j = 0;
-            for i in 0..5 {
-                path[i] += (buf[j] as u32) << 24;
-                path[i] += (buf[j + 1] as u32) << 16;
-                path[i] += (buf[j + 2] as u32) << 8;
-                path[i] += buf[j + 3] as u32;
-                j += 4;
-            }*/
             match path[0] {
                 EIP2645_PATH_PREFIX => Ok(()),
                 _ => Err(CryptoError::UnvalidPathPrefixError),

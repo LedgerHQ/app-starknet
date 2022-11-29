@@ -7,7 +7,7 @@ mod context;
 mod display;
 
 use crypto::{
-    detecdsa_sign, 
+    sign_hash, 
     pedersen, 
     get_pubkey, 
     get_derivation_path
@@ -118,31 +118,22 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     get_derivation_path(&mut data, ctx.bip32_path.as_mut());
                 }
                 _ => {
-                    let mut out: Option<([u8;32], [u8;32])> = None;
+                    ctx.hash_info.m_hash = data.into();
                     if p2 > 0 {
                         match display::sign_ui(data) {
                             Ok(v) => {
                                 if v {
-                                    let signature = detecdsa_sign(ctx.bip32_path.as_ref(), data);
-                                    out = Some(signature.unwrap());
+                                    sign_hash(ctx);
                                 }
                             }
                             Err(_e) => (),
                         }
                     }
                     else {
-                        let signature = detecdsa_sign(ctx.bip32_path.as_ref(), data);
-                        out = Some(signature.unwrap());
+                        sign_hash(ctx);
                     }
-                    match out {
-                        Some(s) => {
-                            comm.append(&s.0[..]);
-                            comm.append(&s.1[..]);
-                        }
-                        None => {
-                            return Err(io::StatusWords::Unknown.into());
-                        }
-                    }
+                    comm.append(ctx.hash_info.r.as_ref());
+                    comm.append(ctx.hash_info.s.as_ref());
                 }
             }
         }  
