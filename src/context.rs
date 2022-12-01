@@ -23,6 +23,10 @@ impl FieldElement {
             value: [0u8; 32]
         }
     }
+
+    pub fn clear(&mut self) {
+        self.value.fill(0);
+    }
 }
 
 impl From<&[u8]> for FieldElement {
@@ -49,13 +53,6 @@ impl From<FieldElement> for u8 {
     }
 }
 
-pub struct PubKey {
-    /// x-coordinate (32), y-coodinate (32)
-    raw_public_key: [u8; 64],  
-    /// for public key derivation
-    chain_code: [u8; 32]      
-}
-
 #[derive(Debug, Copy, Clone)]
 pub struct CallArray {
     pub to: FieldElement,
@@ -77,6 +74,15 @@ impl CallArray {
             data_len: FieldElement::new() 
         }
     }
+
+    pub fn clear(&mut self) {
+        self.to.clear();
+        self.entry_point_length = 0;
+        self.entry_point.fill(0);
+        self.selector.clear();
+        self.data_offset.clear();
+        self.data_len.clear();
+    }
 }
 
 pub struct CallData {
@@ -92,6 +98,14 @@ impl CallData {
             calls: [CallArray::new(); 10],
             calldata_len: FieldElement::new()
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.call_array_len.clear();
+        for i in 1..self.calls.len() {
+            self.calls[i].clear();
+        }
+        self.calldata_len.clear();
     }
 }
 
@@ -115,23 +129,18 @@ impl Transaction {
             chain_id: FieldElement::new()
         }
     }
+
+    pub fn clear(&mut self) {
+        self.sender_address.clear();
+        self.calldata.clear();
+        self.max_fee.clear();
+        self.nonce.clear();
+        self.version.clear();
+        self.chain_id.clear();
+    }
 }
 
 const MAX_TRANSACTION_LEN: usize = 510;
-
-/*pub struct RawTransaction {
-    /// raw transaction serialized
-    raw_tx: [u8;MAX_TRANSACTION_LEN],
-    /// actual length of raw transaction
-    raw_tx_len: usize,
-    /// structured transaction                    
-    transaction: Transaction            
-}*/
-
-pub struct PedersenInput {
-	ab: [u8; 64]
-}
-
 
 pub enum RequestType {
     Unknown,
@@ -140,8 +149,6 @@ pub enum RequestType {
     SignTransaction,
 	ComputePedersen
 }
-
-const MAX_DER_SIG_LEN: usize = 72;
 
 pub struct HashInfo {
     /// message hash digest (Pedersen)
@@ -166,6 +173,14 @@ impl HashInfo {
             v: 0
         }
     }
+
+    pub fn clear(&mut self) {
+        self.m_hash.clear();
+        self.calldata_hash.clear();
+        self.r.fill(0);
+        self.s.fill(0);
+        self.v = 0;
+    }
 }
 
 pub struct Ctx {
@@ -186,5 +201,13 @@ impl Ctx {
             bip32_path: [0u32; 6],
             bip32_path_len: 0
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.req_type = RequestType::Unknown;
+        self.bip32_path.fill(0);
+        self.bip32_path_len = 0;
+        self.tx_info.clear();
+        self.hash_info.clear();
     }
 }

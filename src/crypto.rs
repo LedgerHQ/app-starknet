@@ -1,5 +1,5 @@
 use nanos_sdk::ecc::{Stark256, ECPublicKey};
-use nanos_sdk::io::SyscallError;
+use nanos_sdk::io::{SyscallError, Reply};
 
 use crate::context::{
     Ctx
@@ -15,10 +15,15 @@ pub mod pedersen;
 
 #[derive(Debug)]
 pub enum CryptoError {
-    UnvalidPathPrefixError,
-    UnvalidPathLengthError,
-    SignError,
-    GenericError,
+    UnvalidPathPrefixError = 0xFF00,
+    UnvalidPathLengthError = 0xFF01,
+    SignError = 0xFF02,
+}
+
+impl From<CryptoError> for Reply {
+    fn from(ce: CryptoError) -> Reply {
+        Reply(ce as u16)
+    }
 }
 
 /// Helper function that signs with ECDSA in deterministic nonce
@@ -36,9 +41,9 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 }
 
 /// Helper function that retrieves public key
-pub fn get_pubkey(path: &[u32]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
+pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
 
-    let private_key = Stark256::from_path(path);
+    let private_key = Stark256::from_path(&ctx.bip32_path);
 
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
@@ -46,9 +51,7 @@ pub fn get_pubkey(path: &[u32]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
     }
 }
 
-pub fn get_derivation_path(buf: &mut &[u8], path: &mut [u32]) -> Result<(),  CryptoError>  {
-
-    path.fill(0);
+pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(),  CryptoError>  {
 
     match buf.len() {
         EIP2645_PATH_BYTES_LENGTH => {
@@ -56,10 +59,10 @@ pub fn get_derivation_path(buf: &mut &[u8], path: &mut [u32]) -> Result<(),  Cry
             for i in 0..5 {
                 let (int_bytes, rest) = buf.split_at(4);
                 *buf = rest;
-                path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
+                ctx.bip32_path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
             }
 
-            match path[0] {
+            match ctx.bip32_path[0] {
                 EIP2645_PATH_PREFIX => Ok(()),
                 _ => Err(CryptoError::UnvalidPathPrefixError),
             }

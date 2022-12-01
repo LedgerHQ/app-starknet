@@ -11,7 +11,7 @@ use crypto::{
     sign_hash, 
     pedersen, 
     get_pubkey, 
-    get_derivation_path
+    set_derivation_path
 };
 use utils::print::printf;
 use context::{Ctx, RequestType, FieldElement};
@@ -99,23 +99,28 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::GetPubkey => {
 
+            ctx.clear();
+            ctx.req_type = RequestType::GetPubkey;
+
             let mut data = comm.get_data()?;
 
-            match get_derivation_path(&mut data, ctx.bip32_path.as_mut()) {
+            match set_derivation_path(&mut data, ctx) {
                 Ok(()) => {
-                    match get_pubkey(ctx.bip32_path.as_ref()) {
+                    match get_pubkey(ctx) {
                         Ok(k) => {
                             comm.append(k.as_ref());
                         }
-                        Err(e) => return Err(Reply::from(e)), 
+                        Err(e) => {
+                            return Err(Reply::from(e));
+                        } 
                     }
                 }
-                Err(_e) => return Err(io::StatusWords::BadLen.into())
+                Err(e) => {
+                    return Err(e.into());
+                }
             }
         }
         Ins::SignHash => {
-
-            ctx.req_type = RequestType::SignHash;
 
             let p1 = comm.get_p1();
             let p2 = comm.get_p2();
@@ -124,7 +129,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
             match p1 {
                 0 => {
-                    get_derivation_path(&mut data, ctx.bip32_path.as_mut());
+                    ctx.clear();
+                    ctx.req_type = RequestType::SignHash;
+
+                    set_derivation_path(&mut data, ctx)?;
                 }
                 _ => {
                     ctx.hash_info.m_hash = data.into();
@@ -132,14 +140,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         match display::sign_ui(data) {
                             Ok(v) => {
                                 if v {
-                                    sign_hash(ctx);
+                                    sign_hash(ctx).unwrap();
                                 }
                             }
                             Err(_e) => (),
                         }
                     }
                     else {
-                        sign_hash(ctx);
+                        sign_hash(ctx).unwrap();
                     }
                     comm.append([0x41].as_slice());
                     comm.append(ctx.hash_info.r.as_ref());
@@ -150,6 +158,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }  
         Ins::PedersenHash => {
             printf("Compute Pedersen");
+            ctx.clear();
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
             let (a_s, b_s) = data.split_at(32);
@@ -160,7 +169,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::SignTx => {
             printf("Sign Tx\n");
-            ctx.req_type = RequestType::SignTransaction;
             
             let p1 = comm.get_p1();
             let p2 = comm.get_p2();
@@ -168,7 +176,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
             match p1 {
                 0 => {
-                    get_derivation_path(&mut data, ctx.bip32_path.as_mut());
+                    ctx.clear();
+                    ctx.req_type = RequestType::SignTransaction;
+                    set_derivation_path(&mut data, ctx)?;
                 }
                 1 => {
                     set_tx_fields(&mut data, ctx);
@@ -184,7 +194,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                     if p2 + 1 == ctx.tx_info.calldata.call_array_len.into() {
                         printf("Sign Tx\n");
-                        sign_hash(ctx);
+                        sign_hash(ctx).unwrap();
                         comm.append([65u8].as_slice());
                         comm.append(ctx.hash_info.r.as_ref());
                         comm.append(ctx.hash_info.s.as_ref());

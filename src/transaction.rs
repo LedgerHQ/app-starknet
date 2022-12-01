@@ -1,11 +1,7 @@
 use crate::{context::{
     FieldElement,
     Ctx,
-    Transaction,
-    CallArray
-}, utils::print::{printf, printf_slice}, crypto::sign_hash};
-
-use core::array;
+}, utils::print::{printf, printf_slice}};
 
 use crate::crypto::pedersen::{
     get_selector_from_name,
