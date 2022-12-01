@@ -4,6 +4,20 @@ pub struct FieldElement {
 }
 
 impl FieldElement {
+
+    pub const INVOKE: FieldElement = FieldElement {
+        value: [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x69, 0x6e, 0x76, 0x6f, 0x6b, 0x65
+        ]
+    };
+
+    pub const ZERO: FieldElement = FieldElement {
+        value: [0u8; 32]
+    };
+
     pub fn new() -> Self {
         Self {
             value: [0u8; 32]
@@ -21,6 +35,20 @@ impl From<&[u8]> for FieldElement {
     }
 }
 
+impl From<u8> for FieldElement {
+    fn from(data: u8) -> Self {
+        let mut f = FieldElement::new();
+        f.value[31] = data;
+        f
+    }
+}
+
+impl From<FieldElement> for u8 {
+    fn from(fe: FieldElement) -> u8 {
+        fe.value[31]
+    }
+}
+
 pub struct PubKey {
     /// x-coordinate (32), y-coodinate (32)
     raw_public_key: [u8; 64],  
@@ -29,13 +57,13 @@ pub struct PubKey {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct CallArray {
-    to: FieldElement,
-    entry_point_length: u8,
-    entry_point: [char; 32],
-    selector: FieldElement,
-    data_offset: FieldElement,
-    data_length: FieldElement,
+pub struct CallArray {
+    pub to: FieldElement,
+    pub entry_point_length: u8,
+    pub entry_point: [u8; 32],
+    pub selector: FieldElement,
+    pub data_offset: FieldElement,
+    pub data_len: FieldElement,
 }
 
 impl CallArray {
@@ -43,18 +71,18 @@ impl CallArray {
         Self {
             to: FieldElement::new(),
             entry_point_length: 0,
-            entry_point: ['0'; 32],
+            entry_point: [0u8; 32],
             selector: FieldElement::new(),
             data_offset: FieldElement::new(),
-            data_length: FieldElement::new() 
+            data_len: FieldElement::new() 
         }
     }
 }
 
-struct CallData {
-    call_array_len: FieldElement,
-    calls: [CallArray; 10],
-    calldata_length: FieldElement,
+pub struct CallData {
+    pub call_array_len: FieldElement,
+    pub calls: [CallArray; 10],
+    pub calldata_len: FieldElement,
 } 
 
 impl CallData {
@@ -62,18 +90,18 @@ impl CallData {
         Self {
             call_array_len: FieldElement::new(),
             calls: [CallArray::new(); 10],
-            calldata_length: FieldElement::new()
+            calldata_len: FieldElement::new()
         }
     }
 }
 
 pub struct Transaction {
-    sender_address: FieldElement,
-    calldata: CallData,             
-    max_fee: FieldElement,
-    nonce: FieldElement,
-    version: FieldElement,
-    chain_id: FieldElement
+    pub sender_address: FieldElement,
+    pub calldata: CallData,             
+    pub max_fee: FieldElement,
+    pub nonce: FieldElement,
+    pub version: FieldElement,
+    pub chain_id: FieldElement
 }
 
 impl Transaction {
@@ -118,6 +146,8 @@ const MAX_DER_SIG_LEN: usize = 72;
 pub struct HashInfo {
     /// message hash digest (Pedersen)
     pub m_hash: FieldElement,
+    /// calldata_hash
+    pub calldata_hash: FieldElement,
     /// signature r 
     pub r: [u8; 32],
     /// signature s 
@@ -130,6 +160,7 @@ impl HashInfo {
     pub fn new() -> Self {
         Self {
             m_hash: FieldElement::new(),
+            calldata_hash: FieldElement::new(),
             r: [0u8; 32],
             s: [0u8; 32],
             v: 0

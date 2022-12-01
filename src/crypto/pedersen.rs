@@ -9,10 +9,23 @@ use nanos_sdk::bindings::{
     cx_bn_lock,
     cx_bn_unlock,
     cx_ecpoint_t,
-    CX_CURVE_Stark256
+    CX_CURVE_Stark256,
+    cx_sha3_t,
+    cx_hash_t,
+    cx_bn_t,
+    cx_keccak_init_no_throw,
+    cx_hash_no_throw,
+    CX_LAST,
+    cx_bn_alloc_init,
+    cx_bn_clr_bit,
+    cx_bn_export,
+    cx_bn_destroy,
+    cx_bn_shl,
+    cx_bn_tst_bit
 };
+use nanos_ui::bagls::se;
 
-use crate::utils::print::{printf_slice, printf};
+use crate::{utils::print::{printf_slice, printf}, context::FieldElement};
 
 /* EC points */
 struct ECPoint {
@@ -87,21 +100,21 @@ const PEDERSEN_POINTS: [ECPoint; 4] = [
     }
 ];
 
-pub fn pedersen_hash(a: &[u8], b:&[u8]) -> [u8; 32] {
+pub fn pedersen_hash(a: &mut FieldElement, b: &FieldElement) {
     
-    printf("Pedersen: IN\n");
+    /*printf("Pedersen: IN\n");
     printf("a = ");
-    printf_slice::<64>(a);
+    printf_slice::<64>(&a.value[..]);
     printf("\n");
     printf("b = ");
-    printf_slice::<64>(b);
-    printf("\n");
+    printf_slice::<64>(&b.value[..]);
+    printf("\n");*/
     unsafe { cx_bn_lock(32,0); }
     
     /* shift point */
     let mut sp: cx_ecpoint_t = Default::default();
 
-    printf("Pedersen: Alloc Shift point \n");
+    //printf("Pedersen: Alloc Shift point \n");
     let sp_x = PEDERSEN_SHIFT.x;
     let sp_y = PEDERSEN_SHIFT.y;
     unsafe { 
@@ -109,27 +122,25 @@ pub fn pedersen_hash(a: &[u8], b:&[u8]) -> [u8; 32] {
         cx_ecpoint_init (&mut sp as *mut cx_ecpoint_t, sp_x.as_ptr(), 32, sp_y.as_ptr(), 32); 
     }
     
-    let (a0, a1) = a.split_at(1);
-    let (b0, b1) = b.split_at(1);
+    let (a0, a1) = a.value.as_slice().split_at(1);
+    let (b0, b1) = b.value.as_slice().split_at(1);
     
     double_accum_ec_mul(&mut sp, a1, 31, b1, 31, 0);
     double_accum_ec_mul(&mut sp, a0, 1, b0, 1, 1); 
 	
-    printf("Pedersen: Export\n");
-    let mut res: [u8;32] = [0;32];
+    //printf("Pedersen: Export\n");
     let mut tmp: [u8;32] = [0;32];
     unsafe {
-        cx_ecpoint_export(&sp as *const cx_ecpoint_t, res.as_mut_ptr(), 32, tmp.as_mut_ptr(), 32);
+        cx_ecpoint_export(&sp as *const cx_ecpoint_t, a.value.as_mut_ptr(), 32, tmp.as_mut_ptr(), 32);
         cx_ecpoint_destroy(&mut sp as *mut cx_ecpoint_t); 
         cx_bn_unlock();
     }
-    printf("Pedersen: OUT\n");
-    res
+    //printf("Pedersen: OUT\n");
 }
 
 fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u8], len2: usize, idx: usize)
 {
-    printf("Pedersen: Alloc P0/1 \n");
+    //printf("Pedersen: Alloc P0/1 \n");
     let px = PEDERSEN_POINTS[idx].x;
     let py = PEDERSEN_POINTS[idx].y;
     let mut p: cx_ecpoint_t = Default::default();
@@ -139,7 +150,7 @@ fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u
         cx_ecpoint_init(&mut p as *mut cx_ecpoint_t, px.as_ptr(), 32, py.as_ptr(), 32);
     }
 
-    printf("Pedersen: Alloc P2/3\n");
+    //printf("Pedersen: Alloc P2/3\n");
     let qx = PEDERSEN_POINTS[idx + 2].x;
     let qy = PEDERSEN_POINTS[idx + 2].y;
     let mut q: cx_ecpoint_t = Default::default();
@@ -156,7 +167,7 @@ fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u
     let allzero2 = buf2.iter().all(|&x| x == 0);
 
     if !allzero1 && !allzero2 {
-        printf("Pedersen: Alloc R0\n");
+        //printf("Pedersen: Alloc R0\n");
         pad1[(32-len1)..].copy_from_slice(&buf1[..len1]);
         pad2[(32-len2)..].copy_from_slice(&buf2[..len2]);
         let mut r: cx_ecpoint_t = Default::default();
@@ -185,5 +196,59 @@ fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u
     unsafe {
         cx_ecpoint_destroy(&mut p as *mut cx_ecpoint_t);
         cx_ecpoint_destroy(&mut q as *mut cx_ecpoint_t);
+    }
+}
+
+pub fn get_selector_from_name(name: &[u8], name_length: u32) -> FieldElement {
+    
+    let mut keccak256: cx_sha3_t = Default::default();
+    let mut hash_bn: cx_bn_t = Default::default();
+    let mut selector: FieldElement = FieldElement::new();
+
+    unsafe {
+        cx_keccak_init_no_throw(&mut keccak256, 256);
+        cx_hash_no_throw(&mut keccak256.header as *mut cx_hash_t, CX_LAST, name.as_ptr(), name_length, selector.value[..].as_mut_ptr(), 32);
+        cx_bn_lock(32, 0);
+        cx_bn_alloc_init(&mut hash_bn, 32, selector.value[..].as_ptr(), 32);
+        for i in (250..=255).rev() {
+            cx_bn_clr_bit(hash_bn, i);
+        }
+        cx_bn_export(hash_bn, selector.value[..].as_mut_ptr(), 32);
+        cx_bn_destroy(&mut hash_bn);
+        cx_bn_unlock();
+    }
+    selector
+}
+
+pub fn pedersen_shift(hash: &mut FieldElement) {
+
+    let mut hash256: cx_bn_t = Default::default();
+
+    unsafe {
+        cx_bn_lock(32, 0);
+        cx_bn_alloc_init(&mut hash256, 32, hash.value[..].as_ptr(), 32);
+        
+        let mut bits_count: u32 = 256;
+        let mut set: bool = false;
+        while bits_count > 0 {
+            cx_bn_tst_bit(hash256, bits_count - 1, &mut set);
+            if set {
+                break;
+            }
+            else {
+                bits_count = bits_count - 1;
+            }
+        }
+
+        if bits_count < 248 {
+            cx_bn_unlock();    
+            return;
+        } else if bits_count >= 248 && bits_count % 8 >= 1 && bits_count % 8 <= 4 {
+            cx_bn_shl(hash256, 4);
+            cx_bn_export(hash256, hash.value[..].as_mut_ptr(), 32);
+            cx_bn_destroy(&mut hash256);
+            cx_bn_unlock();
+            return;
+        } 
     }
 }

@@ -5,6 +5,7 @@ mod crypto;
 mod utils;
 mod context;
 mod display;
+mod transaction;
 
 use crypto::{
     sign_hash, 
@@ -13,7 +14,13 @@ use crypto::{
     get_derivation_path
 };
 use utils::print::printf;
-use context::{Ctx, RequestType};
+use context::{Ctx, RequestType, FieldElement};
+use transaction::{
+    set_tx_fields,
+    set_tx_calldata_lengths,
+    set_tx_callarray,
+    set_tx_calldata
+};
 
 //use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
@@ -55,7 +62,8 @@ enum Ins {
     GetVersion,
     GetPubkey,
     SignHash,
-    PedersenHash
+    PedersenHash,
+    SignTx,
 }
 
 impl TryFrom<u8> for Ins {
@@ -65,7 +73,8 @@ impl TryFrom<u8> for Ins {
             0 => Ok(Ins::GetVersion),
             1 => Ok(Ins::GetPubkey),
             2 => Ok(Ins::SignHash),
-            3 => Ok(Ins::PedersenHash),
+            3 => Ok(Ins::SignTx),
+            4 => Ok(Ins::PedersenHash),
             _ => Err(())
         }
     }
@@ -132,8 +141,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     else {
                         sign_hash(ctx);
                     }
+                    comm.append([0x41].as_slice());
                     comm.append(ctx.hash_info.r.as_ref());
                     comm.append(ctx.hash_info.s.as_ref());
+                    comm.append([ctx.hash_info.v].as_slice());
                 }
             }
         }  
@@ -141,9 +152,47 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             printf("Compute Pedersen");
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
-            let (a, b) = data.split_at(32);
-            let hash = pedersen::pedersen_hash(a, b);
-            comm.append(&hash[..]);
+            let (a_s, b_s) = data.split_at(32);
+            let mut a: FieldElement = a_s.into();
+            let b: FieldElement = b_s.into();
+            pedersen::pedersen_hash(&mut a, &b);
+            comm.append(&a.value[..]);
+        }
+        Ins::SignTx => {
+            printf("Sign Tx\n");
+            ctx.req_type = RequestType::SignTransaction;
+            
+            let p1 = comm.get_p1();
+            let p2 = comm.get_p2();
+            let mut data = comm.get_data()?;
+
+            match p1 {
+                0 => {
+                    get_derivation_path(&mut data, ctx.bip32_path.as_mut());
+                }
+                1 => {
+                    set_tx_fields(&mut data, ctx);
+                }
+                2 => {
+                    set_tx_calldata_lengths(&mut data, ctx);
+                }
+                3 => {
+                    set_tx_callarray(&mut data, ctx, p2 as usize);
+                }
+                4 => {
+                    set_tx_calldata(&mut data, ctx, p2 as usize);
+
+                    if p2 + 1 == ctx.tx_info.calldata.call_array_len.into() {
+                        printf("Sign Tx\n");
+                        sign_hash(ctx);
+                        comm.append([65u8].as_slice());
+                        comm.append(ctx.hash_info.r.as_ref());
+                        comm.append(ctx.hash_info.s.as_ref());
+                        comm.append([ctx.hash_info.v].as_slice());
+                    }
+                }
+                _ => ()
+            }
         }
     }
     Ok(())

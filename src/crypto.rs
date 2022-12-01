@@ -2,7 +2,6 @@ use nanos_sdk::ecc::{Stark256, ECPublicKey};
 use nanos_sdk::io::SyscallError;
 
 use crate::context::{
-    FieldElement,
     Ctx
 };
 
@@ -29,6 +28,7 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
         Ok(s) => {
             let der = s.0;
             convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
+            ctx.hash_info.v = s.2 as u8;
             Ok(())
         },
         Err(_) => Err(CryptoError::SignError)
