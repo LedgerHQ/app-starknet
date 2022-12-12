@@ -25,6 +25,7 @@ use nanos_sdk::bindings::{
 };
 
 use crate::context::FieldElement;
+use crate::utils::print::{printf_fe};
 
 /* EC points */
 struct ECPoint {
@@ -122,7 +123,7 @@ pub fn pedersen_hash(a: &mut FieldElement, b: &FieldElement) {
         cx_ecpoint_destroy(&mut sp as *mut cx_ecpoint_t); 
         cx_bn_unlock();
     }
-    //printf("Pedersen: OUT\n");
+    printf_fe("hash = ", &a);
 }
 
 fn double_accum_ec_mul(h: &mut cx_ecpoint_t, buf1: &[u8], len1: usize, buf2: &[u8], len2: usize, idx: usize)

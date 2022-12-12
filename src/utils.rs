@@ -23,6 +23,7 @@ pub fn to_hex<const N: usize>(m: &[u8]) -> Result<[u8; N], ()> {
 pub mod print {
 
     use nanos_sdk::debug_print;
+    use crate::context::FieldElement;
 
     pub fn printf(s: &str) {
         debug_print(s);
@@ -33,10 +34,17 @@ pub mod print {
         let m = core::str::from_utf8(&hex).unwrap();
         debug_print(m);
     }
+
+    pub fn printf_fe(prefix: &str, val: &FieldElement) {
+        printf(prefix);
+        printf_slice::<64>(&val.value[..]);
+        printf("\n");
+    }
 }
 
 #[cfg(feature = "device")]
 pub mod print {
     pub fn printf(s: &str) {}
     pub fn printf_slice<const N: usize>(tab: &[u8]) {}
+    pub fn printf_fe(prefix: &str, val: FieldElement) {}
 }
