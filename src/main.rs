@@ -22,7 +22,7 @@ use transaction::{
     set_tx_calldata
 };
 
-//use nanos_sdk::buttons::ButtonEvent;
+use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
 
@@ -35,16 +35,14 @@ extern "C" fn sample_main() {
     // Draw some 'welcome' screen
     ui::SingleMessage::new(display::WELCOME_SCREEN).show();
 
-    printf("Instantiate Ctx \n");
     let mut ctx: Ctx = Ctx::new();
 
     loop {        
         // Wait for either a specific button push to exit the app
         // or an APDU command
         match comm.next_event() {
-            //io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
+            io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
             io::Event::Command(ins) => {
-                printf("event\n");
                 match handle_apdu(&mut comm, ins, &mut ctx) {
                     Ok(()) => comm.reply_ok(),
                     Err(sw) => comm.reply(sw),
@@ -84,8 +82,6 @@ use nanos_sdk::io::Reply;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
-    printf("process APDU\n");
-
     if comm.rx == 0 {
         return Err(io::StatusWords::NothingReceived.into());
     }
@@ -142,8 +138,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 if v {
                                     sign_hash(ctx).unwrap();
                                 }
+                                else {
+                                    return Err(io::StatusWords::UserCancelled.into());
+                                }
                             }
-                            Err(_e) => (),
+                            Err(_e) => {
+                                return Err(io::SyscallError::Unspecified.into());
+                            }
                         }
                     }
                     else {
@@ -168,7 +169,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             comm.append(&a.value[..]);
         }
         Ins::SignTx => {
-            printf("Sign Tx\n");
             
             let p1 = comm.get_p1();
             let p2 = comm.get_p2();
@@ -190,10 +190,17 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     set_tx_callarray(&mut data, ctx, p2 as usize);
                 }
                 4 => {
-                    set_tx_calldata(&mut data, ctx, p2 as usize);
+
+                    match set_tx_calldata(data, ctx, p2 as usize) {
+                        Ok(flag) => {
+                            if !flag {
+                                return Err(io::StatusWords::UserCancelled.into());
+                            }
+                        }
+                        _ => ()
+                    }
 
                     if p2 + 1 == ctx.tx_info.calldata.call_array_len.into() {
-                        printf("Sign Tx\n");
                         sign_hash(ctx).unwrap();
                         comm.append([65u8].as_slice());
                         comm.append(ctx.hash_info.r.as_ref());

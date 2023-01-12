@@ -1,4 +1,4 @@
-use nanos_sdk::ecc::{Stark256, ECPublicKey};
+use nanos_sdk::ecc::{Stark256, ECPublicKey, SeedDerive};
 use nanos_sdk::io::{SyscallError, Reply};
 
 use crate::context::{
@@ -29,7 +29,7 @@ impl From<CryptoError> for Reply {
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 
-    match Stark256::from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash_info.m_hash.value.as_ref()) {
+    match Stark256::derive_from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash_info.m_hash.value.as_ref()) {
         Ok(s) => {
             let der = s.0;
             convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
@@ -43,7 +43,7 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 /// Helper function that retrieves public key
 pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
 
-    let private_key = Stark256::from_path(&ctx.bip32_path);
+    let private_key = Stark256::derive_from_path(&ctx.bip32_path);
 
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
