@@ -28,4 +28,5 @@ curve = ["secp256k1"]
 path = ["m/2645'"]
 flags = "0"
 icon = "crab.gif"
-icon_small = "crab_14x14.gif"
+icon_small = "starknet_small.gif"
+name = "Starknet"
