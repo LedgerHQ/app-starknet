@@ -16,5 +16,4 @@ For more information:
 
 - [How to build](docs/build.md)
 - [How to test](docs/test.md)
-- [How to install](docs/install.md)
 - [APDU specification](docs/apdu.md)

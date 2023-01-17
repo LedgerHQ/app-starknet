@@ -4,7 +4,7 @@ This document aims to provide a description of the APDU protocol supported by th
 
 ## General Structure
 
-The general structure of a reqeuest and response is as follows:
+The general structure of a reqeuest and response is as followed:
 
 ### Request / Command
 
@@ -32,9 +32,9 @@ The general structure of a reqeuest and response is as follows:
 | 0x6982      | Empty buffer            |
 | 0x6983      | Output buffer too small |
 | 0x6986      | Command not allowed     |
-| 0x6D00      | INS not supported       |
+| 0x6D00      | Unknown                 |
 | 0x6E00      | CLA not supported       |
-| 0x6F00      | Unknown                 |
+| 0xE000      | Panic                   |
 | 0x9000      | Success                 |
 
 ---
@@ -49,7 +49,7 @@ This command will return the app version
 
 | Field | Type     | Content                | Expected |
 |-------|----------|------------------------|----------|
-| CLA   | byte (1) | Application Identifier |          |
+| CLA   | byte (1) | Application Identifier | 0x80     |
 | INS   | byte (1) | Instruction ID         | 0x00     |
 | P1    | byte (1) | Parameter 1            | ignored  |
 | P2    | byte (1) | Parameter 2            | ignored  |
@@ -64,7 +64,7 @@ This command will return the app version
 | PATCH     | byte (1) | Version Patch    |                                 |
 | SW1-SW2   | byte (2) | Return code      | see list of return codes        |
 
-### GetAddress
+### GetPubKey
 
 This command returns the public key corresponding to the secret key found at the given [EIP-2645](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2645.md) path 
 
@@ -72,10 +72,10 @@ This command returns the public key corresponding to the secret key found at the
 
 | Field   | Type     | Content                   | Expected        |
 |---------|----------|---------------------------|-----------------|
-| CLA     | byte (1) | Application Identifier    |                 |
+| CLA     | byte (1) | Application Identifier    | 0x80            |
 | INS     | byte (1) | Instruction ID            | 0x01            |
-| P1      | byte (1) | Request User confirmation | No = 0          |
-| P2      | byte (1) | ignored                   |                 |
+| P1      | byte (1) | Parameter 1               | ignored         |
+| P2      | byte (1) | Parameter 1               | ignored         |
 | L       | byte (1) | Bytes in payload          | (depends)       |
 | PathN   | byte (1) | Number of path components | 6               |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55      |
@@ -97,15 +97,15 @@ This command returns the public key corresponding to the secret key found at the
 
 This command will return a signature of the passed payload
 
-#### Command
+#### Command #1
 
 | Field | Type     | Content                     | Expected          |
 |-------|----------|-----------------------------|-------------------|
 | CLA   | byte (1) | Application Identifier      | 0x80              |
 | INS   | byte (1) | Instruction ID              | 0x02              |
-| P1    | byte (1) | Payload desc                | != 0 then display |
+| P1    | byte (1) | Payload desc                | 0                 |
 | P2    | byte (1) | ignored                     |                   |
-| L     | byte (1) | Bytes in payload            | 57                |
+| L     | byte (1) | Bytes in payload            | (depends)         |
 | PathN   | byte (1) | Number of path components | 6                 |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55        |
 | Path[1] | byte (4) | Derivation Path Data      | ?                 |
@@ -113,11 +113,29 @@ This command will return a signature of the passed payload
 | Path[3] | byte (4) | Derivation Path Data      | ?                 |
 | Path[4] | byte (4) | Derivation Path Data      | ?                 |
 | Path[5] | byte (4) | Derivation Path Data      | ?                 |
-| Message | byte (32)| Data to sign              | ?                 |
 
 #### Response
 
 | Field    | Type      | Content     | Note                                  |
 |----------|-----------|-------------|---------------------------------------|
 | SIG      | byte (64) | Signature   | (R,S) encoded signature               |
+| SW1-SW2  | byte (2)  | Return code | see list of return codes              |
+
+#### Command #2
+
+| Field | Type     | Content                     | Expected          |
+|-------|----------|-----------------------------|-------------------|
+| CLA   | byte (1) | Application Identifier      | 0x80              |
+| INS   | byte (1) | Instruction ID              | 0x02              |
+| P1    | byte (1) | Payload desc                | 1                 |
+| P2    | byte (1) | ignored                     | display ?         |
+| L     | byte (1) | Bytes in payload            | 20                |
+| Hash  | byte (32)| Pedersen hash               | (depends)         |
+
+#### Response
+
+| Field    | Type      | Content     | Note                                  |
+|----------|-----------|-------------|---------------------------------------|
+| L        | byte (1)  | Sig Length  | 0x41 = 65                             |
+| SIG      | byte (65) | Signature   | (R,S, V) encoded signature            |
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
