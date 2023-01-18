@@ -28,7 +28,7 @@ pub fn sign_tx_ui(tx: &context::Transaction, n: usize, calldata: &[u8]) -> Resul
     let mut hex: [u8; 64];
     let mut m: &str;
 
-    if (n == 0) {
+    if n == 0 {
         if u8::from(tx.calldata.call_array_len) > 1 {
             ui::popup("Review Multicall Tx");
         }

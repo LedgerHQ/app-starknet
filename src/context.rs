@@ -88,9 +88,14 @@ impl CallArray {
     }
 }
 
+/// Maximum numbers of calls in a multicall Tx (out of memory)
+/// NanoS = 3
+/// NanoS+ = 10 (maybe more ?) 
+const MAX_TX_CALLS: usize = 3;
+
 pub struct CallData {
     pub call_array_len: FieldElement,
-    pub calls: [CallArray; 10],
+    pub calls: [CallArray; MAX_TX_CALLS],
     pub calldata_len: FieldElement,
 } 
 
@@ -98,7 +103,7 @@ impl CallData {
     pub fn new() -> Self {
         Self {
             call_array_len: FieldElement::new(),
-            calls: [CallArray::new(); 10],
+            calls: [CallArray::new(); MAX_TX_CALLS],
             calldata_len: FieldElement::new()
         }
     }

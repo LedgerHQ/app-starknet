@@ -10,8 +10,8 @@
     ]
   },
   "flags": "0",
-  "icon": "starknet_small.gif",
+  "icon": "crab.gif",
   "name": "staRknet",
-  "targetId": "0x33100004",
+  "targetId": "0x31100004",
   "version": "0.1.0"
 }

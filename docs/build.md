@@ -24,7 +24,7 @@ Build for Speculos env:
 ```
 docker run --rm -ti -v $(pwd)/app:/app ledger-starknet-app-builder:latest
 cd app/nano-app-starknet/
-cargo ledger nanosplus
+cargo ledger nanos|nanosplus 
 ```
 
 
@@ -32,5 +32,5 @@ Build for Nano device:
 ```
 docker run --rm -ti -v $(pwd)/app:/app ledger-starknet-app-builder:latest
 cd app/nano-app-starknet/
-cargo ledger nanosplus -- --no-default-features --features device
+cargo ledger nanos|nanosplus -- --no-default-features --features device
 ```
