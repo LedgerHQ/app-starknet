@@ -1,6 +1,0 @@
-# For speculos:
-cargo ledger nanosplus
-
-# For device:
-cargo ledger nanosplus -- --no-default-features --features device
-

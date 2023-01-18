@@ -7,13 +7,13 @@ Official Ledger Nano App Starknet application
 
 -------------------
 
-<img src="docs/LedgerXStarknet.png"/>
+<img src="docs/LedgerXStarknetXRust.png"/>
 
 
 This project contains the Starknet app (https://starkware.co/) for Ledger Nano S, SP and X.
 
 For more information:
 
-- [How to build](docs/build.md), 
+- [How to build](docs/build.md)
+- [How to test](docs/test.md)
 - [APDU specification](docs/apdu.md)
-

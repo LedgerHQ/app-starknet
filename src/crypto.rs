@@ -1,5 +1,9 @@
-use nanos_sdk::ecc::{Stark256, ECPublicKey};
-use nanos_sdk::io::SyscallError;
+use nanos_sdk::ecc::{Stark256, ECPublicKey, SeedDerive};
+use nanos_sdk::io::{SyscallError, Reply};
+
+use crate::context::{
+    Ctx
+};
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
 /// with every step encoded with 4 bytes (total length = 6 x 4 = 24 bytes)
@@ -11,34 +15,35 @@ pub mod pedersen;
 
 #[derive(Debug)]
 pub enum CryptoError {
-    UnvalidPathPrefixError,
-    UnvalidPathLengthError,
-    SignError,
-    GenericError,
+    UnvalidPathPrefixError = 0xFF00,
+    UnvalidPathLengthError = 0xFF01,
+    SignError = 0xFF02,
+}
+
+impl From<CryptoError> for Reply {
+    fn from(ce: CryptoError) -> Reply {
+        Reply(ce as u16)
+    }
 }
 
 /// Helper function that signs with ECDSA in deterministic nonce
-pub fn detecdsa_sign(
-    path: &[u32],
-    m: &[u8]
-) -> Result<([u8; 32], [u8; 32]) , CryptoError> {
+pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 
-    match Stark256::from_path(path).deterministic_sign(m) {
+    match Stark256::derive_from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash_info.m_hash.value.as_ref()) {
         Ok(s) => {
             let der = s.0;
-            let mut r = [0u8; 32];
-            let mut s = [0u8; 32];
-            convert_der_to_rs(&der[..], &mut r, &mut s).unwrap();
-            Ok((r, s))
+            convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
+            ctx.hash_info.v = s.2 as u8;
+            Ok(())
         },
         Err(_) => Err(CryptoError::SignError)
     }
 }
 
 /// Helper function that retrieves public key
-pub fn get_pubkey(path: &[u32]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
+pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
 
-    let private_key = Stark256::from_path(path);
+    let private_key = Stark256::derive_from_path(&ctx.bip32_path);
 
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
@@ -46,9 +51,7 @@ pub fn get_pubkey(path: &[u32]) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
     }
 }
 
-pub fn get_derivation_path(buf: &mut &[u8], path: &mut [u32]) -> Result<(),  CryptoError>  {
-
-    path.fill(0);
+pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(),  CryptoError>  {
 
     match buf.len() {
         EIP2645_PATH_BYTES_LENGTH => {
@@ -56,18 +59,10 @@ pub fn get_derivation_path(buf: &mut &[u8], path: &mut [u32]) -> Result<(),  Cry
             for i in 0..5 {
                 let (int_bytes, rest) = buf.split_at(4);
                 *buf = rest;
-                path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
+                ctx.bip32_path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
             }
 
-            /*let mut j = 0;
-            for i in 0..5 {
-                path[i] += (buf[j] as u32) << 24;
-                path[i] += (buf[j + 1] as u32) << 16;
-                path[i] += (buf[j + 2] as u32) << 8;
-                path[i] += buf[j + 3] as u32;
-                j += 4;
-            }*/
-            match path[0] {
+            match ctx.bip32_path[0] {
                 EIP2645_PATH_PREFIX => Ok(()),
                 _ => Err(CryptoError::UnvalidPathPrefixError),
             }
