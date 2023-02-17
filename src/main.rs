@@ -32,6 +32,8 @@ nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
 
+    nanos_ui::ui::popup("Pending Review");
+
     // Draw some 'welcome' screen
     ui::SingleMessage::new(display::WELCOME_SCREEN).show();
 
