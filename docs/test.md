@@ -10,6 +10,13 @@ docker build -t speculos-runner:latest .
 ```
 git clone https://github.com/LedgerHQ/nano-rapp-starknet.git
 cd nano-rapp-starknet
+```
+### Nano S
+```
+docker run --rm -it -v $(pwd)/target/nanos/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 apps/nano-rapp-starknet
+```
+### Nano S+
+```
 docker run --rm -it -v $(pwd)/target/nanosplus/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanosp --sdk 1.0.3 apps/nano-rapp-starknet
 ```
 Use [ledgercomm](https://github.com/LedgerHQ/ledgercomm) to send APDU e.g :
