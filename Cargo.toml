@@ -5,10 +5,8 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-#nanos_sdk = { path = "../ledger-nanos-sdk/", features = ["speculos"] }
-nanos_sdk = { path = "../ledger-nanos-sdk/" }  
-nanos_ui = { path = "../ledger-nanos-ui/" }
-#crypto-bigint = { version = "0.4.9", default-features = false }
+nanos_sdk = { git = "https://github.com/LedgerHQ/ledger-nanos-sdk/" }
+nanos_ui = { git = "https://github.com/LedgerHQ/ledger-nanos-ui/" }
 
 [features]
 default = [ "debug" ]
@@ -24,6 +22,7 @@ opt-level = 'z'
 lto = true
 
 [package.metadata.nanos]
+api_level = "1"
 curve = ["secp256k1"]
 path = ["m/2645'"]
 flags = "0"
