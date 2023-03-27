@@ -5,32 +5,27 @@ Use [ledger_starknet_app_builder](https://github.com/yogh333/ledger-app-builder/
 git clone https://github.com/yogh333/ledger-app-builder.git
 cd ledger-app-builder
 git checkout -b ledger-starknet-app-builder origin/ledger-starknet-app-builder
-docker build -t ledger-starknet-app-builder:latest .
-# Checkout 3 Rust repositories (UI, SDK, Starknet app)
+docker build -t ledger-starknet-app-builder:latest -f legacy/Dockerfile .
+# Checkout Starknet Nano app repository
 mkdir app
 cd app
-git clone https://github.com/yogh333/ledger-nanos-ui.git
-cd ledger-nanos-ui
-git checkout -b speculos origin/speculos
-cd ..
-git clone https://github.com/yogh333/ledger-nanos-sdk.git
-cd ledger-nanos-sdk
-git checkout -b ecc-pubkey-getter origin/ecc-pubkey-getter
-cd ..
 git clone https://github.com/LedgerHQ/nano-rapp-starknet.git
 ```
 
 Build for Speculos env:
 ```
 docker run --rm -ti -v $(pwd)/app:/app ledger-starknet-app-builder:latest
-cd app/nano-app-starknet/
-cargo ledger nanos|nanosplus 
+export BOLOS_SDK=/opt/nanos-secure-sdk|nanosplus-secure-sdk|nanox-secure-sdk
+cd nano-rapp-starknet/
+cago clean
+cargo ledger build nanos|nanosplus|nanox
 ```
 
 
 Build for Nano device:
 ```
 docker run --rm -ti -v $(pwd)/app:/app ledger-starknet-app-builder:latest
-cd app/nano-app-starknet/
-cargo ledger nanos|nanosplus -- --no-default-features --features device
+export BOLOS_SDK=/opt/nanos-secure-sdk|nanosplus-secure-sdk|nanox-secure-sdk
+cd nano-rapp-starknet/
+cargo ledger build nanos|nanosplus|nanox -- --no-default-features --features device
 ```

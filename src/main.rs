@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+
 mod crypto;
 mod utils;
 mod context;
@@ -30,9 +31,11 @@ nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = io::Comm::new();
 
+    #[cfg(feature = "device")]
     nanos_ui::ui::popup("Pending Review");
+
+    let mut comm = io::Comm::new();
 
     // Draw some 'welcome' screen
     ui::SingleMessage::new(display::WELCOME_SCREEN).show();
