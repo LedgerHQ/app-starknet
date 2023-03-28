@@ -30,10 +30,28 @@ use nanos_ui::ui;
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
 #[no_mangle]
-extern "C" fn sample_main() {
+extern "C" fn sample_pending() {
+    let mut comm = io::Comm::new();
 
-    #[cfg(feature = "device")]
-    nanos_ui::ui::popup("Pending Review");
+    ui::SingleMessage::new("Pending").show();
+
+    loop {
+        match comm.next_event::<Ins>() {
+            io::Event::Button(ButtonEvent::RightButtonRelease) => break,
+            _ => (),
+        }
+    }
+    ui::SingleMessage::new("Ledger review").show();
+    loop {
+        match comm.next_event::<Ins>() {
+            io::Event::Button(ButtonEvent::BothButtonsRelease) => break,
+            _ => (),
+        }
+    }
+}
+
+#[no_mangle]
+extern "C" fn sample_main() {
 
     let mut comm = io::Comm::new();
 

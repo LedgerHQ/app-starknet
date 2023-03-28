@@ -19,7 +19,7 @@ pub fn to_hex<const N: usize>(m: &[u8]) -> Result<[u8; N], ()> {
 }
 
 
-#[cfg(feature = "debug")]
+#[cfg(feature = "speculos")]
 pub mod print {
 
     use nanos_sdk::testing::debug_print;
