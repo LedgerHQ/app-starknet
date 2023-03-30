@@ -14,7 +14,7 @@ use crypto::{
     get_pubkey, 
     set_derivation_path
 };
-use utils::print::printf;
+
 use context::{Ctx, RequestType, FieldElement};
 use transaction::{
     set_tx_fields,
@@ -109,6 +109,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         return Err(io::StatusWords::NothingReceived.into());
     }
     
+    let (cla_byte, _) = comm.get_cla_ins();
+    if cla_byte != 0x80 {
+        return Err(io::StatusWords::BadCla.into());
+    }
+
     match ins {
         Ins::GetVersion => {
             let version_major = env!("CARGO_PKG_VERSION_MAJOR").parse::<u8>().unwrap();
@@ -181,7 +186,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             }
         }  
         Ins::PedersenHash => {
-            printf("Compute Pedersen");
             ctx.clear();
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
@@ -231,7 +235,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         comm.append([ctx.hash_info.v].as_slice());
                     }
                 }
-                _ => ()
+                _ => return Err(io::StatusWords::BadP1P2.into()),
             }
         }
     }

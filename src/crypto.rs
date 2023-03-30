@@ -45,6 +45,10 @@ pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
 
     let private_key = Stark256::derive_from_path(&ctx.bip32_path);
 
+    /*crate::utils::print::printf("private key is: \n");
+    crate::utils::print::printf_slice::<64>(&private_key.key[..]);
+    crate::utils::print::printf("\n");*/
+
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
         Err(_) => Err(SyscallError::Unspecified)
