@@ -5,8 +5,10 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-nanos_sdk = { git = "https://github.com/yogh333/ledger-nanos-sdk.git", branch="fix/handling_invalid_ins" }
-nanos_ui = { git = "https://github.com/yogh333/ledger-nanos-ui.git", branch="feat/use_fork_nanos_sdk" }
+#nanos_sdk = { git = "https://github.com/yogh333/ledger-nanos-sdk.git", branch="fix/handling_invalid_ins" }
+#nanos_ui = { git = "https://github.com/yogh333/ledger-nanos-ui.git", branch="feat/use_fork_nanos_sdk" }
+nanos_sdk = { path = "../ledger-nanos-sdk" }
+nanos_ui = { path = "../ledger-nanos-ui" }
 
 [features]
 default = [ "speculos" ]
