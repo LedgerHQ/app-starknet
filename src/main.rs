@@ -87,10 +87,10 @@ enum Ins {
     SignTx,
 }
 
-impl TryFrom<u8> for Ins {
+impl TryFrom<io::ApduHeader> for Ins {
     type Error = ();
-    fn try_from(ins: u8) -> Result<Self, Self::Error> {
-        match ins {
+    fn try_from(header: io::ApduHeader) -> Result<Self, Self::Error> {
+        match header.ins {
             0 => Ok(Ins::GetVersion),
             1 => Ok(Ins::GetPubkey),
             2 => Ok(Ins::SignHash),
@@ -109,8 +109,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         return Err(io::StatusWords::NothingReceived.into());
     }
     
-    let (cla_byte, _) = comm.get_cla_ins();
-    if cla_byte != 0x80 {
+    let apdu_header = comm.get_apdu_metadata();
+    if apdu_header.cla != 0x80 {
         return Err(io::StatusWords::BadCla.into());
     }
 
@@ -146,8 +146,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::SignHash => {
 
-            let p1 = comm.get_p1();
-            let p2 = comm.get_p2();
+            let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
 
             let mut data = comm.get_data()?;
 
@@ -197,8 +197,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::SignTx => {
             
-            let p1 = comm.get_p1();
-            let p2 = comm.get_p2();
+            let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
             let mut data = comm.get_data()?;
 
             match p1 {
