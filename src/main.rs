@@ -27,6 +27,12 @@ use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
 
+use nanos_sdk::bindings::{
+    os_lib_call
+};
+
+use crate::utils::print::{printf};
+
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
 #[no_mangle]
@@ -51,7 +57,7 @@ extern "C" fn sample_pending() {
 }
 
 #[no_mangle]
-extern "C" fn sample_main() {
+extern "C" fn sample_main(arg0: u32) {
 
     let mut comm = io::Comm::new();
 
@@ -63,15 +69,23 @@ extern "C" fn sample_main() {
     loop {        
         // Wait for either a specific button push to exit the app
         // or an APDU command
+        //printf("loop\n");
         match comm.next_event() {
             io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
             io::Event::Command(ins) => {
                 match handle_apdu(&mut comm, ins, &mut ctx) {
-                    Ok(()) => comm.reply_ok(),
+                    Ok(()) => {
+                        printf("Reply OK\n");
+                        comm.reply_ok();
+                        printf("Reply OK\n");
+                    }
                     Err(sw) => comm.reply(sw),
                 }
+                printf("clear screen\n");
                 ui::clear_screen();
+                printf("display message\n");
                 ui::SingleMessage::new(display::WELCOME_SCREEN).show();
+                printf("message displayed\n");
             },
             _ => (),
         }
@@ -85,6 +99,7 @@ enum Ins {
     SignHash,
     PedersenHash,
     SignTx,
+    TestPlugin
 }
 
 impl TryFrom<io::ApduHeader> for Ins {
@@ -96,6 +111,7 @@ impl TryFrom<io::ApduHeader> for Ins {
             2 => Ok(Ins::SignHash),
             3 => Ok(Ins::SignTx),
             4 => Ok(Ins::PedersenHash),
+            5 => Ok(Ins::TestPlugin),
             _ => Err(())
         }
     }
@@ -238,6 +254,17 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 _ => return Err(io::StatusWords::BadP1P2.into()),
             }
         }
+        Ins::TestPlugin => {
+            let plugin_name: &[u8] = "plugin-boilerplate\0".as_bytes();
+            let mut arg: [u32; 3] = [0xFF; 3];
+            arg[0] = plugin_name.as_ptr() as u32;
+            unsafe {
+                os_lib_call(arg.as_mut_ptr());
+            }
+            comm.append([0u8].as_slice());
+            printf("Plugin has been called\n");
+        }
     }
+    printf("Returns OK\n");
     Ok(())
 }

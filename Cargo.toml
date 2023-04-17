@@ -5,8 +5,10 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-nanos_sdk = { git = "https://github.com/LedgerHQ/ledger-nanos-sdk.git" }
-nanos_ui = { git = "https://github.com/LedgerHQ/ledger-nanos-ui.git" }
+#nanos_sdk = { git = "https://github.com/LedgerHQ/ledger-nanos-sdk.git" }
+#nanos_ui = { git = "https://github.com/LedgerHQ/ledger-nanos-ui.git" }
+nanos_sdk = { path = "../ledger-nanos-sdk" }
+nanos_ui = { path = "../ledger-nanos-ui" }
 
 [features]
 default = [ "speculos" ]
