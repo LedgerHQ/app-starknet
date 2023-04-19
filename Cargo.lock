@@ -50,7 +50,6 @@ dependencies = [
 [[package]]
 name = "nanos_sdk"
 version = "0.2.0"
-source = "git+https://github.com/LedgerHQ/ledger-nanos-sdk.git#a4092821398d27413d9cc1209209e0c63ebc5459"
 dependencies = [
  "cc",
  "num-traits",
@@ -60,7 +59,6 @@ dependencies = [
 [[package]]
 name = "nanos_ui"
 version = "0.2.0"
-source = "git+https://github.com/LedgerHQ/ledger-nanos-ui.git#c7fe3dff2417f9a118ad176d578c5c1ee07e83cd"
 dependencies = [
  "include_gif",
  "nanos_sdk",

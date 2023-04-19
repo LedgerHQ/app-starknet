@@ -75,17 +75,12 @@ extern "C" fn sample_main(arg0: u32) {
             io::Event::Command(ins) => {
                 match handle_apdu(&mut comm, ins, &mut ctx) {
                     Ok(()) => {
-                        printf("Reply OK\n");
                         comm.reply_ok();
-                        printf("Reply OK\n");
                     }
                     Err(sw) => comm.reply(sw),
                 }
-                printf("clear screen\n");
                 ui::clear_screen();
-                printf("display message\n");
                 ui::SingleMessage::new(display::WELCOME_SCREEN).show();
-                printf("message displayed\n");
             },
             _ => (),
         }
@@ -118,6 +113,11 @@ impl TryFrom<io::ApduHeader> for Ins {
 }
 
 use nanos_sdk::io::Reply;
+
+struct PluginCtx {
+    operation: u8,
+    name: [u8; 100],
+}
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
@@ -255,16 +255,39 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             }
         }
         Ins::TestPlugin => {
+
+            let mut plugin_ctx = PluginCtx {
+                operation: 69,
+                name: [0x00; 100]
+            };
+
+            for (idx, b) in "plugin_tester".bytes().enumerate() {
+                plugin_ctx.name[idx] = b;
+            }
+
+            {
+                nanos_sdk::testing::debug_print(core::str::from_utf8(&plugin_ctx.name).unwrap());
+                nanos_sdk::testing::debug_print("\n");
+            }
+
             let plugin_name: &[u8] = "plugin-boilerplate\0".as_bytes();
-            let mut arg: [u32; 3] = [0xFF; 3];
+            let mut arg: [u32; 3] = [0x00; 3];
             arg[0] = plugin_name.as_ptr() as u32;
+            arg[1] = 0xBB;
+            arg[2] = &mut plugin_ctx as *mut PluginCtx as u32;
+
+            nanos_sdk::testing::debug_print("=========================> Plugin call\n");
             unsafe {
                 os_lib_call(arg.as_mut_ptr());
             }
+            nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+
+            {
+                nanos_sdk::testing::debug_print(core::str::from_utf8(&plugin_ctx.name).unwrap());
+                nanos_sdk::testing::debug_print("\n");
+            }
             comm.append([0u8].as_slice());
-            printf("Plugin has been called\n");
         }
     }
-    printf("Returns OK\n");
     Ok(())
 }
