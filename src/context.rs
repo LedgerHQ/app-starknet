@@ -155,7 +155,8 @@ pub enum RequestType {
     GetPubkey,     
     SignHash,
     SignTransaction,
-	ComputePedersen
+	ComputePedersen,
+    TestPlugin
 }
 
 pub struct HashInfo {
@@ -198,6 +199,8 @@ pub struct Ctx {
     pub hash_info: HashInfo,
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
+    pub plugin_internal_ctx: [u8; 255],
+    pub plugin_internal_ctx_len: usize
 }
 
 impl Ctx {
@@ -207,7 +210,9 @@ impl Ctx {
             hash_info: HashInfo::new(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
-            bip32_path_len: 0
+            bip32_path_len: 0,
+            plugin_internal_ctx: [0u8; 255],
+            plugin_internal_ctx_len: 0
         }
     }
 
@@ -217,5 +222,7 @@ impl Ctx {
         self.bip32_path_len = 0;
         self.tx_info.clear();
         self.hash_info.clear();
+        self.plugin_internal_ctx.fill(0);
+        self.plugin_internal_ctx_len = 0;
     }
 }

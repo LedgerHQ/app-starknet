@@ -31,8 +31,6 @@ use nanos_sdk::bindings::{
     os_lib_call
 };
 
-use crate::utils::print::{printf};
-
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
 #[no_mangle]
@@ -113,11 +111,11 @@ impl TryFrom<io::ApduHeader> for Ins {
 }
 
 use nanos_sdk::io::Reply;
-
-struct PluginCtx {
-    operation: u8,
-    name: [u8; 100],
-}
+use nanos_sdk::plugin::{
+    PluginInitParams,
+    PluginFeedParams,
+    PluginInteractionType
+};
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
@@ -256,35 +254,63 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::TestPlugin => {
 
-            let mut plugin_ctx = PluginCtx {
-                operation: 69,
-                name: [0x00; 100]
-            };
+            let p1 = apdu_header.p1;
 
-            for (idx, b) in "plugin_tester".bytes().enumerate() {
-                plugin_ctx.name[idx] = b;
-            }
-
-            {
-                nanos_sdk::testing::debug_print(core::str::from_utf8(&plugin_ctx.name).unwrap());
-                nanos_sdk::testing::debug_print("\n");
-            }
-
-            let plugin_name: &[u8] = "plugin-boilerplate\0".as_bytes();
+            let plugin_name: &[u8] = "plugin-erc20\0".as_bytes();
             let mut arg: [u32; 3] = [0x00; 3];
             arg[0] = plugin_name.as_ptr() as u32;
-            arg[1] = 0xBB;
-            arg[2] = &mut plugin_ctx as *mut PluginCtx as u32;
 
-            nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-            unsafe {
-                os_lib_call(arg.as_mut_ptr());
-            }
-            nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+            match p1 {
+                0 => {
 
-            {
-                nanos_sdk::testing::debug_print(core::str::from_utf8(&plugin_ctx.name).unwrap());
-                nanos_sdk::testing::debug_print("\n");
+                    ctx.clear();
+                    ctx.req_type = RequestType::TestPlugin;
+
+                    let operation: u16 = PluginInteractionType::Check.into();
+                    arg[1] = operation as u32;
+                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
+                    unsafe {
+                        os_lib_call(arg.as_mut_ptr());
+                    }
+                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+                }
+                1 => {
+                    let mut plugin_ctx = PluginInitParams {
+                        operation: 69,
+                        name: [0x00; 100],
+                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                    };
+
+                    for (idx, b) in "Initialization".bytes().enumerate() {
+                        plugin_ctx.name[idx] = b;
+                    }
+
+                    let operation: u16 = PluginInteractionType::Init.into();
+                    arg[1] = operation as u32;
+                    arg[2] = &mut plugin_ctx as *mut PluginInitParams as u32;
+                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
+                    unsafe {
+                        os_lib_call(arg.as_mut_ptr());
+                    }
+                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+                }
+                2 => {
+                    let mut plugin_ctx = PluginFeedParams {
+                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                    };
+                    let operation: u16 = PluginInteractionType::Feed.into();
+                    arg[1] = operation as u32;
+                    arg[2] = &mut plugin_ctx as *mut PluginFeedParams as u32;
+                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
+                    unsafe {
+                        os_lib_call(arg.as_mut_ptr());
+                    }
+                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+
+                }
+                _ => return Err(io::StatusWords::BadP1P2.into()),
             }
             comm.append([0u8].as_slice());
         }
