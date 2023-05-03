@@ -1,6 +1,3 @@
-//use crypto_bigint::U256;
-//pub struct NewFieldElement(U256);
-
 #[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
     pub value: [u8; 32]
@@ -66,6 +63,14 @@ pub struct CallArray {
     pub data_len: FieldElement,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct CallArrayV1 {
+    pub to: FieldElement,
+    pub selector: FieldElement,
+    pub call_data_len: FieldElement,
+    pub call_data: [FieldElement; 6]
+}
+
 impl CallArray {
     pub fn new() -> Self {
         Self {
@@ -88,6 +93,26 @@ impl CallArray {
     }
 }
 
+impl CallArrayV1 {
+    pub fn new() -> Self {
+        Self {
+            to: FieldElement::new(),
+            selector: FieldElement::new(),
+            call_data_len: FieldElement::new(),
+            call_data: [FieldElement::ZERO; 6]
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.to.clear();
+        self.selector.clear();
+        self.call_data_len.clear();
+        for i in 0..6 {
+            self.call_data[i].clear();
+        }
+    }
+}
+
 /// Maximum numbers of calls in a multicall Tx (out of memory)
 /// NanoS = 3
 /// NanoS+ = 10 (maybe more ?) 
@@ -98,6 +123,11 @@ pub struct CallData {
     pub calls: [CallArray; MAX_TX_CALLS],
     pub calldata_len: FieldElement,
 } 
+
+pub struct CallDataV1 {
+    pub call_array_len: FieldElement,
+    pub calls: [CallArrayV1; MAX_TX_CALLS]
+}
 
 impl CallData {
     pub fn new() -> Self {
@@ -110,16 +140,33 @@ impl CallData {
 
     pub fn clear(&mut self) {
         self.call_array_len.clear();
-        for i in 1..self.calls.len() {
+        for i in 0..self.calls.len() {
             self.calls[i].clear();
         }
         self.calldata_len.clear();
     }
 }
 
+impl CallDataV1 {
+    pub fn new() -> Self {
+        Self {
+            call_array_len: FieldElement::new(),
+            calls: [CallArrayV1::new(); MAX_TX_CALLS],
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.call_array_len.clear();
+        for i in 0..self.calls.len() {
+            self.calls[i].clear();
+        }
+    }
+}
+
 pub struct Transaction {
     pub sender_address: FieldElement,
     pub calldata: CallData,             
+    pub calldata_v1: CallDataV1,
     pub max_fee: FieldElement,
     pub nonce: FieldElement,
     pub version: FieldElement,
@@ -131,6 +178,7 @@ impl Transaction {
         Self {
             sender_address: FieldElement::new(),
             calldata: CallData::new(),
+            calldata_v1: CallDataV1::new(),
             max_fee: FieldElement::new(),
             nonce: FieldElement::new(),
             version: FieldElement::new(),
@@ -141,6 +189,7 @@ impl Transaction {
     pub fn clear(&mut self) {
         self.sender_address.clear();
         self.calldata.clear();
+        self.calldata_v1.clear();
         self.max_fee.clear();
         self.nonce.clear();
         self.version.clear();
