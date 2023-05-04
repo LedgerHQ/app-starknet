@@ -249,7 +249,8 @@ pub struct Ctx {
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
     pub plugin_internal_ctx: [u8; 255],
-    pub plugin_internal_ctx_len: usize
+    pub plugin_internal_ctx_len: usize,
+    pub num_ui_screens: u8
 }
 
 impl Ctx {
@@ -261,7 +262,8 @@ impl Ctx {
             bip32_path: [0u32; 6],
             bip32_path_len: 0,
             plugin_internal_ctx: [0u8; 255],
-            plugin_internal_ctx_len: 0
+            plugin_internal_ctx_len: 0,
+            num_ui_screens: 0
         }
     }
 
@@ -273,5 +275,6 @@ impl Ctx {
         self.hash_info.clear();
         self.plugin_internal_ctx.fill(0);
         self.plugin_internal_ctx_len = 0;
+        self.num_ui_screens = 0;
     }
 }

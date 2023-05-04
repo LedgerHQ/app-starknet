@@ -115,8 +115,12 @@ use nanos_sdk::plugin::{
     PluginInitParams,
     PluginFeedParams,
     PluginFinalizeParams,
+    PluginQueryUiParams,
+    PluginGetUiParams,
     PluginInteractionType
 };
+
+use nanos_sdk::debug;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
@@ -358,7 +362,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                         plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
                         app_data: &ctx.tx_info as *const Transaction as *const u8,
-                        app_data_len: 0xFF
+                        app_data_len: 0xFF,
+                        need_info: false,
+                        num_ui_screens: 0
                     };
                     let operation: u16 = PluginInteractionType::Finalize.into();
                     arg[1] = operation as u32;
@@ -368,7 +374,92 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         os_lib_call(arg.as_mut_ptr());
                     }
                     nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+
+                    debug::print("Number of UI screens: ");
+                    let mut s = debug::to_hex_string::<2>(debug::Value::U8(plugin_params.num_ui_screens));
+                    debug::print(core::str::from_utf8(&s).unwrap());
+                    debug::print("\n");
+
+                    ctx.num_ui_screens = plugin_params.num_ui_screens;
                 }
+                5 => {
+                    let mut plugin_params = PluginQueryUiParams {
+                       title: [0u8; 32],
+                       title_len: 0
+                    };
+                    let operation: u16 = PluginInteractionType::QueryUI.into();
+                    arg[1] = operation as u32;
+                    arg[2] = &mut plugin_params as *mut PluginQueryUiParams as u32;
+                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
+                    unsafe {
+                        os_lib_call(arg.as_mut_ptr());
+                    }
+                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+
+                    ui::popup(core::str::from_utf8(&plugin_params.title[..plugin_params.title_len]).unwrap());
+                }
+                6 => {
+                    let mut plugin_params = PluginGetUiParams {
+                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                        ui_screen_idx: 0,
+                        title: [0u8; 32],
+                        title_len: 0,
+                        msg: [0u8; 64],
+                        msg_len: 0,
+                     };
+                     let operation: u16 = PluginInteractionType::GetUI.into();
+                     arg[1] = operation as u32;
+                     arg[2] = &mut plugin_params as *mut PluginGetUiParams as u32;
+
+                    for i in 0..ctx.num_ui_screens {
+                        plugin_params.ui_screen_idx = i as usize;
+                        nanos_sdk::testing::debug_print("=========================> Plugin call\n");
+                        unsafe {
+                            os_lib_call(arg.as_mut_ptr());
+                        }
+                        nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+
+                        let title = core::str::from_utf8(&plugin_params.title[..plugin_params.title_len]).unwrap();
+
+                        match plugin_params.msg_len {
+                            0..=16 => {
+                                let msg = core::str::from_utf8(&plugin_params.msg[..plugin_params.msg_len]).unwrap();
+                                ui::MessageValidator::new(
+                                    &[title, msg],
+                                    &[&"Confirm"],
+                                    &[&"Cancel"],
+                                )
+                                .ask();
+                            },
+                            17..=32 => {
+                                let msg0 = core::str::from_utf8(&plugin_params.msg[..16]).unwrap();
+                                let msg1 = core::str::from_utf8(&plugin_params.msg[17..plugin_params.msg_len]).unwrap();
+                                ui::MessageValidator::new(
+                                    &[title, msg0, msg1],
+                                    &[&"Confirm"],
+                                    &[&"Cancel"],
+                                )
+                                .ask();
+                            }
+                            33..=64 => {
+                                let msg0 = core::str::from_utf8(&plugin_params.msg[..16]).unwrap();
+                                let msg1 = core::str::from_utf8(&plugin_params.msg[17..32]).unwrap();
+                                let msg2 = core::str::from_utf8(&plugin_params.msg[32..48]).unwrap();
+                                let msg3 = core::str::from_utf8(&plugin_params.msg[48..plugin_params.msg_len]).unwrap();
+                                ui::MessageValidator::new(
+                                    &[title, msg0, msg1, msg2, msg3],
+                                    &[&"Confirm"],
+                                    &[&"Cancel"],
+                                )
+                                .ask();
+                            }
+                            _ => {
+                            }
+                        }
+                    }
+                }
+
                 _ => return Err(io::StatusWords::BadP1P2.into()),
             }
             comm.append([0u8].as_slice());
