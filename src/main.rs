@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-
 mod crypto;
 mod utils;
 mod context;
@@ -26,9 +25,9 @@ use transaction::{
 use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
-
-use nanos_sdk::bindings::{
-    os_lib_call
+use nanos_sdk::{
+    string,
+    testing
 };
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
@@ -67,7 +66,6 @@ extern "C" fn sample_main(arg0: u32) {
     loop {        
         // Wait for either a specific button push to exit the app
         // or an APDU command
-        //printf("loop\n");
         match comm.next_event() {
             io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
             io::Event::Command(ins) => {
@@ -112,15 +110,18 @@ impl TryFrom<io::ApduHeader> for Ins {
 
 use nanos_sdk::io::Reply;
 use nanos_sdk::plugin::{
+    PluginCoreParams,
+    PluginCheckParams,
     PluginInitParams,
     PluginFeedParams,
     PluginFinalizeParams,
     PluginQueryUiParams,
     PluginGetUiParams,
-    PluginInteractionType
+    PluginParams,
+    plugin_call,
+    PluginInteractionType,
+    PluginResult
 };
-
-use nanos_sdk::debug;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
@@ -261,23 +262,27 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
             let p1 = apdu_header.p1;
 
-            let plugin_name: &[u8] = "plugin-erc20\0".as_bytes();
-            let mut arg: [u32; 3] = [0x00; 3];
-            arg[0] = plugin_name.as_ptr() as u32;
-
             match p1 {
                 0 => {
 
                     ctx.clear();
                     ctx.req_type = RequestType::TestPlugin;
 
-                    let operation: u16 = PluginInteractionType::Check.into();
-                    arg[1] = operation as u32;
-                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-                    unsafe {
-                        os_lib_call(arg.as_mut_ptr());
-                    }
-                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+                    let mut plugin_check_params = PluginCheckParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data_len: 0xFF,
+                            plugin_result: PluginResult::Err
+                        }
+                    };
+                    let plugin_params = PluginParams::Check(&mut plugin_check_params);
+
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Check);
+                    testing::debug_print("=========================> Plugin has been call\n");
+
                 }
                 1 => {
 
@@ -317,114 +322,120 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         };       
                     }
                     
-
-                    let mut plugin_params = PluginInitParams {
-                        operation: 69,
-                        name: [0x00; 100],
-                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                        app_data: &ctx.tx_info as *const Transaction as *const u8,
-                        app_data_len: 0xFF
+                    let mut plugin_init_params = PluginInitParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data_len: 0xFF,
+                            plugin_result: PluginResult::Err
+                        }
                     };
 
-                    for (idx, b) in "Initialization".bytes().enumerate() {
-                        plugin_params.name[idx] = b;
-                    }
+                    let plugin_params = PluginParams::Init(&mut plugin_init_params);
 
-                    let operation: u16 = PluginInteractionType::Init.into();
-                    arg[1] = operation as u32;
-                    arg[2] = &mut plugin_params as *mut PluginInitParams as u32;
-                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-                    unsafe {
-                        os_lib_call(arg.as_mut_ptr());
-                    }
-                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Init);
+                    testing::debug_print("=========================> Plugin has been call\n");
                 }
                 2 => {
-                    let mut plugin_params = PluginFeedParams {
-                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                        app_data: &ctx.tx_info as *const Transaction as *const u8,
-                        app_data_len: 0xFF
+
+                    let mut plugin_feed_params = PluginFeedParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data_len: 0xFF,
+                            plugin_result: PluginResult::Err
+                        }
                     };
-                    let operation: u16 = PluginInteractionType::Feed.into();
-                    arg[1] = operation as u32;
-                    arg[2] = &mut plugin_params as *mut PluginFeedParams as u32;
-                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-                    unsafe {
-                        os_lib_call(arg.as_mut_ptr());
-                    }
-                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
+
+                    let plugin_params = PluginParams::Feed(&mut plugin_feed_params);
+
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Feed);
+                    testing::debug_print("=========================> Plugin has been call\n");
 
                 }
                 3 => {
-                    let mut plugin_params = PluginFinalizeParams {
-                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                        app_data: &ctx.tx_info as *const Transaction as *const u8,
-                        app_data_len: 0xFF,
-                        need_info: false,
+
+                    let mut plugin_finalize_params = PluginFinalizeParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data_len: 0xFF,
+                            plugin_result: PluginResult::Err
+                        },
                         num_ui_screens: 0
                     };
-                    let operation: u16 = PluginInteractionType::Finalize.into();
-                    arg[1] = operation as u32;
-                    arg[2] = &mut plugin_params as *mut PluginFinalizeParams as u32;
-                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-                    unsafe {
-                        os_lib_call(arg.as_mut_ptr());
-                    }
-                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
 
-                    debug::print("Number of UI screens: ");
-                    let mut s = debug::to_hex_string::<2>(debug::Value::U8(plugin_params.num_ui_screens));
-                    debug::print(core::str::from_utf8(&s).unwrap());
-                    debug::print("\n");
+                    let plugin_params = PluginParams::Finalize(&mut plugin_finalize_params);
 
-                    ctx.num_ui_screens = plugin_params.num_ui_screens;
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Finalize);
+                    testing::debug_print("=========================> Plugin has been call\n");
+
+                    testing::debug_print("Number of UI screens: ");
+                    let s = string::to_utf8::<2>(string::Value::U8(plugin_finalize_params.num_ui_screens));
+                    testing::debug_print(core::str::from_utf8(&s).unwrap());
+                    testing::debug_print("\n");
+
+                    ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
                 }
                 5 => {
-                    let mut plugin_params = PluginQueryUiParams {
-                       title: [0u8; 32],
-                       title_len: 0
-                    };
-                    let operation: u16 = PluginInteractionType::QueryUI.into();
-                    arg[1] = operation as u32;
-                    arg[2] = &mut plugin_params as *mut PluginQueryUiParams as u32;
-                    nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-                    unsafe {
-                        os_lib_call(arg.as_mut_ptr());
-                    }
-                    nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
 
-                    ui::popup(core::str::from_utf8(&plugin_params.title[..plugin_params.title_len]).unwrap());
+                    let mut plugin_queryui_params = PluginQueryUiParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data_len: 0xFF,
+                            plugin_result: PluginResult::Err
+                        },
+                        title: [0u8; 32],
+                        title_len: 0
+                    };
+
+                    let plugin_params = PluginParams::QueryUi(&mut plugin_queryui_params);
+
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::QueryUi);
+                    testing::debug_print("=========================> Plugin has been call\n");
+
+                    ui::popup(core::str::from_utf8(&plugin_queryui_params.title[..plugin_queryui_params.title_len]).unwrap());
                 }
                 6 => {
-                    let mut plugin_params = PluginGetUiParams {
-                        plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+
+                    let mut plugin_getui_params = PluginGetUiParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data_len: 0xFF,
+                            plugin_result: PluginResult::Err
+                        },
                         ui_screen_idx: 0,
                         title: [0u8; 32],
                         title_len: 0,
                         msg: [0u8; 64],
                         msg_len: 0,
                      };
-                     let operation: u16 = PluginInteractionType::GetUI.into();
-                     arg[1] = operation as u32;
-                     arg[2] = &mut plugin_params as *mut PluginGetUiParams as u32;
 
                     for i in 0..ctx.num_ui_screens {
-                        plugin_params.ui_screen_idx = i as usize;
-                        nanos_sdk::testing::debug_print("=========================> Plugin call\n");
-                        unsafe {
-                            os_lib_call(arg.as_mut_ptr());
-                        }
-                        nanos_sdk::testing::debug_print("=========================> Plugin has been call\n");
 
-                        let title = core::str::from_utf8(&plugin_params.title[..plugin_params.title_len]).unwrap();
+                        plugin_getui_params.ui_screen_idx = i as usize;
+                        let plugin_params = PluginParams::GetUi(&mut plugin_getui_params);
 
-                        match plugin_params.msg_len {
+                        testing::debug_print("=========================> Plugin call\n");
+                        plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::GetUi);
+                        testing::debug_print("=========================> Plugin has been call\n");
+
+                        let title = core::str::from_utf8(&plugin_getui_params.title[..plugin_getui_params.title_len]).unwrap();
+
+                        match plugin_getui_params.msg_len {
                             0..=16 => {
-                                let msg = core::str::from_utf8(&plugin_params.msg[..plugin_params.msg_len]).unwrap();
+                                let msg = core::str::from_utf8(&plugin_getui_params.msg[..plugin_getui_params.msg_len]).unwrap();
                                 ui::MessageValidator::new(
                                     &[title, msg],
                                     &[&"Confirm"],
@@ -433,8 +444,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 .ask();
                             },
                             17..=32 => {
-                                let msg0 = core::str::from_utf8(&plugin_params.msg[..16]).unwrap();
-                                let msg1 = core::str::from_utf8(&plugin_params.msg[17..plugin_params.msg_len]).unwrap();
+                                let msg0 = core::str::from_utf8(&plugin_getui_params.msg[..16]).unwrap();
+                                let msg1 = core::str::from_utf8(&plugin_getui_params.msg[17..plugin_getui_params.msg_len]).unwrap();
                                 ui::MessageValidator::new(
                                     &[title, msg0, msg1],
                                     &[&"Confirm"],
@@ -443,10 +454,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 .ask();
                             }
                             33..=64 => {
-                                let msg0 = core::str::from_utf8(&plugin_params.msg[..16]).unwrap();
-                                let msg1 = core::str::from_utf8(&plugin_params.msg[17..32]).unwrap();
-                                let msg2 = core::str::from_utf8(&plugin_params.msg[32..48]).unwrap();
-                                let msg3 = core::str::from_utf8(&plugin_params.msg[48..plugin_params.msg_len]).unwrap();
+                                let msg0 = core::str::from_utf8(&plugin_getui_params.msg[..16]).unwrap();
+                                let msg1 = core::str::from_utf8(&plugin_getui_params.msg[17..32]).unwrap();
+                                let msg2 = core::str::from_utf8(&plugin_getui_params.msg[32..48]).unwrap();
+                                let msg3 = core::str::from_utf8(&plugin_getui_params.msg[48..plugin_getui_params.msg_len]).unwrap();
                                 ui::MessageValidator::new(
                                     &[title, msg0, msg1, msg2, msg3],
                                     &[&"Confirm"],
@@ -459,7 +470,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         }
                     }
                 }
-
                 _ => return Err(io::StatusWords::BadP1P2.into()),
             }
             comm.append([0u8].as_slice());
