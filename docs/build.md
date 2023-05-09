@@ -12,7 +12,7 @@ mkdir app
 cd app
 git clone https://github.com/LedgerHQ/nano-rapp-starknet.git
 git checkout -b feat/plugin_call origin/feat/plugin_call
-git clone https://github.com/LedgerHQ/plugin-erc20.git
+git clone https://github.com/LedgerHQ/plugin-erc20.git rapp-plugin-erc20
 ```
 
 Build for Speculos env:

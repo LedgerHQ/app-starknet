@@ -14,26 +14,25 @@ Then
 ```
 docker build -t speculos-runner:latest .
 ```
-## Launch Nano application in Speculos env
+## Launch Starknet application with erc-20 plugin in Speculos env
 ```
-git clone https://github.com/LedgerHQ/nano-rapp-starknet.git
-cd nano-rapp-starknet
+cd ledger-app-builder
 ```
 ### Nano S
 ```
-docker run --rm -it -v $(pwd)/target/nanos/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanos apps/nano-rapp-starknet
+docker run --rm -it -v $(pwd)/app:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanos -l plugin-erc20:apps/rapp-plugin-erc20/target/nanos/release/plugin-erc20 apps/nano-rapp-starknet/target/nanos/release/nano-rapp-starknet
 ```
 ### Nano S+
 ```
-docker run --rm -it -v $(pwd)/target/nanosplus/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanosp --apiLevel 1 apps/nano-rapp-starknet
+docker run --rm -it -v $(pwd)/app:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanosp --apiLevel 1 -l plugin-erc20:apps/rapp-plugin-erc20/target/nanosplus/release/plugin-erc20 apps/nano-rapp-starknet/target/nanosplus/release/nano-rapp-starknet
 ```
 ### Nano X
 ```
-docker run --rm -it -v $(pwd)/target/nanox/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanox --apiLevel 1 apps/nano-rapp-starknet
+docker run --rm -it -v $(pwd)/app:/speculos/apps --publish 5001:5001 --publish 9999:9999 speculos-runner --display headless --api-port 5001 --apdu-port 9999 --model nanox --apiLevel 1 -l plugin-erc20:apps/rapp-plugin-erc20/target/nanox/release/plugin-erc20 apps/nano-rapp-starknet/target/nanox/release/nano-rapp-starknet
 ```
-Use [ledgercomm](https://github.com/LedgerHQ/ledgercomm) to send APDU e.g :
+Use [cargo ledger](https://github.com/yogh333/cargo-ledger/tree/feat/device_testing) to send APDU e.g :
 ```
-ledgercomm-send file test/sign.apdu
+cargo ledger send apdu.dat
 ```
 
 # Device
