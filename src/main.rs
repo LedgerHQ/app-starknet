@@ -31,8 +31,7 @@ use nanos_sdk::{
 };
 use nanos_sdk::starknet::{
     FieldElement, 
-    Transaction, 
-    CallArrayV1
+    Transaction
 };
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
@@ -253,7 +252,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         _ => ()
                     }
 
-                    if p2 + 1 == ctx.tx_info.calldata.call_array_len.into() {
+                    if p2 + 1 == ctx.tx_info.calldata_v0.call_array_len.into() {
                         sign_hash(ctx).unwrap();
                         comm.append([65u8].as_slice());
                         comm.append(ctx.hash_info.r.as_ref());

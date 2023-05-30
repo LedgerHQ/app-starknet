@@ -30,7 +30,7 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
     let mut m: &str;
 
     if n == 0 {
-        if u8::from(tx.calldata.call_array_len) > 1 {
+        if u8::from(tx.calldata_v0.call_array_len) > 1 {
             ui::popup("Review Multicall Tx");
         }
         else {
@@ -71,14 +71,14 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
         }
     }
 
-    if u8::from(tx.calldata.call_array_len) > 1 {
+    if u8::from(tx.calldata_v0.call_array_len) > 1 {
         ui::popup("Review Tx Multicalldata:");
     }
     else {
         ui::popup("Review Tx Calldata:");
     }
 
-    hex = utils::to_hex(&tx.calldata.calls[n].to.value[..]).unwrap();
+    hex = utils::to_hex(&tx.calldata_v0.calls[n].to.value[..]).unwrap();
     m = core::str::from_utf8(&hex).unwrap();
     if !ui::MessageValidator::new(
         &[&"Contract:", &m[0..16],&m[16..32], &m[32..48], &m[48..64]],
@@ -89,9 +89,9 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
         return Ok(false);
     }
 
-    m = core::str::from_utf8(&tx.calldata.calls[n].entry_point[0..tx.calldata.calls[n].entry_point_length as usize]).unwrap();
+    m = core::str::from_utf8(&tx.calldata_v0.calls[n].entry_point[0..tx.calldata_v0.calls[n].entry_point_length as usize]).unwrap();
     if !ui::MessageValidator::new(
-        &[&"Selector:", &m[0..tx.calldata.calls[n].entry_point_length as usize]],
+        &[&"Selector:", &m[0..tx.calldata_v0.calls[n].entry_point_length as usize]],
         &[&"Confirm"],
         &[&"Cancel"],
     )
@@ -102,7 +102,7 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
     let mut s_start: usize;
     let mut s_end: usize;
     let mut s: &[u8];
-    let data_len: u8 = tx.calldata.calls[n].data_len.into();
+    let data_len: u8 = tx.calldata_v0.calls[n].data_len.into();
     for i in 0..data_len {
         s_start = (i * 32).into();
         s_end = s_start + 32;
