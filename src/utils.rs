@@ -23,7 +23,7 @@ pub fn to_hex<const N: usize>(m: &[u8]) -> Result<[u8; N], ()> {
 pub mod print {
 
     use nanos_sdk::testing::debug_print;
-    use crate::context::FieldElement;
+    use nanos_sdk::starknet::FieldElement;
 
     pub fn printf(s: &str) {
         debug_print(s);

@@ -1,5 +1,6 @@
 use nanos_ui::ui;
 use nanos_sdk::io;
+use nanos_sdk::starknet::Transaction;
 
 use crate::{utils, context};
 
@@ -23,7 +24,7 @@ pub fn sign_ui(message: &[u8]) -> Result<bool, io::SyscallError> {
     }
 }
 
-pub fn sign_tx_ui(tx: &context::Transaction, n: usize, calldata: &[u8]) -> Result<bool, ()> {
+pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, ()> {
     
     let mut hex: [u8; 64];
     let mut m: &str;

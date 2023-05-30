@@ -1,5 +1,4 @@
 use crate::{context::{
-    FieldElement,
     Ctx,
 }, utils::print::{printf, printf_fe}, display::sign_tx_ui};
 
@@ -7,6 +6,10 @@ use crate::crypto::pedersen::{
     get_selector_from_name,
     pedersen_hash,
     pedersen_shift
+};
+
+use nanos_sdk::starknet::{
+    FieldElement
 };
 
 pub fn set_tx_fields(data: &mut &[u8], ctx: &mut Ctx) {

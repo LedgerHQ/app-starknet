@@ -14,7 +14,7 @@ use crypto::{
     set_derivation_path
 };
 
-use context::{Ctx, RequestType, FieldElement, Transaction, CallArrayV1};
+use context::{Ctx, RequestType};
 use transaction::{
     set_tx_fields,
     set_tx_calldata_lengths,
@@ -28,6 +28,11 @@ use nanos_ui::ui;
 use nanos_sdk::{
     string,
     testing
+};
+use nanos_sdk::starknet::{
+    FieldElement, 
+    Transaction, 
+    CallArrayV1
 };
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
@@ -115,6 +120,7 @@ use nanos_sdk::plugin::{
     PluginInitParams,
     PluginFeedParams,
     PluginFinalizeParams,
+    PluginProvideDataParams,
     PluginQueryUiParams,
     PluginGetUiParams,
     PluginParams,
@@ -382,6 +388,27 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     testing::debug_print("\n");
 
                     ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
+                }
+                4 => {
+
+                    let mut plugin_providedata_params = PluginProvideDataParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            app_data: core::ptr::null(),
+                            app_data_len: 0,
+                            plugin_result: PluginResult::Err
+                        },
+                        data: [0xFFu8; 128],
+                        data_len: 15
+                    };
+                    
+                    let plugin_params = PluginParams::ProvideData(&mut plugin_providedata_params);
+
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::ProvideData);
+                    testing::debug_print("=========================> Plugin has been call\n");
+
                 }
                 5 => {
 
