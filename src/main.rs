@@ -5,7 +5,7 @@ mod crypto;
 mod utils;
 mod context;
 mod display;
-mod transaction;
+//mod transaction;
 
 use crypto::{
     sign_hash, 
@@ -15,13 +15,14 @@ use crypto::{
 };
 
 use context::{Ctx, RequestType};
-use transaction::{
+/*use transaction::{
     set_tx_fields,
     set_tx_calldata_lengths,
     set_tx_callarray,
     set_tx_calldata
-};
+};*/
 
+use heapless::String;
 use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
@@ -31,7 +32,7 @@ use nanos_sdk::{
 };
 use nanos_sdk::starknet::{
     FieldElement, 
-    Transaction
+    TransactionInfo, AbstractCallData, AbstractCall
 };
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
@@ -58,7 +59,7 @@ extern "C" fn sample_pending() {
 }
 
 #[no_mangle]
-extern "C" fn sample_main(arg0: u32) {
+extern "C" fn sample_main(_arg0: u32) {
 
     let mut comm = io::Comm::new();
 
@@ -93,7 +94,7 @@ enum Ins {
     GetPubkey,
     SignHash,
     PedersenHash,
-    SignTx,
+    //SignTx,
     TestPlugin
 }
 
@@ -104,7 +105,7 @@ impl TryFrom<io::ApduHeader> for Ins {
             0 => Ok(Ins::GetVersion),
             1 => Ok(Ins::GetPubkey),
             2 => Ok(Ins::SignHash),
-            3 => Ok(Ins::SignTx),
+            //3 => Ok(Ins::SignTx),
             4 => Ok(Ins::PedersenHash),
             5 => Ok(Ins::TestPlugin),
             _ => Err(())
@@ -220,7 +221,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             pedersen::pedersen_hash(&mut a, &b);
             comm.append(&a.value[..]);
         }
-        Ins::SignTx => {
+        /*Ins::SignTx => {
             
             let p1 = apdu_header.p1;
             let p2 = apdu_header.p2;
@@ -262,7 +263,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => return Err(io::StatusWords::BadP1P2.into()),
             }
-        }
+        }*/
         Ins::TestPlugin => {
 
             let p1 = apdu_header.p1;
@@ -277,8 +278,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const Transaction as *const u8,
-                            app_data_len: 0xFF,
+                            app_data: core::ptr::null(),
+                            app_data_len: 0,
                             plugin_result: PluginResult::Err
                         }
                     };
@@ -287,51 +288,49 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Check);
                     testing::debug_print("=========================> Plugin has been call\n");
-
                 }
                 1 => {
 
                     {
-                        ctx.tx_info = Transaction::new();
                         ctx.tx_info.sender_address = FieldElement {
                             value: [
                                 0x05, 0x12, 0xb3, 0xc8, 0xa1, 0x70, 0x42, 0xe5, 0x8a, 0xb4, 0x52, 0xa5, 0xec, 0x02, 0xe7, 0xba, 
                                 0x94, 0x98, 0x72, 0xf5, 0xab, 0xd6, 0xb1, 0x8e, 0xc8, 0x3c, 0xf1, 0x86, 0x9a, 0x60, 0xfb, 0xe0
                             ]
                         };
-                        ctx.tx_info.calldata_v1.call_array_len = FieldElement::from(1u8);
-                        ctx.tx_info.calldata_v1.calls[0].to = FieldElement {
+
+                        ctx.abstract_call.to = FieldElement {
                             value: [
                                 0x06, 0x8f, 0x5c, 0x6a, 0x61, 0x78, 0x07, 0x68, 0x45, 0x5d, 0xe6, 0x90, 0x77, 0xe0, 0x7e, 0x89, 
                                 0x78, 0x78, 0x39, 0xbf, 0x81, 0x66, 0xde, 0xcf, 0xbf, 0x92, 0xb6, 0x45, 0x20, 0x9c, 0x0f, 0xb8
                             ]
                         };
-                        ctx.tx_info.calldata_v1.calls[0].selector = FieldElement {
+                        ctx.abstract_call.method = String::from("transfer");
+                        ctx.abstract_call.selector = FieldElement {
                             value: [
                                 0x00, 0x83, 0xaf, 0xd3, 0xf4, 0xca, 0xed, 0xc6, 0xee, 0xbf, 0x44, 0x24, 0x6f, 0xe5, 0x4e, 0x38, 
                                 0xc9, 0x5e, 0x31, 0x79, 0xa5, 0xec, 0x9e, 0xa8, 0x17, 0x40, 0xec, 0xa5, 0xb4, 0x82, 0xd1, 0x2e
                             ]
                         };
-                        ctx.tx_info.calldata_v1.calls[0].call_data_len = FieldElement::from(2u8);
-                        ctx.tx_info.calldata_v1.calls[0].call_data[0] = FieldElement {
+                        ctx.abstract_call.call_data.push(AbstractCallData::Felt(FieldElement {
                             value: [
                                 0x03, 0x5e, 0x4b, 0x54, 0x88, 0x1e, 0xdb, 0x79, 0xfb, 0x05, 0xac, 0x57, 0xf1, 0xd7, 0xb4, 0x5e, 
                                 0x1b, 0x34, 0xb7, 0x10, 0x19, 0x00, 0x7f, 0xc1, 0x7b, 0x35, 0x9e, 0xf8, 0x04, 0x0f, 0xdb, 0x14
                             ]
-                        };
-                        ctx.tx_info.calldata_v1.calls[0].call_data[1] = FieldElement {
+                        })).unwrap();
+                        ctx.abstract_call.call_data.push(AbstractCallData::Felt(FieldElement {
                             value: [
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE8
                             ]
-                        };       
+                        })).unwrap(); 
                     }
                     
                     let mut plugin_init_params = PluginInitParams {
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data: &ctx.abstract_call as *const AbstractCall as *const u8,
                             app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
                         }
@@ -349,7 +348,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data: &ctx.abstract_call as *const AbstractCall as *const u8,
                             app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
                         }
@@ -368,8 +367,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const Transaction as *const u8,
-                            app_data_len: 0xFF,
+                            app_data: core::ptr::null(),
+                            app_data_len: 0,
                             plugin_result: PluginResult::Err
                         },
                         num_ui_screens: 0
@@ -415,7 +414,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data: &ctx.tx_info as *const TransactionInfo as *const u8,
                             app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
                         },
@@ -437,7 +436,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const Transaction as *const u8,
+                            app_data: &ctx.tx_info as *const TransactionInfo as *const u8,
                             app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
                         },
