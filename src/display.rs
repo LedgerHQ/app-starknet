@@ -30,14 +30,14 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
     let mut m: &str;
 
     if n == 0 {
-        if u8::from(tx.calldata_v0.call_array_len) > 1 {
+        if tx.calldata.len() > 1 {
             ui::popup("Review Multicall Tx");
         }
         else {
             ui::popup("Review Tx");
         }
 
-        hex = utils::to_hex(&tx.sender_address.value[..]).unwrap();
+        hex = utils::to_hex(&tx.tx_info.sender_address.value[..]).unwrap();
         m = core::str::from_utf8(&hex).unwrap();
         if !ui::MessageValidator::new(
             &[&"Account:", &m[0..16],&m[16..32], &m[32..48], &m[48..64]],
@@ -48,7 +48,7 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
             return Ok(false);
         }
         
-        hex = utils::to_hex(&tx.max_fee.value[..]).unwrap();
+        hex = utils::to_hex(&tx.tx_info.max_fee.value[..]).unwrap();
         m = core::str::from_utf8(&hex).unwrap();
         if !ui::MessageValidator::new(
             &[&"MaxFee:", &m[0..16],&m[16..32], &m[32..48], &m[48..64]],
@@ -59,7 +59,7 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
             return Ok(false);
         }
 
-        hex = utils::to_hex(&tx.nonce.value[..]).unwrap();
+        hex = utils::to_hex(&tx.tx_info.nonce.value[..]).unwrap();
         m = core::str::from_utf8(&hex).unwrap();
         if !ui::MessageValidator::new(
             &[&"Nonce:", &m[0..16],&m[16..32], &m[32..48], &m[48..64]],
@@ -71,14 +71,14 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
         }
     }
 
-    if u8::from(tx.calldata_v0.call_array_len) > 1 {
+    if tx.calldata.len() > 1 {
         ui::popup("Review Tx Multicalldata:");
     }
     else {
         ui::popup("Review Tx Calldata:");
     }
 
-    hex = utils::to_hex(&tx.calldata_v0.calls[n].to.value[..]).unwrap();
+    hex = utils::to_hex(&tx.calldata[n].to.value[..]).unwrap();
     m = core::str::from_utf8(&hex).unwrap();
     if !ui::MessageValidator::new(
         &[&"Contract:", &m[0..16],&m[16..32], &m[32..48], &m[48..64]],
@@ -89,9 +89,9 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
         return Ok(false);
     }
 
-    m = core::str::from_utf8(&tx.calldata_v0.calls[n].entry_point[0..tx.calldata_v0.calls[n].entry_point_length as usize]).unwrap();
+    //m = core::str::from_utf8(&tx.calldata_v0.calls[n].entry_point[0..tx.calldata_v0.calls[n].entry_point_length as usize]).unwrap();
     if !ui::MessageValidator::new(
-        &[&"Selector:", &m[0..tx.calldata_v0.calls[n].entry_point_length as usize]],
+        &[&"Selector:", tx.calldata[n].method.as_str()],
         &[&"Confirm"],
         &[&"Cancel"],
     )
@@ -99,7 +99,7 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
         return Ok(false);
     }
 
-    let mut s_start: usize;
+    /*let mut s_start: usize;
     let mut s_end: usize;
     let mut s: &[u8];
     let data_len: u8 = tx.calldata_v0.calls[n].data_len.into();
@@ -117,6 +117,18 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
         .ask() {
             return Ok(false);
         }
+    }*/
+    for d in &tx.calldata[n].calldata {
+        hex = utils::to_hex(d.value.as_slice()).unwrap();
+        m = core::str::from_utf8(&hex).unwrap();
+        if !ui::MessageValidator::new(
+            &[&"Selector calldata:", &m[0..16],&m[16..32], &m[32..48], &m[48..64]],
+            &[&"Confirm"],
+            &[&"Cancel"],
+        )
+        .ask() {
+            return Ok(false);
+        }   
     }
     Ok(true)
 }

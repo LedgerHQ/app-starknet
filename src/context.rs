@@ -2,7 +2,7 @@ use heapless::{ Vec, FnvIndexMap };
 use nanos_sdk::starknet::{
     FieldElement,
     TransactionInfo,
-    CallV1, 
+    Call, 
     AbstractCall
 };
 
@@ -51,10 +51,10 @@ impl HashInfo {
 pub struct Ctx {
     pub req_type: RequestType,
     pub tx_info: TransactionInfo,
-    pub call: CallV1,
-    pub abstract_call: AbstractCall,
-    pub call_to_nref: Vec<u8, 256>,
-    pub cached_calls: FnvIndexMap<u8, AbstractCall, 16>,
+    pub call: Call,
+    pub a_call: AbstractCall,
+    pub call_to_nref: [u8; 256],
+    pub cached_calls: FnvIndexMap<u8, Call, 16>,
     pub hash_info: HashInfo,
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
@@ -67,9 +67,9 @@ impl Ctx {
     pub fn new() -> Self {
         Self {
             tx_info: TransactionInfo::new(),
-            call: CallV1::new(),
-            abstract_call: AbstractCall::new(),
-            call_to_nref: Vec::new(),
+            call: Call::new(),
+            a_call: AbstractCall::new(),
+            call_to_nref: [0u8; 256],
             cached_calls: FnvIndexMap::new(),
             hash_info: HashInfo::new(),
             req_type: RequestType::Unknown,
@@ -85,8 +85,8 @@ impl Ctx {
         self.req_type = RequestType::Unknown;
         self.tx_info.clear();
         self.call.clear();
-        self.abstract_call.clear();
-        self.call_to_nref.clear();
+        self.a_call.clear();
+        self.call_to_nref = [0u8; 256];
         self.cached_calls.clear();
         self.hash_info.clear();
         self.bip32_path.fill(0);

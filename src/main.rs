@@ -32,7 +32,8 @@ use nanos_sdk::{
 };
 use nanos_sdk::starknet::{
     FieldElement, 
-    TransactionInfo, AbstractCallData, AbstractCall
+    TransactionInfo, 
+    Call
 };
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
@@ -120,13 +121,16 @@ use nanos_sdk::plugin::{
     PluginInitParams,
     PluginFeedParams,
     PluginFinalizeParams,
-    PluginProvideDataParams,
     PluginQueryUiParams,
     PluginGetUiParams,
     PluginParams,
     plugin_call,
     PluginInteractionType,
     PluginResult
+};
+
+use nanos_sdk::starknet::{
+    AbstractCall
 };
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
@@ -274,23 +278,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.clear();
                     ctx.req_type = RequestType::TestPlugin;
 
-                    let mut plugin_check_params = PluginCheckParams {
-                        core_params: PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: core::ptr::null(),
-                            app_data_len: 0,
-                            plugin_result: PluginResult::Err
-                        }
-                    };
-                    let plugin_params = PluginParams::Check(&mut plugin_check_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Check);
-                    testing::debug_print("=========================> Plugin has been call\n");
-                }
-                1 => {
-
+                    // Hardcoded Tx 
                     {
                         ctx.tx_info.sender_address = FieldElement {
                             value: [
@@ -299,76 +287,143 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             ]
                         };
 
-                        ctx.abstract_call.to = FieldElement {
+                        ctx.call.to = FieldElement {
                             value: [
                                 0x06, 0x8f, 0x5c, 0x6a, 0x61, 0x78, 0x07, 0x68, 0x45, 0x5d, 0xe6, 0x90, 0x77, 0xe0, 0x7e, 0x89, 
                                 0x78, 0x78, 0x39, 0xbf, 0x81, 0x66, 0xde, 0xcf, 0xbf, 0x92, 0xb6, 0x45, 0x20, 0x9c, 0x0f, 0xb8
                             ]
                         };
-                        ctx.abstract_call.method = String::from("transfer");
-                        ctx.abstract_call.selector = FieldElement {
+                        ctx.call.method = String::from("transfer");
+                        ctx.call.selector = FieldElement {
                             value: [
                                 0x00, 0x83, 0xaf, 0xd3, 0xf4, 0xca, 0xed, 0xc6, 0xee, 0xbf, 0x44, 0x24, 0x6f, 0xe5, 0x4e, 0x38, 
                                 0xc9, 0x5e, 0x31, 0x79, 0xa5, 0xec, 0x9e, 0xa8, 0x17, 0x40, 0xec, 0xa5, 0xb4, 0x82, 0xd1, 0x2e
                             ]
                         };
-                        ctx.abstract_call.call_data.push(AbstractCallData::Felt(FieldElement {
+                        ctx.call.calldata.push(FieldElement {
                             value: [
                                 0x03, 0x5e, 0x4b, 0x54, 0x88, 0x1e, 0xdb, 0x79, 0xfb, 0x05, 0xac, 0x57, 0xf1, 0xd7, 0xb4, 0x5e, 
                                 0x1b, 0x34, 0xb7, 0x10, 0x19, 0x00, 0x7f, 0xc1, 0x7b, 0x35, 0x9e, 0xf8, 0x04, 0x0f, 0xdb, 0x14
                             ]
-                        })).unwrap();
-                        ctx.abstract_call.call_data.push(AbstractCallData::Felt(FieldElement {
+                        }).unwrap();
+                        ctx.call.calldata.push(FieldElement {
                             value: [
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE8
                             ]
-                        })).unwrap(); 
+                        }).unwrap(); 
                     }
+
+                    let mut plugin_bmc_params = PluginFeedParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            plugin_result: PluginResult::Err
+                        },
+                        data_in: [
+                            &ctx.call as *const Call as *const u8,
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null()
+                        ],
+                        data_out: [
+                            &mut ctx.a_call as *mut AbstractCall as *mut u8,
+                            &mut ctx.call_to_nref as *mut [u8; 256] as *mut u8,
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut()
+                        ]
+                    };
+                    let plugin_params = PluginParams::Feed(&mut plugin_bmc_params);
+
+                    testing::debug_print("call_to_nref[0] = 0x");
+                    let s = string::to_utf8::<2>(string::Value::U8(ctx.call_to_nref[0]));
+                    testing::debug_print(core::str::from_utf8(&s).unwrap());
+                    testing::debug_print("\n");
+
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-bmc\0", plugin_params, PluginInteractionType::Feed);
+                    testing::debug_print("=========================> Plugin has been called\n");
+
+                    testing::debug_print("call_to_nref[0] = 0x");
+                    let s = string::to_utf8::<2>(string::Value::U8(ctx.call_to_nref[0]));
+                    testing::debug_print(core::str::from_utf8(&s).unwrap());
+                    testing::debug_print("\n");
+
+                }
+                1 => {
+
+                    let mut plugin_check_params = PluginCheckParams {
+                        core_params: PluginCoreParams {
+                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                            plugin_result: PluginResult::Err
+                        },
+                        data_in: core::ptr::null(),
+                        data_in_len: 0
+                    };
+                    let plugin_params = PluginParams::Check(&mut plugin_check_params);
+
+                    testing::debug_print("=========================> Plugin call\n");
+                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Check);
+                    testing::debug_print("=========================> Plugin has been called\n");
+                }
+                2 => {
                     
                     let mut plugin_init_params = PluginInitParams {
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.abstract_call as *const AbstractCall as *const u8,
-                            app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
-                        }
+                        },
+                        data_in: &ctx.call as *const Call as *const u8,
+                        data_in_len: 0xFF
                     };
 
                     let plugin_params = PluginParams::Init(&mut plugin_init_params);
 
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Init);
-                    testing::debug_print("=========================> Plugin has been call\n");
+                    testing::debug_print("=========================> Plugin has been called\n");
                 }
-                2 => {
+                3 => {
 
                     let mut plugin_feed_params = PluginFeedParams {
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.abstract_call as *const AbstractCall as *const u8,
-                            app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
-                        }
+                        },
+                        data_in: [
+                            &ctx.call as *const Call as *const u8,
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null(),
+                            core::ptr::null()
+                        ],
+                        data_out: [
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut(),
+                            core::ptr::null_mut()
+                        ]
                     };
 
                     let plugin_params = PluginParams::Feed(&mut plugin_feed_params);
 
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Feed);
-                    testing::debug_print("=========================> Plugin has been call\n");
+                    testing::debug_print("=========================> Plugin has been called\n");
 
                 }
-                3 => {
+                4 => {
 
                     let mut plugin_finalize_params = PluginFinalizeParams {
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: core::ptr::null(),
-                            app_data_len: 0,
                             plugin_result: PluginResult::Err
                         },
                         num_ui_screens: 0
@@ -378,7 +433,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Finalize);
-                    testing::debug_print("=========================> Plugin has been call\n");
+                    testing::debug_print("=========================> Plugin has been called\n");
 
                     testing::debug_print("Number of UI screens: ");
                     let s = string::to_utf8::<2>(string::Value::U8(plugin_finalize_params.num_ui_screens));
@@ -387,7 +442,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                     ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
                 }
-                4 => {
+                /*5 => {
 
                     let mut plugin_providedata_params = PluginProvideDataParams {
                         core_params: PluginCoreParams {
@@ -405,17 +460,15 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::ProvideData);
-                    testing::debug_print("=========================> Plugin has been call\n");
+                    testing::debug_print("=========================> Plugin has been called\n");
 
-                }
-                5 => {
+                }*/
+                6 => {
 
                     let mut plugin_queryui_params = PluginQueryUiParams {
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const TransactionInfo as *const u8,
-                            app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
                         },
                         title: [0u8; 32],
@@ -426,18 +479,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::QueryUi);
-                    testing::debug_print("=========================> Plugin has been call\n");
+                    testing::debug_print("=========================> Plugin has been called\n");
 
                     ui::popup(core::str::from_utf8(&plugin_queryui_params.title[..plugin_queryui_params.title_len]).unwrap());
                 }
-                6 => {
+                7 => {
 
                     let mut plugin_getui_params = PluginGetUiParams {
                         core_params: PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: &ctx.tx_info as *const TransactionInfo as *const u8,
-                            app_data_len: 0xFF,
                             plugin_result: PluginResult::Err
                         },
                         ui_screen_idx: 0,
@@ -454,7 +505,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                         testing::debug_print("=========================> Plugin call\n");
                         plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::GetUi);
-                        testing::debug_print("=========================> Plugin has been call\n");
+                        testing::debug_print("=========================> Plugin has been called\n");
 
                         let title = core::str::from_utf8(&plugin_getui_params.title[..plugin_getui_params.title_len]).unwrap();
 
