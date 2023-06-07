@@ -1,4 +1,4 @@
-use heapless::{ Vec, FnvIndexMap };
+use heapless::{ Vec, String };
 use nanos_sdk::starknet::{
     FieldElement,
     TransactionInfo,
@@ -53,8 +53,8 @@ pub struct Ctx {
     pub tx_info: TransactionInfo,
     pub call: Call,
     pub a_call: AbstractCall,
-    pub call_to_nref: [u8; 256],
-    pub cached_calls: FnvIndexMap<u8, Call, 16>,
+    pub call_to_nref: [u8; 16],
+    pub call_to_string: Option<String<32>>,
     pub hash_info: HashInfo,
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
@@ -69,8 +69,8 @@ impl Ctx {
             tx_info: TransactionInfo::new(),
             call: Call::new(),
             a_call: AbstractCall::new(),
-            call_to_nref: [0u8; 256],
-            cached_calls: FnvIndexMap::new(),
+            call_to_nref: [0u8; 16],
+            call_to_string: Option::None,
             hash_info: HashInfo::new(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
@@ -86,8 +86,8 @@ impl Ctx {
         self.tx_info.clear();
         self.call.clear();
         self.a_call.clear();
-        self.call_to_nref = [0u8; 256];
-        self.cached_calls.clear();
+        self.call_to_nref = [0u8; 16];
+        self.call_to_string = Option::None;
         self.hash_info.clear();
         self.bip32_path.fill(0);
         self.bip32_path_len = 0;

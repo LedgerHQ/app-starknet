@@ -22,7 +22,7 @@ use context::{Ctx, RequestType};
     set_tx_calldata
 };*/
 
-use heapless::String;
+use heapless::{Vec, String};
 use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
@@ -130,7 +130,8 @@ use nanos_sdk::plugin::{
 };
 
 use nanos_sdk::starknet::{
-    AbstractCall
+    AbstractCall,
+    AbstractCallData
 };
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
@@ -300,12 +301,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 0xc9, 0x5e, 0x31, 0x79, 0xa5, 0xec, 0x9e, 0xa8, 0x17, 0x40, 0xec, 0xa5, 0xb4, 0x82, 0xd1, 0x2e
                             ]
                         };
+                        ctx.call.calldata.push(FieldElement::ZERO).unwrap();
                         ctx.call.calldata.push(FieldElement {
                             value: [
                                 0x03, 0x5e, 0x4b, 0x54, 0x88, 0x1e, 0xdb, 0x79, 0xfb, 0x05, 0xac, 0x57, 0xf1, 0xd7, 0xb4, 0x5e, 
                                 0x1b, 0x34, 0xb7, 0x10, 0x19, 0x00, 0x7f, 0xc1, 0x7b, 0x35, 0x9e, 0xf8, 0x04, 0x0f, 0xdb, 0x14
                             ]
                         }).unwrap();
+                        ctx.call.calldata.push(FieldElement::ZERO).unwrap();
                         ctx.call.calldata.push(FieldElement {
                             value: [
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
@@ -315,53 +318,24 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     }
 
                     let mut plugin_bmc_params = PluginFeedParams {
-                        core_params: PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
-                        data_in: [
-                            &ctx.call as *const Call as *const u8,
-                            core::ptr::null(),
-                            core::ptr::null(),
-                            core::ptr::null(),
-                            core::ptr::null()
-                        ],
-                        data_out: [
-                            &mut ctx.a_call as *mut AbstractCall as *mut u8,
-                            &mut ctx.call_to_nref as *mut [u8; 256] as *mut u8,
-                            core::ptr::null_mut(),
-                            core::ptr::null_mut(),
-                            core::ptr::null_mut()
-                        ]
+                        core_params: Option::None,
+                        data_in: &ctx.call as *const Call as *const u8,
+                        data_out: &mut ctx.a_call as *mut AbstractCall as *mut u8,
+                        result: PluginResult::Err
                     };
                     let plugin_params = PluginParams::Feed(&mut plugin_bmc_params);
-
-                    testing::debug_print("call_to_nref[0] = 0x");
-                    let s = string::to_utf8::<2>(string::Value::U8(ctx.call_to_nref[0]));
-                    testing::debug_print(core::str::from_utf8(&s).unwrap());
-                    testing::debug_print("\n");
 
                     testing::debug_print("=========================> Plugin call\n");
                     plugin_call("plugin-bmc\0", plugin_params, PluginInteractionType::Feed);
                     testing::debug_print("=========================> Plugin has been called\n");
-
-                    testing::debug_print("call_to_nref[0] = 0x");
-                    let s = string::to_utf8::<2>(string::Value::U8(ctx.call_to_nref[0]));
-                    testing::debug_print(core::str::from_utf8(&s).unwrap());
-                    testing::debug_print("\n");
-
                 }
                 1 => {
 
                     let mut plugin_check_params = PluginCheckParams {
-                        core_params: PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
+                        core_params: Option::None,
                         data_in: core::ptr::null(),
-                        data_in_len: 0
+                        data_in_len: 0,
+                        result: PluginResult::Err
                     };
                     let plugin_params = PluginParams::Check(&mut plugin_check_params);
 
@@ -372,13 +346,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 2 => {
                     
                     let mut plugin_init_params = PluginInitParams {
-                        core_params: PluginCoreParams {
+                        core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
-                        data_in: &ctx.call as *const Call as *const u8,
-                        data_in_len: 0xFF
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        }),
+                        data_in: &ctx.a_call as *const AbstractCall as *const u8,
+                        data_in_len: 0xFF,
+                        result: PluginResult::Err
                     };
 
                     let plugin_params = PluginParams::Init(&mut plugin_init_params);
@@ -390,25 +364,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 3 => {
 
                     let mut plugin_feed_params = PluginFeedParams {
-                        core_params: PluginCoreParams {
+                        core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
-                        data_in: [
-                            &ctx.call as *const Call as *const u8,
-                            core::ptr::null(),
-                            core::ptr::null(),
-                            core::ptr::null(),
-                            core::ptr::null()
-                        ],
-                        data_out: [
-                            core::ptr::null_mut(),
-                            core::ptr::null_mut(),
-                            core::ptr::null_mut(),
-                            core::ptr::null_mut(),
-                            core::ptr::null_mut()
-                        ]
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        }),
+                        data_in: &ctx.a_call.calldata as *const Vec<AbstractCallData, 8> as *const u8,
+                        data_out: core::ptr::null_mut(),
+                        result: PluginResult::Err
                     };
 
                     let plugin_params = PluginParams::Feed(&mut plugin_feed_params);
@@ -421,12 +383,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 4 => {
 
                     let mut plugin_finalize_params = PluginFinalizeParams {
-                        core_params: PluginCoreParams {
+                        core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
-                        num_ui_screens: 0
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        }),
+                        num_ui_screens: 0,
+                        result: PluginResult::Err
                     };
 
                     let plugin_params = PluginParams::Finalize(&mut plugin_finalize_params);
@@ -466,13 +428,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 6 => {
 
                     let mut plugin_queryui_params = PluginQueryUiParams {
-                        core_params: PluginCoreParams {
+                        core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
+                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        }),
                         title: [0u8; 32],
-                        title_len: 0
+                        title_len: 0,
+                        result: PluginResult::Err
                     };
 
                     let plugin_params = PluginParams::QueryUi(&mut plugin_queryui_params);
@@ -486,16 +448,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 7 => {
 
                     let mut plugin_getui_params = PluginGetUiParams {
-                        core_params: PluginCoreParams {
+                        core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            plugin_result: PluginResult::Err
-                        },
+                        }),
                         ui_screen_idx: 0,
                         title: [0u8; 32],
                         title_len: 0,
                         msg: [0u8; 64],
                         msg_len: 0,
+                        result: PluginResult::Err
                      };
 
                     for i in 0..ctx.num_ui_screens {
