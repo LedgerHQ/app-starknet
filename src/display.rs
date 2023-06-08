@@ -91,7 +91,7 @@ pub fn sign_tx_ui(tx: &Transaction, n: usize, calldata: &[u8]) -> Result<bool, (
 
     //m = core::str::from_utf8(&tx.calldata_v0.calls[n].entry_point[0..tx.calldata_v0.calls[n].entry_point_length as usize]).unwrap();
     if !ui::MessageValidator::new(
-        &[&"Selector:", tx.calldata[n].method.as_str()],
+        &[&"Selector:", core::str::from_utf8(&tx.calldata[n].method.arr[..]).unwrap()],
         &[&"Confirm"],
         &[&"Cancel"],
     )

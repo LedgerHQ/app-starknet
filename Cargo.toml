@@ -9,7 +9,6 @@ authors = ["yogh333"]
 #nanos_ui = { git = "https://github.com/yogh333/ledger-nanos-ui.git", branch="feat/use_fork_nanos_sdk" }
 nanos_sdk = { path = "../ledger-nanos-sdk" }
 nanos_ui = { path = "../ledger-nanos-ui" }
-heapless = "0.7.16"
 
 [features]
 default = [ "speculos" ]

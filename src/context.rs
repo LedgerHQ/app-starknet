@@ -1,10 +1,11 @@
-use heapless::{ Vec, String };
 use nanos_sdk::starknet::{
     FieldElement,
     TransactionInfo,
     Call, 
     AbstractCall
 };
+
+use nanos_sdk::string::String;
 
 pub enum RequestType {
     Unknown,
@@ -54,7 +55,7 @@ pub struct Ctx {
     pub call: Call,
     pub a_call: AbstractCall,
     pub call_to_nref: [u8; 16],
-    pub call_to_string: Option<String<32>>,
+    pub call_to_string: [String<32>; 16],
     pub hash_info: HashInfo,
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
@@ -70,7 +71,7 @@ impl Ctx {
             call: Call::new(),
             a_call: AbstractCall::new(),
             call_to_nref: [0u8; 16],
-            call_to_string: Option::None,
+            call_to_string: [String::<32>::new(); 16],
             hash_info: HashInfo::new(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
@@ -87,7 +88,7 @@ impl Ctx {
         self.call.clear();
         self.a_call.clear();
         self.call_to_nref = [0u8; 16];
-        self.call_to_string = Option::None;
+        self.call_to_string = [String::<32>::new(); 16];
         self.hash_info.clear();
         self.bip32_path.fill(0);
         self.bip32_path_len = 0;

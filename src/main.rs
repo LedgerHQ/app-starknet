@@ -22,7 +22,6 @@ use context::{Ctx, RequestType};
     set_tx_calldata
 };*/
 
-use heapless::{Vec, String};
 use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
@@ -294,27 +293,31 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 0x78, 0x78, 0x39, 0xbf, 0x81, 0x66, 0xde, 0xcf, 0xbf, 0x92, 0xb6, 0x45, 0x20, 0x9c, 0x0f, 0xb8
                             ]
                         };
-                        ctx.call.method = String::from("transfer");
+                        ctx.call.method = string::String::try_from("transfer").unwrap();
                         ctx.call.selector = FieldElement {
                             value: [
                                 0x00, 0x83, 0xaf, 0xd3, 0xf4, 0xca, 0xed, 0xc6, 0xee, 0xbf, 0x44, 0x24, 0x6f, 0xe5, 0x4e, 0x38, 
                                 0xc9, 0x5e, 0x31, 0x79, 0xa5, 0xec, 0x9e, 0xa8, 0x17, 0x40, 0xec, 0xa5, 0xb4, 0x82, 0xd1, 0x2e
                             ]
                         };
-                        ctx.call.calldata.push(FieldElement::ZERO).unwrap();
-                        ctx.call.calldata.push(FieldElement {
+                        ctx.call.calldata[0] = FieldElement::TWO;
+                        ctx.call.calldata[1] = FieldElement::ZERO;
+                        ctx.call.calldata[2] = FieldElement::ZERO;
+                        
+                        /*ctx.call.calldata.push(FieldElement {
                             value: [
                                 0x03, 0x5e, 0x4b, 0x54, 0x88, 0x1e, 0xdb, 0x79, 0xfb, 0x05, 0xac, 0x57, 0xf1, 0xd7, 0xb4, 0x5e, 
                                 0x1b, 0x34, 0xb7, 0x10, 0x19, 0x00, 0x7f, 0xc1, 0x7b, 0x35, 0x9e, 0xf8, 0x04, 0x0f, 0xdb, 0x14
                             ]
-                        }).unwrap();
-                        ctx.call.calldata.push(FieldElement::ZERO).unwrap();
-                        ctx.call.calldata.push(FieldElement {
+                        }).unwrap();*/
+                        ctx.call.calldata[3] = FieldElement::ZERO;
+                        ctx.call.calldata[4] = FieldElement {
                             value: [
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE8
                             ]
-                        }).unwrap(); 
+                        }; 
+                        ctx.call.calldata_len = 5;
                     }
 
                     let mut plugin_bmc_params = PluginFeedParams {
@@ -334,7 +337,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     let mut plugin_check_params = PluginCheckParams {
                         core_params: Option::None,
                         data_in: core::ptr::null(),
-                        data_in_len: 0,
+                        data_out: core::ptr::null_mut(),
                         result: PluginResult::Err
                     };
                     let plugin_params = PluginParams::Check(&mut plugin_check_params);
@@ -351,7 +354,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
                         }),
                         data_in: &ctx.a_call as *const AbstractCall as *const u8,
-                        data_in_len: 0xFF,
+                        data_out: core::ptr::null_mut(),
                         result: PluginResult::Err
                     };
 
@@ -363,12 +366,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 3 => {
 
+                    ctx.call_to_string[0] = string::String::try_from("grom.stark").unwrap();
+
                     let mut plugin_feed_params = PluginFeedParams {
                         core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
                         }),
-                        data_in: &ctx.a_call.calldata as *const Vec<AbstractCallData, 8> as *const u8,
+                        data_in: &(&ctx.a_call.calldata, &ctx.call_to_string) as *const (&[AbstractCallData; 8], &[string::String<32>; 16]) as *const u8,
                         data_out: core::ptr::null_mut(),
                         result: PluginResult::Err
                     };
@@ -398,8 +403,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     testing::debug_print("=========================> Plugin has been called\n");
 
                     testing::debug_print("Number of UI screens: ");
-                    let s = string::to_utf8::<2>(string::Value::U8(plugin_finalize_params.num_ui_screens));
-                    testing::debug_print(core::str::from_utf8(&s).unwrap());
+                    let s: string::String::<2> = plugin_finalize_params.num_ui_screens.into();
+                    testing::debug_print(core::str::from_utf8(&s.arr[..]).unwrap());
                     testing::debug_print("\n");
 
                     ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
@@ -470,6 +475,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         testing::debug_print("=========================> Plugin has been called\n");
 
                         let title = core::str::from_utf8(&plugin_getui_params.title[..plugin_getui_params.title_len]).unwrap();
+
+                        testing::debug_print(title);
+                        testing::debug_print("\n");
+                        testing::debug_print(core::str::from_utf8(&plugin_getui_params.msg[..]).unwrap());
+                        testing::debug_print("\n");
 
                         match plugin_getui_params.msg_len {
                             0..=16 => {
