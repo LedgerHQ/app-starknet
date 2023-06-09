@@ -393,6 +393,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
                         }),
                         num_ui_screens: 0,
+                        data_to_display: string::String::<64>::new(),
                         result: PluginResult::Err
                     };
 
@@ -409,36 +410,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
                     ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
                 }
-                /*5 => {
-
-                    let mut plugin_providedata_params = PluginProvideDataParams {
-                        core_params: PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                            app_data: core::ptr::null(),
-                            app_data_len: 0,
-                            plugin_result: PluginResult::Err
-                        },
-                        data: [0xFFu8; 128],
-                        data_len: 15
-                    };
-                    
-                    let plugin_params = PluginParams::ProvideData(&mut plugin_providedata_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::ProvideData);
-                    testing::debug_print("=========================> Plugin has been called\n");
-
-                }*/
                 6 => {
-
                     let mut plugin_queryui_params = PluginQueryUiParams {
                         core_params: Option::Some(PluginCoreParams {
                             plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
                         }),
-                        title: [0u8; 32],
-                        title_len: 0,
+                        title: string::String::<32>::new(),
                         result: PluginResult::Err
                     };
 
@@ -448,7 +426,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::QueryUi);
                     testing::debug_print("=========================> Plugin has been called\n");
 
-                    ui::popup(core::str::from_utf8(&plugin_queryui_params.title[..plugin_queryui_params.title_len]).unwrap());
+                    ui::popup(core::str::from_utf8(&plugin_queryui_params.title.arr[..plugin_queryui_params.title.len]).unwrap());
                 }
                 7 => {
 
@@ -458,10 +436,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
                         }),
                         ui_screen_idx: 0,
-                        title: [0u8; 32],
-                        title_len: 0,
-                        msg: [0u8; 64],
-                        msg_len: 0,
+                        title: string::String::<32>::new(),
+                        msg: string::String::<64>::new(),
                         result: PluginResult::Err
                      };
 
@@ -474,16 +450,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::GetUi);
                         testing::debug_print("=========================> Plugin has been called\n");
 
-                        let title = core::str::from_utf8(&plugin_getui_params.title[..plugin_getui_params.title_len]).unwrap();
+                        let title = core::str::from_utf8(&plugin_getui_params.title.arr[..plugin_getui_params.title.len]).unwrap();
 
                         testing::debug_print(title);
                         testing::debug_print("\n");
-                        testing::debug_print(core::str::from_utf8(&plugin_getui_params.msg[..]).unwrap());
+                        testing::debug_print(core::str::from_utf8(&plugin_getui_params.msg.arr[..plugin_getui_params.msg.len]).unwrap());
                         testing::debug_print("\n");
 
-                        match plugin_getui_params.msg_len {
+                        match plugin_getui_params.msg.len {
                             0..=16 => {
-                                let msg = core::str::from_utf8(&plugin_getui_params.msg[..plugin_getui_params.msg_len]).unwrap();
+                                let msg = core::str::from_utf8(&plugin_getui_params.msg.arr[..plugin_getui_params.msg.len]).unwrap();
                                 ui::MessageValidator::new(
                                     &[title, msg],
                                     &[&"Confirm"],
@@ -492,8 +468,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 .ask();
                             },
                             17..=32 => {
-                                let msg0 = core::str::from_utf8(&plugin_getui_params.msg[..16]).unwrap();
-                                let msg1 = core::str::from_utf8(&plugin_getui_params.msg[17..plugin_getui_params.msg_len]).unwrap();
+                                let msg0 = core::str::from_utf8(&plugin_getui_params.msg.arr[..16]).unwrap();
+                                let msg1 = core::str::from_utf8(&plugin_getui_params.msg.arr[17..plugin_getui_params.msg.len]).unwrap();
                                 ui::MessageValidator::new(
                                     &[title, msg0, msg1],
                                     &[&"Confirm"],
@@ -502,10 +478,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 .ask();
                             }
                             33..=64 => {
-                                let msg0 = core::str::from_utf8(&plugin_getui_params.msg[..16]).unwrap();
-                                let msg1 = core::str::from_utf8(&plugin_getui_params.msg[17..32]).unwrap();
-                                let msg2 = core::str::from_utf8(&plugin_getui_params.msg[32..48]).unwrap();
-                                let msg3 = core::str::from_utf8(&plugin_getui_params.msg[48..plugin_getui_params.msg_len]).unwrap();
+                                let msg0 = core::str::from_utf8(&plugin_getui_params.msg.arr[..16]).unwrap();
+                                let msg1 = core::str::from_utf8(&plugin_getui_params.msg.arr[17..32]).unwrap();
+                                let msg2 = core::str::from_utf8(&plugin_getui_params.msg.arr[32..48]).unwrap();
+                                let msg3 = core::str::from_utf8(&plugin_getui_params.msg.arr[48..plugin_getui_params.msg.len]).unwrap();
                                 ui::MessageValidator::new(
                                     &[title, msg0, msg1, msg2, msg3],
                                     &[&"Confirm"],
