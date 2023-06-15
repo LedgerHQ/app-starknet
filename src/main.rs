@@ -285,7 +285,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.req_type = RequestType::TestPlugin;
                     set_derivation_path(&mut data, ctx)?;
                 }
-                1 => {/* tx info */}
+                1 => {
+                    /* tx info */
+                }
                 2 => {
                     let call_input: CallInput = p2.into();
                     ctx.is_first_loop = true;

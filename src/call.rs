@@ -21,6 +21,9 @@ use nanos_ui::ui;
 
 use crate::context::Ctx;
 
+mod plugin;
+use plugin::*;
+
 pub enum CallInput {
     Full = 0x00,
     PartialStart = 0x01,
@@ -80,11 +83,7 @@ pub fn handle_call_apdu(data: &[u8], ctx: &mut Ctx, step: CallInput) -> Result<(
                         data_out: core::ptr::null_mut(),
                         result: PluginResult::Err
                     };
-                    let plugin_params = PluginParams::Check(&mut params);
-
-                    debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-bmc\0", plugin_params, PluginInteractionType::Check);
-                    debug_print("=========================> Plugin has been called\n");
+                    plugin_check(ctx, "plugin-bmc\0", &mut params);
                 }
                 ctx.is_bettermulticall = true;
             }
@@ -110,11 +109,7 @@ pub fn handle_call_apdu(data: &[u8], ctx: &mut Ctx, step: CallInput) -> Result<(
                         data_out: core::ptr::null_mut(),
                         result: PluginResult::Err
                     };
-                    let plugin_params = PluginParams::Check(&mut params);
-
-                    debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-bmc\0", plugin_params, PluginInteractionType::Check);
-                    debug_print("=========================> Plugin has been called\n");
+                    plugin_check(ctx, "plugin-bmc\0", &mut params);
                 }
                 ctx.is_bettermulticall = true;
             }
@@ -173,11 +168,7 @@ fn process_call(ctx: &mut Ctx) {
                     data_out: &mut ctx.a_call as *mut AbstractCall as *mut u8,
                     result: PluginResult::Err
                 };
-                let plugin_params = PluginParams::Feed(&mut params);
-    
-                debug_print("=========================> Plugin call\n");
-                plugin_call("plugin-bmc\0", plugin_params, PluginInteractionType::Feed);
-                debug_print("=========================> Plugin has been called\n");
+                plugin_feed(ctx, "plugin-bmc\0", &mut params);
             }
 
             match ctx.is_first_loop {
@@ -199,36 +190,25 @@ fn process_call(ctx: &mut Ctx) {
         false => {
             debug_print("Multicall!\n");
             {
-                //ctx.a_call.copy_from(&ctx.call);
-                ctx.a_call.to.copy_from(&ctx.call.to);
-                ctx.a_call.method.copy_from(&ctx.call.method);
-                ctx.a_call.selector.copy_from(&ctx.call.selector);
-                for i in 0..ctx.call.calldata_len {
-                    let mut fe = FieldElement::new();
-                    fe.copy_from(&ctx.call.calldata[i]);
-                    ctx.a_call.calldata[i] = AbstractCallData::Felt(fe);
-                }
+                ctx.a_call.copy_from(&ctx.call);
             }
             debug_print("Call to AbstractCall trivial conversion done!\n");
             /* Call Plugin */
             {
                 /* FIND */
+                let plugin_name = "plugin-erc20\0";
 
                 /* CHECK */
-                let mut plugin_check_params = PluginCheckParams {
+                let mut params = PluginCheckParams {
                     core_params: Option::None,
                     data_in: core::ptr::null(),
                     data_out: core::ptr::null_mut(),
                     result: PluginResult::Err
                 };
-                let plugin_params = PluginParams::Check(&mut plugin_check_params);
-
-                debug_print("=========================> Plugin call\n");
-                plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Check);
-                debug_print("=========================> Plugin has been called\n");
+                plugin_check(ctx, plugin_name, &mut params);
 
                 /* INIT */
-                let mut plugin_init_params = PluginInitParams {
+                let mut params = PluginInitParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                         plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
@@ -237,17 +217,10 @@ fn process_call(ctx: &mut Ctx) {
                     data_out: core::ptr::null_mut(),
                     result: PluginResult::Err
                 };
-
-                let plugin_params = PluginParams::Init(&mut plugin_init_params);
-
-                debug_print("=========================> Plugin call\n");
-                plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Init);
-                debug_print("=========================> Plugin has been called\n");
+                plugin_init(ctx, plugin_name, &mut params);
 
                 /* FEED */
-                ctx.call_to_string[0] = string::String::try_from("grom.stark").unwrap();
-
-                let mut plugin_feed_params = PluginFeedParams {
+                let mut params = PluginFeedParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                         plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
@@ -256,15 +229,10 @@ fn process_call(ctx: &mut Ctx) {
                     data_out: core::ptr::null_mut(),
                     result: PluginResult::Err
                 };
-
-                let plugin_params = PluginParams::Feed(&mut plugin_feed_params);
-
-                debug_print("=========================> Plugin call\n");
-                plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Feed);
-                debug_print("=========================> Plugin has been called\n");
+                plugin_feed(ctx, plugin_name, &mut params);
 
                 /* FINALIZE */
-                let mut plugin_finalize_params = PluginFinalizeParams {
+                let mut params = PluginFinalizeParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                         plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
@@ -273,22 +241,12 @@ fn process_call(ctx: &mut Ctx) {
                     data_to_display: string::String::<64>::new(),
                     result: PluginResult::Err
                 };
+                plugin_finalize(ctx, plugin_name, &mut params);
 
-                let plugin_params = PluginParams::Finalize(&mut plugin_finalize_params);
-
-                debug_print("=========================> Plugin call\n");
-                plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Finalize);
-                debug_print("=========================> Plugin has been called\n");
-
-                debug_print("Number of UI screens: ");
-                let s: string::String::<2> = plugin_finalize_params.num_ui_screens.into();
-                debug_print(s.as_str());
-                debug_print("\n");
-
-                ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
+                ctx.num_ui_screens = params.num_ui_screens;
 
                 /* QUERY UI */
-                let mut plugin_queryui_params = PluginQueryUiParams {
+                let mut params = PluginQueryUiParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                         plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
@@ -296,17 +254,12 @@ fn process_call(ctx: &mut Ctx) {
                     title: string::String::<32>::new(),
                     result: PluginResult::Err
                 };
+                plugin_queryui(ctx, plugin_name, &mut params);
 
-                let plugin_params = PluginParams::QueryUi(&mut plugin_queryui_params);
-
-                debug_print("=========================> Plugin call\n");
-                plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::QueryUi);
-                debug_print("=========================> Plugin has been called\n");
-
-                ui::popup(plugin_queryui_params.title.as_str());
+                ui::popup(params.title.as_str());
 
                 /* GET UI */
-                let mut plugin_getui_params = PluginGetUiParams {
+                let mut params = PluginGetUiParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
                         plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
@@ -316,36 +269,29 @@ fn process_call(ctx: &mut Ctx) {
                     msg: string::String::<64>::new(),
                     result: PluginResult::Err
                  };
+                 for i in 0..ctx.num_ui_screens {
+                    
+                    params.ui_screen_idx = i as usize;
+                    plugin_getui(ctx, plugin_name, &mut params);
 
-                for i in 0..ctx.num_ui_screens {
-
-                    plugin_getui_params.ui_screen_idx = i as usize;
-                    let plugin_params = PluginParams::GetUi(&mut plugin_getui_params);
-
-                    debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::GetUi);
-                    debug_print("=========================> Plugin has been called\n");
-
-                    let title = plugin_getui_params.title.as_str();
+                    let title = params.title.as_str();
                     debug_print(title);
                     debug_print("\n");
-                    debug_print(plugin_getui_params.msg.as_str());
+                    debug_print(params.msg.as_str());
                     debug_print("\n");
 
-                    match plugin_getui_params.msg.len {
+                    match params.msg.len {
                         0..=16 => {
-                            let msg = plugin_getui_params.msg.as_str();
+                            let msg = params.msg.as_str();
                             ui::MessageValidator::new(
                                 &[title, msg],
                                 &[&"Confirm"],
-                                &[&"Cancel"],
-                            )
-                            .ask();
+                                &[&"Cancel"]).ask();
                         },
                         17..=32 => {
-                            let s = plugin_getui_params.msg.as_str();
+                            let s = params.msg.as_str();
                             let msg0 = &s[..16];
-                            let msg1 = &s[16..plugin_getui_params.msg.len];
+                            let msg1 = &s[16..params.msg.len];
                             ui::MessageValidator::new(
                                 &[title, msg0, msg1],
                                 &[&"Confirm"],
@@ -354,11 +300,11 @@ fn process_call(ctx: &mut Ctx) {
                             .ask();
                         }
                         33..=64 => {
-                            let s = plugin_getui_params.msg.as_str();
+                            let s = params.msg.as_str();
                             let msg0 = &s[..16];
                             let msg1 = &s[16..32];
                             let msg2 = &s[32..48];
-                            let msg3 = &s[48..plugin_getui_params.msg.len];
+                            let msg3 = &s[48..params.msg.len];
                             ui::MessageValidator::new(
                                 &[title, msg0, msg1, msg2, msg3],
                                 &[&"Confirm"],
@@ -368,31 +314,10 @@ fn process_call(ctx: &mut Ctx) {
                         }
                         _ => {
                         }
+
                     }
                 }
             }
-        }
-    }
-
-    if !ctx.is_first_loop {
-
-        debug_print("to: ");
-        debug_print(string::String::<64>::from(&ctx.a_call.to).as_str());
-        debug_print("\n");
-
-        debug_print("selector: ");
-        debug_print(string::String::<64>::from(&ctx.a_call.selector).as_str());
-        debug_print("\n");
-        
-        for i in 0..ctx.a_call.calldata_len {
-            debug_print("calldata: ");
-            match ctx.a_call.calldata[i] {
-                AbstractCallData::Felt(f) => {
-                    debug_print(string::String::<64>::from(&f).as_str());
-                }
-                _ => debug_print("Ref or CallRef")
-            }
-            debug_print("\n");
         }
     }
 }
