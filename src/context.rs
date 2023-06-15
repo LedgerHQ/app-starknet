@@ -1,4 +1,4 @@
-use nanos_sdk::starknet::{
+use starknet_sdk::types::{
     FieldElement,
     TransactionInfo,
     Call, 
@@ -52,8 +52,11 @@ impl HashInfo {
 pub struct Ctx {
     pub req_type: RequestType,
     pub tx_info: TransactionInfo,
+    pub is_bettermulticall: bool,
+    pub is_first_loop: bool,
     pub call: Call,
     pub a_call: AbstractCall,
+    pub nb_calls_rcv: usize,
     pub call_to_nref: [u8; 16],
     pub call_to_string: [String<32>; 16],
     pub hash_info: HashInfo,
@@ -68,8 +71,11 @@ impl Ctx {
     pub fn new() -> Self {
         Self {
             tx_info: TransactionInfo::new(),
+            is_bettermulticall: false,
+            is_first_loop: false,
             call: Call::new(),
             a_call: AbstractCall::new(),
+            nb_calls_rcv: 0,
             call_to_nref: [0u8; 16],
             call_to_string: [String::<32>::new(); 16],
             hash_info: HashInfo::new(),
@@ -85,8 +91,11 @@ impl Ctx {
     pub fn clear(&mut self) {
         self.req_type = RequestType::Unknown;
         self.tx_info.clear();
+        self.is_bettermulticall = false;
+        self.is_first_loop = false;
         self.call.clear();
         self.a_call.clear();
+        self.nb_calls_rcv = 0;
         self.call_to_nref = [0u8; 16];
         self.call_to_string = [String::<32>::new(); 16];
         self.hash_info.clear();

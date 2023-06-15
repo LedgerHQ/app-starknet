@@ -1,8 +1,8 @@
 use nanos_ui::ui;
 use nanos_sdk::io;
-use nanos_sdk::starknet::Transaction;
+use starknet_sdk::types::Transaction;
 
-use crate::{ utils };
+use crate::utils;
 
 pub const WELCOME_SCREEN: &str = "S T A R K N E T";
 

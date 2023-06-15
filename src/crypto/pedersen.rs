@@ -24,7 +24,7 @@ use nanos_sdk::bindings::{
     cx_bn_tst_bit
 };
 
-use nanos_sdk::starknet::FieldElement;
+use starknet_sdk::types::FieldElement;
 
 /* EC points */
 struct ECPoint {

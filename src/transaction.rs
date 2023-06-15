@@ -8,7 +8,7 @@ use crate::crypto::pedersen::{
     pedersen_shift
 };
 
-use nanos_sdk::starknet::{
+use starknet-sdk::types::{
     FieldElement
 };
 

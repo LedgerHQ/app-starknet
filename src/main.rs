@@ -5,6 +5,11 @@ mod crypto;
 mod utils;
 mod context;
 mod display;
+mod call;
+use call::{
+    handle_call_apdu, 
+    CallInput
+};
 //mod transaction;
 
 use crypto::{
@@ -29,7 +34,7 @@ use nanos_sdk::{
     string,
     testing
 };
-use nanos_sdk::starknet::{
+use starknet_sdk::types::{
     FieldElement, 
     TransactionInfo, 
     Call
@@ -128,7 +133,7 @@ use nanos_sdk::plugin::{
     PluginResult
 };
 
-use nanos_sdk::starknet::{
+use starknet_sdk::types::{
     AbstractCall,
     AbstractCallData
 };
@@ -271,230 +276,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         Ins::TestPlugin => {
 
             let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
+            let mut data = comm.get_data()?;
 
             match p1 {
                 0 => {
-
                     ctx.clear();
                     ctx.req_type = RequestType::TestPlugin;
-
-                    // Hardcoded Tx 
-                    {
-                        ctx.tx_info.sender_address = FieldElement {
-                            value: [
-                                0x05, 0x12, 0xb3, 0xc8, 0xa1, 0x70, 0x42, 0xe5, 0x8a, 0xb4, 0x52, 0xa5, 0xec, 0x02, 0xe7, 0xba, 
-                                0x94, 0x98, 0x72, 0xf5, 0xab, 0xd6, 0xb1, 0x8e, 0xc8, 0x3c, 0xf1, 0x86, 0x9a, 0x60, 0xfb, 0xe0
-                            ]
-                        };
-
-                        ctx.call.to = FieldElement {
-                            value: [
-                                0x06, 0x8f, 0x5c, 0x6a, 0x61, 0x78, 0x07, 0x68, 0x45, 0x5d, 0xe6, 0x90, 0x77, 0xe0, 0x7e, 0x89, 
-                                0x78, 0x78, 0x39, 0xbf, 0x81, 0x66, 0xde, 0xcf, 0xbf, 0x92, 0xb6, 0x45, 0x20, 0x9c, 0x0f, 0xb8
-                            ]
-                        };
-                        ctx.call.method = string::String::try_from("transfer").unwrap();
-                        ctx.call.selector = FieldElement {
-                            value: [
-                                0x00, 0x83, 0xaf, 0xd3, 0xf4, 0xca, 0xed, 0xc6, 0xee, 0xbf, 0x44, 0x24, 0x6f, 0xe5, 0x4e, 0x38, 
-                                0xc9, 0x5e, 0x31, 0x79, 0xa5, 0xec, 0x9e, 0xa8, 0x17, 0x40, 0xec, 0xa5, 0xb4, 0x82, 0xd1, 0x2e
-                            ]
-                        };
-                        ctx.call.calldata[0] = FieldElement::TWO;
-                        ctx.call.calldata[1] = FieldElement::ZERO;
-                        ctx.call.calldata[2] = FieldElement::ZERO;
-                        
-                        /*ctx.call.calldata.push(FieldElement {
-                            value: [
-                                0x03, 0x5e, 0x4b, 0x54, 0x88, 0x1e, 0xdb, 0x79, 0xfb, 0x05, 0xac, 0x57, 0xf1, 0xd7, 0xb4, 0x5e, 
-                                0x1b, 0x34, 0xb7, 0x10, 0x19, 0x00, 0x7f, 0xc1, 0x7b, 0x35, 0x9e, 0xf8, 0x04, 0x0f, 0xdb, 0x14
-                            ]
-                        }).unwrap();*/
-                        ctx.call.calldata[3] = FieldElement::ZERO;
-                        ctx.call.calldata[4] = FieldElement {
-                            value: [
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
-                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE8
-                            ]
-                        }; 
-                        ctx.call.calldata_len = 5;
-                    }
-
-                    let mut plugin_bmc_params = PluginFeedParams {
-                        core_params: Option::None,
-                        data_in: &ctx.call as *const Call as *const u8,
-                        data_out: &mut ctx.a_call as *mut AbstractCall as *mut u8,
-                        result: PluginResult::Err
-                    };
-                    let plugin_params = PluginParams::Feed(&mut plugin_bmc_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-bmc\0", plugin_params, PluginInteractionType::Feed);
-                    testing::debug_print("=========================> Plugin has been called\n");
+                    set_derivation_path(&mut data, ctx)?;
                 }
-                1 => {
-
-                    let mut plugin_check_params = PluginCheckParams {
-                        core_params: Option::None,
-                        data_in: core::ptr::null(),
-                        data_out: core::ptr::null_mut(),
-                        result: PluginResult::Err
-                    };
-                    let plugin_params = PluginParams::Check(&mut plugin_check_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Check);
-                    testing::debug_print("=========================> Plugin has been called\n");
-                }
+                1 => {/* tx info */}
                 2 => {
-                    
-                    let mut plugin_init_params = PluginInitParams {
-                        core_params: Option::Some(PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
-                        }),
-                        data_in: &ctx.a_call as *const AbstractCall as *const u8,
-                        data_out: core::ptr::null_mut(),
-                        result: PluginResult::Err
-                    };
-
-                    let plugin_params = PluginParams::Init(&mut plugin_init_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Init);
-                    testing::debug_print("=========================> Plugin has been called\n");
+                    let call_input: CallInput = p2.into();
+                    ctx.is_first_loop = true;
+                    handle_call_apdu(data, ctx, call_input)?;
                 }
                 3 => {
-
-                    ctx.call_to_string[0] = string::String::try_from("grom.stark").unwrap();
-
-                    let mut plugin_feed_params = PluginFeedParams {
-                        core_params: Option::Some(PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
-                        }),
-                        data_in: &(&ctx.a_call.calldata, &ctx.call_to_string) as *const (&[AbstractCallData; 8], &[string::String<32>; 16]) as *const u8,
-                        data_out: core::ptr::null_mut(),
-                        result: PluginResult::Err
-                    };
-
-                    let plugin_params = PluginParams::Feed(&mut plugin_feed_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Feed);
-                    testing::debug_print("=========================> Plugin has been called\n");
-
-                }
-                4 => {
-
-                    let mut plugin_finalize_params = PluginFinalizeParams {
-                        core_params: Option::Some(PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
-                        }),
-                        num_ui_screens: 0,
-                        data_to_display: string::String::<64>::new(),
-                        result: PluginResult::Err
-                    };
-
-                    let plugin_params = PluginParams::Finalize(&mut plugin_finalize_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::Finalize);
-                    testing::debug_print("=========================> Plugin has been called\n");
-
-                    testing::debug_print("Number of UI screens: ");
-                    let s: string::String::<2> = plugin_finalize_params.num_ui_screens.into();
-                    testing::debug_print(s.print().unwrap());
-                    testing::debug_print("\n");
-
-                    ctx.num_ui_screens = plugin_finalize_params.num_ui_screens;
-                }
-                6 => {
-                    let mut plugin_queryui_params = PluginQueryUiParams {
-                        core_params: Option::Some(PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
-                        }),
-                        title: string::String::<32>::new(),
-                        result: PluginResult::Err
-                    };
-
-                    let plugin_params = PluginParams::QueryUi(&mut plugin_queryui_params);
-
-                    testing::debug_print("=========================> Plugin call\n");
-                    plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::QueryUi);
-                    testing::debug_print("=========================> Plugin has been called\n");
-
-                    ui::popup(plugin_queryui_params.title.print().unwrap());
-                }
-                7 => {
-
-                    let mut plugin_getui_params = PluginGetUiParams {
-                        core_params: Option::Some(PluginCoreParams {
-                            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                            plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
-                        }),
-                        ui_screen_idx: 0,
-                        title: string::String::<32>::new(),
-                        msg: string::String::<64>::new(),
-                        result: PluginResult::Err
-                     };
-
-                    for i in 0..ctx.num_ui_screens {
-
-                        plugin_getui_params.ui_screen_idx = i as usize;
-                        let plugin_params = PluginParams::GetUi(&mut plugin_getui_params);
-
-                        testing::debug_print("=========================> Plugin call\n");
-                        plugin_call("plugin-erc20\0", plugin_params, PluginInteractionType::GetUi);
-                        testing::debug_print("=========================> Plugin has been called\n");
-
-                        let title = plugin_getui_params.title.print().unwrap();
-
-                        testing::debug_print(title);
-                        testing::debug_print("\n");
-                        testing::debug_print(plugin_getui_params.msg.print().unwrap());
-                        testing::debug_print("\n");
-
-                        match plugin_getui_params.msg.len {
-                            0..=16 => {
-                                let msg = plugin_getui_params.msg.print().unwrap();
-                                ui::MessageValidator::new(
-                                    &[title, msg],
-                                    &[&"Confirm"],
-                                    &[&"Cancel"],
-                                )
-                                .ask();
-                            },
-                            17..=32 => {
-                                let s = plugin_getui_params.msg.print().unwrap();
-                                let msg0 = &s[..16];
-                                let msg1 = &s[17..plugin_getui_params.msg.len];
-                                ui::MessageValidator::new(
-                                    &[title, msg0, msg1],
-                                    &[&"Confirm"],
-                                    &[&"Cancel"],
-                                )
-                                .ask();
-                            }
-                            33..=64 => {
-                                let s = plugin_getui_params.msg.print().unwrap();
-                                let msg0 = &s[..16];
-                                let msg1 = &s[17..32];
-                                let msg2 = &s[32..48];
-                                let msg3 = &s[48..plugin_getui_params.msg.len];
-                                ui::MessageValidator::new(
-                                    &[title, msg0, msg1, msg2, msg3],
-                                    &[&"Confirm"],
-                                    &[&"Cancel"],
-                                )
-                                .ask();
-                            }
-                            _ => {
-                            }
-                        }
-                    }
+                    /* better multicall second loop */
+                    let call_input: CallInput = p2.into();
+                    ctx.is_first_loop = false;
+                    handle_call_apdu(data, ctx, call_input)?;
                 }
                 _ => return Err(io::StatusWords::BadP1P2.into()),
             }
