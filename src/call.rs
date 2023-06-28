@@ -211,7 +211,7 @@ fn process_call(ctx: &mut Ctx) {
                 let mut params = PluginInitParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
                     }),
                     data_in: &ctx.a_call as *const AbstractCall as *const u8,
                     data_out: core::ptr::null_mut(),
@@ -223,7 +223,7 @@ fn process_call(ctx: &mut Ctx) {
                 let mut params = PluginFeedParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
                     }),
                     data_in: &(&ctx.a_call.calldata, &ctx.call_to_string) as *const (&[AbstractCallData; 8], &[string::String<32>; 16]) as *const u8,
                     data_out: core::ptr::null_mut(),
@@ -235,7 +235,7 @@ fn process_call(ctx: &mut Ctx) {
                 let mut params = PluginFinalizeParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
                     }),
                     num_ui_screens: 0,
                     data_to_display: string::String::<64>::new(),
@@ -249,7 +249,7 @@ fn process_call(ctx: &mut Ctx) {
                 let mut params = PluginQueryUiParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
                     }),
                     title: string::String::<32>::new(),
                     result: PluginResult::Err
@@ -262,7 +262,7 @@ fn process_call(ctx: &mut Ctx) {
                 let mut params = PluginGetUiParams {
                     core_params: Option::Some(PluginCoreParams {
                         plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                        plugin_internal_ctx_len: ctx.plugin_internal_ctx_len,
+                        plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
                     }),
                     ui_screen_idx: 0,
                     title: string::String::<32>::new(),
