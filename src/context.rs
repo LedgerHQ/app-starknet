@@ -56,9 +56,9 @@ pub struct Ctx {
     pub is_first_loop: bool,
     pub call: Call,
     pub a_call: AbstractCall,
-    pub nb_calls_rcv: usize,
-    pub call_to_nref: [u8; 16],
-    pub call_to_string: [String<32>; 16],
+    pub nb_call_rcv: usize,
+    pub call_to_nref: [u8; 8],
+    pub call_to_string: [String<64>; 8],
     pub hash_info: HashInfo,
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
@@ -74,9 +74,9 @@ impl Ctx {
             is_first_loop: false,
             call: Call::new(),
             a_call: AbstractCall::new(),
-            nb_calls_rcv: 0,
-            call_to_nref: [0u8; 16],
-            call_to_string: [String::<32>::new(); 16],
+            nb_call_rcv: 0,
+            call_to_nref: [0u8; 8],
+            call_to_string: [String::<64>::new(); 8],
             hash_info: HashInfo::new(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
@@ -93,9 +93,9 @@ impl Ctx {
         self.is_first_loop = false;
         self.call.clear();
         self.a_call.clear();
-        self.nb_calls_rcv = 0;
-        self.call_to_nref = [0u8; 16];
-        self.call_to_string = [String::<32>::new(); 16];
+        self.nb_call_rcv = 0;
+        self.call_to_nref = [0u8; 8];
+        self.call_to_string = [String::<64>::new(); 8];
         self.hash_info.clear();
         self.bip32_path.fill(0);
         self.bip32_path_len = 0;
