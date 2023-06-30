@@ -1,20 +1,13 @@
 use starknet_sdk::types::{
-    Call, FieldElement, AbstractCallData, AbstractCall
+    Call, FieldElement, AbstractCallData, AbstractCall, UiParam
 };
 use nanos_sdk::io::{Reply};
 use nanos_sdk::testing::debug_print;
 use nanos_sdk::plugin::{
     PluginResult,
     PluginInteractionType,
-    PluginParams,
-    PluginCoreParams,
-    PluginCheckParams,
-    PluginFeedParams,
-    PluginInitParams,
-    PluginFinalizeParams,
-    PluginGetUiParams,
-    PluginQueryUiParams,
-    plugin_call
+    PluginParam,
+    plugin_call_v2
 };
 use nanos_sdk::string;
 use nanos_ui::ui;
@@ -130,13 +123,14 @@ fn process_call(ctx: &mut Ctx) {
 
     // Convert Call -> ACall (BMC or Trivial)
     if ctx.is_bettermulticall {
-        let mut params = PluginFeedParams {
-            core_params: Option::None,
+        let mut params = PluginParam {
+            plugin_internal_ctx: core::ptr::null_mut(),
+            plugin_internal_ctx_len: 0,
             data_in: &ctx.call as *const Call as *const u8,
             data_out: &mut ctx.a_call as *mut AbstractCall as *mut u8,
             result: PluginResult::Err
         };
-        plugin_feed(ctx, "plugin-bmc\0", &mut params);
+        plugin_call_v2("plugin-bmc\0", &mut params, PluginInteractionType::Feed);
     }
     else {
         ctx.a_call.copy_from(&ctx.call);
@@ -148,108 +142,98 @@ fn process_call(ctx: &mut Ctx) {
     // Plugin cycle
     {
         /* INIT */
-        let mut params = PluginInitParams {
-            core_params: Option::Some(PluginCoreParams {
-                plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
-            }),
+        let mut params = PluginParam {
+            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+            plugin_internal_ctx_len: ctx.plugin_internal_ctx.len(),
             data_in: &ctx.a_call as *const AbstractCall as *const u8,
             data_out: core::ptr::null_mut(),
             result: PluginResult::Err
         };
-        plugin_init(ctx, plugin_name, &mut params);
+        plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Init);
 
         /* FEED */
-        let mut params = PluginFeedParams {
-            core_params: Option::Some(PluginCoreParams {
-                plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
-            }),
+        let mut params = PluginParam {
+            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+            plugin_internal_ctx_len: ctx.plugin_internal_ctx.len(),
             data_in: &(&ctx.a_call.calldata, &ctx.call_to_string) as *const (&[AbstractCallData; 8], &[string::String<64>; 8]) as *const u8,
             data_out: core::ptr::null_mut(),
             result: PluginResult::Err
         };
-        plugin_feed(ctx, plugin_name, &mut params);
+        plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Feed);
 
         /* FINALIZE */
-        let mut params = PluginFinalizeParams {
-            core_params: Option::Some(PluginCoreParams {
-                plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
-            }),
-            num_ui_screens: 0,
-            data_to_display: string::String::<64>::new(),
+        let mut ui: UiParam = Default::default();
+        let mut params = PluginParam {
+            plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+            plugin_internal_ctx_len: ctx.plugin_internal_ctx.len(),
+            data_in: core::ptr::null(),
+            data_out: &mut ui as *mut UiParam as *mut u8,
             result: PluginResult::Err
         };
-        plugin_finalize(ctx, plugin_name, &mut params);
-        ctx.num_ui_screens = params.num_ui_screens;
-        ctx.call_to_string[ctx.nb_call_rcv].copy_from(&params.data_to_display);
+        plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Finalize);
+
+        ctx.num_ui_screens = ui.num_ui_screens;
+        ctx.call_to_string[ctx.nb_call_rcv].copy_from(&ui.msg);
+        
         ctx.nb_call_rcv += 1;
 
         if ctx.num_ui_screens > 0 {
         
             /* QUERY UI */
-            let mut params = PluginQueryUiParams {
-                core_params: Option::Some(PluginCoreParams {
-                    plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                    plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
-                }),
-                title: string::String::<32>::new(),
+            let mut params = PluginParam {
+                plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                plugin_internal_ctx_len: ctx.plugin_internal_ctx.len(),
+                data_in: core::ptr::null(),
+                data_out: &mut ui.title as *mut string::String<32> as *mut u8,
                 result: PluginResult::Err
             };
-            plugin_queryui(ctx, plugin_name, &mut params);
+            plugin_call_v2(plugin_name, &mut params, PluginInteractionType::QueryUi);
 
-            ui::popup(params.title.as_str());
+            ui::popup(ui.title.as_str());
 
             /* GET UI */
-            let mut params = PluginGetUiParams {
-                core_params: Option::Some(PluginCoreParams {
-                    plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
-                    plugin_internal_ctx_len: ctx.plugin_internal_ctx.len()
-                }),
-                ui_screen_idx: 0,
-                title: string::String::<32>::new(),
-                msg: string::String::<64>::new(),
-                result: PluginResult::Err
-            };
-            for i in 0..ctx.num_ui_screens {
+            for ui_screen_idx in 0..ctx.num_ui_screens {
                 
-                params.ui_screen_idx = i as usize;
-                plugin_getui(ctx, plugin_name, &mut params);
+                let mut params = PluginParam {
+                    plugin_internal_ctx: &mut ctx.plugin_internal_ctx as *mut u8,
+                    plugin_internal_ctx_len: ctx.plugin_internal_ctx.len(),
+                    data_in: &ui_screen_idx as *const u8,
+                    data_out: &mut ui as *mut UiParam as *mut u8,
+                    result: PluginResult::Err
+                };
+                plugin_call_v2(plugin_name, &mut params, PluginInteractionType::GetUi);
 
-                let title = params.title.as_str();
-                debug_print(title);
+                debug_print(ui.title.as_str());
                 debug_print("\n");
-                debug_print(params.msg.as_str());
+                debug_print(ui.msg.as_str());
                 debug_print("\n");
 
-                match params.msg.len {
+                match ui.msg.len {
                     0..=16 => {
-                        let msg = params.msg.as_str();
                         ui::MessageValidator::new(
-                            &[title, msg],
+                            &[ui.title.as_str(), ui.msg.as_str()],
                             &[&"Confirm"],
                             &[&"Cancel"]).ask();
                     },
                     17..=32 => {
-                        let s = params.msg.as_str();
+                        let s = ui.msg.as_str();
                         let msg0 = &s[..16];
-                        let msg1 = &s[16..params.msg.len];
+                        let msg1 = &s[16..ui.msg.len];
                         ui::MessageValidator::new(
-                            &[title, msg0, msg1],
+                            &[ui.title.as_str(), msg0, msg1],
                             &[&"Confirm"],
                             &[&"Cancel"],
                         )
                         .ask();
                     }
                     33..=64 => {
-                        let s = params.msg.as_str();
+                        let s = ui.msg.as_str();
                         let msg0 = &s[..16];
                         let msg1 = &s[16..32];
                         let msg2 = &s[32..48];
-                        let msg3 = &s[48..params.msg.len];
+                        let msg3 = &s[48..ui.msg.len];
                         ui::MessageValidator::new(
-                            &[title, msg0, msg1, msg2, msg3],
+                            &[ui.title.as_str(), msg0, msg1, msg2, msg3],
                             &[&"Confirm"],
                             &[&"Cancel"],
                         )
