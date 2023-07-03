@@ -13,7 +13,7 @@ struct PluginItem<'a> {
 }
 
 pub fn plugin_find(ctx: &mut Ctx) -> Option<&'static str> {
-    let plugins: [PluginItem; 2] = [
+    let plugins: [PluginItem; 3] = [
         PluginItem {
             addr: FieldElement {
                 value: [
