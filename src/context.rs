@@ -16,37 +16,14 @@ pub enum RequestType {
     TestPlugin
 }
 
-pub struct HashInfo {
-    /// message hash digest (Pedersen)
-    pub m_hash: FieldElement,
-    /// calldata_hash
-    pub calldata_hash: FieldElement,
-    /// signature r 
-    pub r: [u8; 32],
-    /// signature s 
-    pub s: [u8; 32],
-    /// parity of y-coordinate of R in ECDSA signature
-    pub v: u8
-}
-
-impl HashInfo {
-    pub fn new() -> Self {
-        Self {
-            m_hash: FieldElement::new(),
-            calldata_hash: FieldElement::new(),
-            r: [0u8; 32],
-            s: [0u8; 32],
-            v: 0
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.m_hash.clear();
-        self.calldata_hash.clear();
-        self.r.fill(0);
-        self.s.fill(0);
-        self.v = 0;
-    }
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Signature {
+     /// signature r 
+     pub r: [u8; 32],
+     /// signature s 
+     pub s: [u8; 32],
+     /// parity of y-coordinate of R in ECDSA signature
+     pub v: u8
 }
 
 pub struct Ctx {
@@ -59,11 +36,12 @@ pub struct Ctx {
     pub nb_call_rcv: usize,
     pub call_to_nref: [u8; 8],
     pub call_to_string: [String<64>; 8],
-    pub hash_info: HashInfo,
+    pub hash: FieldElement,
     pub bip32_path: [u32; 6],
     pub bip32_path_len: u8,
     pub plugin_internal_ctx: [u8; 255],
-    pub num_ui_screens: u8
+    pub num_ui_screens: u8,
+    pub signature: Signature
 }
 
 impl Ctx {
@@ -77,12 +55,13 @@ impl Ctx {
             nb_call_rcv: 0,
             call_to_nref: [0u8; 8],
             call_to_string: [String::<64>::new(); 8],
-            hash_info: HashInfo::new(),
+            hash: Default::default(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
             bip32_path_len: 0,
             plugin_internal_ctx: [0u8; 255],
-            num_ui_screens: 0
+            num_ui_screens: 0,
+            signature: Default::default()
         }
     }
 
@@ -96,10 +75,11 @@ impl Ctx {
         self.nb_call_rcv = 0;
         self.call_to_nref = [0u8; 8];
         self.call_to_string = [String::<64>::new(); 8];
-        self.hash_info.clear();
+        self.hash = Default::default();
         self.bip32_path.fill(0);
         self.bip32_path_len = 0;
         self.plugin_internal_ctx.fill(0);
         self.num_ui_screens = 0;
+        self.signature = Default::default()
     }
 }

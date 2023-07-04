@@ -1,5 +1,5 @@
 use starknet_sdk::types::{
-    Call, FieldElement, AbstractCallData, AbstractCall, UiParam
+    Call, FieldElement, AbstractCallData, AbstractCall, UiParam, TransactionInfo
 };
 use nanos_sdk::io::{Reply};
 use nanos_sdk::testing::debug_print;
@@ -13,6 +13,10 @@ use nanos_sdk::string;
 use nanos_ui::ui;
 
 use crate::context::Ctx;
+use crate::crypto::pedersen::{
+    pedersen_hash,
+    pedersen_shift
+};
 
 mod plugin;
 use plugin::*;
@@ -61,27 +65,28 @@ impl From<CallError> for Reply {
     }
 }
 
-pub fn handle_call_apdu(data: &[u8], ctx: &mut Ctx, step: CallInput) -> Result<(), CallError> {
+pub fn handle_call_apdu(data: &[u8], ctx: &mut Ctx, step: CallInput) -> Result<bool, CallError> {
     match step  {
         CallInput::Full => {        
             ctx.call.clear();
             save_call(data, &mut ctx.call);
-            process_call(ctx);
+            Ok(process_call(ctx))
         }
         CallInput::PartialStart => {
             ctx.call.clear();
             save_call(data, &mut ctx.call);
+            Ok(true)
         }
         CallInput::PartialNext => {
             append_calldata(data, &mut ctx.call)?;
+            Ok(true)
         }
         CallInput::PartialEnd => {
             append_calldata(data, &mut ctx.call)?;
-            process_call(ctx);
+            Ok(process_call(ctx))
         }
-        _ => ()
+        _ => Ok(false)
     }
-    Ok(())
 }
 
 fn save_call(data: &[u8], call: &mut Call) {
@@ -111,13 +116,22 @@ fn append_calldata(data: &[u8], call: &mut Call) -> Result<(), CallError>{
     Ok(())
 }
 
-fn process_call(ctx: &mut Ctx) {
+fn process_call(ctx: &mut Ctx) -> bool {
 
     if ctx.nb_call_rcv == 0 {
+
+        // Init Pedersen Hash
+        pedersen_hash(&mut ctx.hash, &ctx.tx_info.callarray_len);
+
         if ctx.call.to == FieldElement::ZERO {
+
+            // Update Pedersen Hash
+            update_pedersen(&ctx.call, &mut ctx.hash);
+
             // To do: check BMC plugin
             ctx.is_bettermulticall = true;
-            return;
+            ctx.nb_call_rcv += 1;
+            return true;
         }
     }
 
@@ -175,9 +189,21 @@ fn process_call(ctx: &mut Ctx) {
         ctx.num_ui_screens = ui.num_ui_screens;
         ctx.call_to_string[ctx.nb_call_rcv].copy_from(&ui.msg);
         
+         // Update Pedersen Hash
+         update_pedersen(&ctx.call, &mut ctx.hash);
+
         ctx.nb_call_rcv += 1;
 
-        if ctx.num_ui_screens > 0 {
+        if FieldElement::from(ctx.nb_call_rcv) == ctx.tx_info.callarray_len {
+            finalize_pedersen(&ctx.tx_info, &mut ctx.hash);
+        }
+
+        if ctx.num_ui_screens == 0 {
+            true
+        }
+        else {
+
+            let mut acknowledged: bool = false;
         
             /* QUERY UI */
             let mut params = PluginParam {
@@ -210,7 +236,7 @@ fn process_call(ctx: &mut Ctx) {
 
                 match ui.msg.len {
                     0..=16 => {
-                        ui::MessageValidator::new(
+                        acknowledged = ui::MessageValidator::new(
                             &[ui.title.as_str(), ui.msg.as_str()],
                             &[&"Confirm"],
                             &[&"Cancel"]).ask();
@@ -219,7 +245,7 @@ fn process_call(ctx: &mut Ctx) {
                         let s = ui.msg.as_str();
                         let msg0 = &s[..16];
                         let msg1 = &s[16..ui.msg.len];
-                        ui::MessageValidator::new(
+                        acknowledged = ui::MessageValidator::new(
                             &[ui.title.as_str(), msg0, msg1],
                             &[&"Confirm"],
                             &[&"Cancel"],
@@ -232,7 +258,7 @@ fn process_call(ctx: &mut Ctx) {
                         let msg1 = &s[16..32];
                         let msg2 = &s[32..48];
                         let msg3 = &s[48..ui.msg.len];
-                        ui::MessageValidator::new(
+                        acknowledged = ui::MessageValidator::new(
                             &[ui.title.as_str(), msg0, msg1, msg2, msg3],
                             &[&"Confirm"],
                             &[&"Cancel"],
@@ -240,9 +266,44 @@ fn process_call(ctx: &mut Ctx) {
                         .ask();
                     }
                     _ => {
+                        acknowledged = false;
                     }
                 }
             }
+            acknowledged
         }
     }
+}
+
+fn update_pedersen(call: &Call, hash: &mut FieldElement) {
+    pedersen_hash(hash, &call.to);
+    pedersen_hash(hash, &call.selector);
+    pedersen_hash(hash, &FieldElement::from(call.calldata_len));
+    for data in call.calldata {
+        pedersen_hash(hash, &data);
+    }
+}
+
+fn finalize_pedersen(tx_info: &TransactionInfo, hash: &mut FieldElement) {
+    
+    let mut pedersen: FieldElement = Default::default();
+
+    // do not forget to finalize Pedersen hash of calldata
+    // see https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/#pedersen_array_hash
+    pedersen_hash(hash, &tx_info.callarray_len);
+
+    pedersen_hash(&mut pedersen, &FieldElement::INVOKE);
+    pedersen_hash(&mut pedersen, &tx_info.version);
+    pedersen_hash(&mut pedersen, &tx_info.sender_address);
+    pedersen_hash(&mut pedersen, &FieldElement::ZERO);
+    pedersen_hash(&mut pedersen, hash);
+    pedersen_hash(&mut pedersen, &tx_info.max_fee);
+    pedersen_hash(&mut pedersen, &tx_info.chain_id);
+    pedersen_hash(&mut pedersen, &tx_info.nonce);
+    let n: FieldElement = 8u8.into();
+    pedersen_hash(&mut pedersen, &n);
+
+    pedersen_shift(&mut pedersen);
+
+    hash.copy_from(&pedersen);
 }

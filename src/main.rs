@@ -30,15 +30,7 @@ use context::{Ctx, RequestType};
 use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
-use nanos_sdk::{
-    string,
-    testing
-};
-use starknet_sdk::types::{
-    FieldElement, 
-    TransactionInfo, 
-    Call
-};
+use starknet_sdk::types::FieldElement;
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
@@ -117,24 +109,6 @@ impl TryFrom<io::ApduHeader> for Ins {
 }
 
 use nanos_sdk::io::Reply;
-use nanos_sdk::plugin::{
-    PluginCoreParams,
-    PluginCheckParams,
-    PluginInitParams,
-    PluginFeedParams,
-    PluginFinalizeParams,
-    PluginQueryUiParams,
-    PluginGetUiParams,
-    PluginParams,
-    plugin_call,
-    PluginInteractionType,
-    PluginResult
-};
-
-use starknet_sdk::types::{
-    AbstractCall,
-    AbstractCallData
-};
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     
@@ -192,7 +166,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     set_derivation_path(&mut data, ctx)?;
                 }
                 _ => {
-                    ctx.hash_info.m_hash = data.into();
+                    ctx.hash = data.into();
                     if p2 > 0 {
                         match display::sign_ui(data) {
                             Ok(v) => {
@@ -212,9 +186,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         sign_hash(ctx).unwrap();
                     }
                     comm.append([0x41].as_slice());
-                    comm.append(ctx.hash_info.r.as_ref());
-                    comm.append(ctx.hash_info.s.as_ref());
-                    comm.append([ctx.hash_info.v].as_slice());
+                    comm.append(ctx.signature.r.as_ref());
+                    comm.append(ctx.signature.s.as_ref());
+                    comm.append([ctx.signature.v].as_slice());
                 }
             }
         }  
@@ -251,7 +225,17 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 2 => {
                     let call_input: CallInput = p2.into();
                     ctx.is_first_loop = true;
-                    handle_call_apdu(data, ctx, call_input)?;
+                    let res = handle_call_apdu(data, ctx, call_input)?;
+                    if !res {
+                        return Err(io::StatusWords::UserCancelled.into());
+                    }                        
+                    if res && FieldElement::from(ctx.nb_call_rcv) == ctx.tx_info.callarray_len {
+                        sign_hash(ctx).unwrap();
+                        comm.append([0x41].as_slice());
+                        comm.append(ctx.signature.r.as_ref());
+                        comm.append(ctx.signature.s.as_ref());
+                        comm.append([ctx.signature.v].as_slice());
+                    }
                 }
                 3 => {
                     /* better multicall second loop */
@@ -261,7 +245,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => return Err(io::StatusWords::BadP1P2.into()),
             }
-            comm.append([0u8].as_slice());
         }
     }
     Ok(())

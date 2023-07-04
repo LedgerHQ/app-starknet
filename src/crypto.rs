@@ -29,11 +29,11 @@ impl From<CryptoError> for Reply {
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 
-    match Stark256::derive_from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash_info.m_hash.value.as_ref()) {
+    match Stark256::derive_from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash.value.as_ref()) {
         Ok(s) => {
             let der = s.0;
-            convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
-            ctx.hash_info.v = s.2 as u8;
+            convert_der_to_rs(&der[..], &mut ctx.signature.r, &mut ctx.signature.s).unwrap();
+            ctx.signature.v = s.2 as u8;
             Ok(())
         },
         Err(_) => Err(CryptoError::SignError)
@@ -44,10 +44,6 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
 pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
 
     let private_key = Stark256::derive_from_path(&ctx.bip32_path);
-
-    /*crate::utils::print::printf("private key is: \n");
-    crate::utils::print::printf_slice::<64>(&private_key.key[..]);
-    crate::utils::print::printf("\n");*/
 
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
@@ -179,6 +175,3 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     Ok(())
 }
-
-
-
