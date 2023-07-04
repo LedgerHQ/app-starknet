@@ -1,9 +1,11 @@
-use starknet_sdk::types::{AbstractCall, AbstractCallData, Call, FieldElement};
+use starknet_sdk::types::FieldElement;
 
-use nanos_sdk::plugin::{plugin_call_v2, PluginInteractionType, PluginParam, PluginResult};
-use nanos_sdk::string;
-use nanos_sdk::testing::debug_print;
-use nanos_ui::ui;
+use nanos_sdk::plugin::{
+    PluginResult,
+    PluginInteractionType,
+    PluginParam,
+    plugin_call_v2
+};
 
 use crate::context::Ctx;
 
