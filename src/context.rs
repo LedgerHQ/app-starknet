@@ -34,6 +34,7 @@ pub struct Ctx {
     pub call: Call,
     pub a_call: AbstractCall,
     pub nb_call_rcv: usize,
+    pub nb_hash: usize,
     pub call_to_nref: [u8; 8],
     pub call_to_string: [String<64>; 8],
     pub hash: FieldElement,
@@ -53,6 +54,7 @@ impl Ctx {
             call: Call::new(),
             a_call: AbstractCall::new(),
             nb_call_rcv: 0,
+            nb_hash: 0,
             call_to_nref: [0u8; 8],
             call_to_string: [String::<64>::new(); 8],
             hash: Default::default(),
@@ -73,6 +75,7 @@ impl Ctx {
         self.call.clear();
         self.a_call.clear();
         self.nb_call_rcv = 0;
+        self.nb_hash = 0;
         self.call_to_nref = [0u8; 8];
         self.call_to_string = [String::<64>::new(); 8];
         self.hash = Default::default();

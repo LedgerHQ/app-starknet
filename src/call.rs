@@ -122,11 +122,13 @@ fn process_call(ctx: &mut Ctx) -> bool {
 
         // Init Pedersen Hash
         pedersen_hash(&mut ctx.hash, &ctx.tx_info.callarray_len);
+        ctx.nb_hash = 1;
 
         if ctx.call.to == FieldElement::ZERO {
 
             // Update Pedersen Hash
             update_pedersen(&ctx.call, &mut ctx.hash);
+            ctx.nb_hash += 3 + ctx.call.calldata_len;
 
             // To do: check BMC plugin
             ctx.is_bettermulticall = true;
@@ -191,11 +193,12 @@ fn process_call(ctx: &mut Ctx) -> bool {
         
          // Update Pedersen Hash
          update_pedersen(&ctx.call, &mut ctx.hash);
+         ctx.nb_hash += 3 + ctx.call.calldata_len;
 
         ctx.nb_call_rcv += 1;
 
         if FieldElement::from(ctx.nb_call_rcv) == ctx.tx_info.callarray_len {
-            finalize_pedersen(&ctx.tx_info, &mut ctx.hash);
+            finalize_pedersen(&ctx.tx_info, &mut ctx.hash, ctx.nb_hash);
         }
 
         if ctx.num_ui_screens == 0 {
@@ -284,13 +287,14 @@ fn update_pedersen(call: &Call, hash: &mut FieldElement) {
     }
 }
 
-fn finalize_pedersen(tx_info: &TransactionInfo, hash: &mut FieldElement) {
+fn finalize_pedersen(tx_info: &TransactionInfo, hash: &mut FieldElement, nb_hash: usize) {
     
     let mut pedersen: FieldElement = Default::default();
 
     // do not forget to finalize Pedersen hash of calldata
     // see https://docs.starknet.io/documentation/architecture_and_concepts/Hashing/hash-functions/#pedersen_array_hash
-    pedersen_hash(hash, &tx_info.callarray_len);
+    let mut n: FieldElement = FieldElement::from(nb_hash); 
+    pedersen_hash(hash, &n);
 
     pedersen_hash(&mut pedersen, &FieldElement::INVOKE);
     pedersen_hash(&mut pedersen, &tx_info.version);
@@ -300,7 +304,7 @@ fn finalize_pedersen(tx_info: &TransactionInfo, hash: &mut FieldElement) {
     pedersen_hash(&mut pedersen, &tx_info.max_fee);
     pedersen_hash(&mut pedersen, &tx_info.chain_id);
     pedersen_hash(&mut pedersen, &tx_info.nonce);
-    let n: FieldElement = 8u8.into();
+    n = 8u8.into();
     pedersen_hash(&mut pedersen, &n);
 
     pedersen_shift(&mut pedersen);
