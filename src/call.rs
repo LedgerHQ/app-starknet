@@ -282,8 +282,8 @@ fn update_pedersen(call: &Call, hash: &mut FieldElement) {
     pedersen_hash(hash, &call.to);
     pedersen_hash(hash, &call.selector);
     pedersen_hash(hash, &FieldElement::from(call.calldata_len));
-    for data in call.calldata {
-        pedersen_hash(hash, &data);
+    for i in 0..call.calldata_len {
+        pedersen_hash(hash, &call.calldata[i]);
     }
 }
 

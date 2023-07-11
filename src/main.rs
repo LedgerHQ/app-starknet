@@ -31,6 +31,7 @@ use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
 use nanos_ui::ui;
 use starknet_sdk::types::FieldElement;
+use nanos_sdk::testing::debug_print;
 
 nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
 
@@ -71,6 +72,10 @@ extern "C" fn sample_main(_arg0: u32) {
         match comm.next_event() {
             io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
             io::Event::Command(ins) => {
+
+                ui::clear_screen();
+                ui::SingleMessage::new("Processing...").show();
+
                 match handle_apdu(&mut comm, ins, &mut ctx) {
                     Ok(()) => {
                         comm.reply_ok();
@@ -193,13 +198,17 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             }
         }  
         Ins::PedersenHash => {
+            let p1 = apdu_header.p1;
             ctx.clear();
             ctx.req_type = RequestType::ComputePedersen;
             let data = comm.get_data()?;
             let (a_s, b_s) = data.split_at(32);
             let mut a: FieldElement = a_s.into();
             let b: FieldElement = b_s.into();
-            pedersen::pedersen_hash(&mut a, &b);
+            for i in 0..p1 {
+                debug_print("pedersen calculation\n");
+                pedersen::pedersen_hash(&mut a, &b);
+            }
             comm.append(&a.value[..]);
         }
         Ins::SignTx => {
