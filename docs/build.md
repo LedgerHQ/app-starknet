@@ -1,23 +1,24 @@
-Use [ledger_starknet_app_builder](https://github.com/yogh333/ledger-app-builder/tree/ledger-starknet-app-builder)
-
+### Set Docker env
 ```
-# Get Docker env
 git clone https://github.com/yogh333/ledger-app-builder.git
 cd ledger-app-builder
-git checkout -b ledger-starknet-app-builder origin/ledger-starknet-app-builder
-docker build -t ledger-starknet-app-builder:latest -f legacy/Dockerfile .
+git checkout ledger-starknet-app-builder
+docker build -t starknet-builder:latest -f legacy/Dockerfile .
+cd ..
+```
 
-# Checkout Nano app and plugin repositories
-mkdir app
-cd app
+### Checkout Nano app and plugin repositories (for instance erc-20 plugin)
+```
+mkdir apps
+cd apps
 git clone https://github.com/LedgerHQ/nano-rapp-starknet.git
-git checkout -b feat/plugin_call origin/feat/plugin_call
+git checkout feat/plugin_call
 git clone https://github.com/LedgerHQ/plugin-erc20.git rapp-plugin-erc20
 ```
 
-Build for Speculos env:
+### Build
 ```
-docker run --rm -ti -v $(pwd)/app:/app ledger-starknet-app-builder:latest
+docker run --rm -ti -v $(pwd)/apps:/app starknet-builder:latest
 export BOLOS_SDK=/opt/nanos-secure-sdk|nanosplus-secure-sdk|nanox-secure-sdk
 cd nano-rapp-starknet/
 cago clean
@@ -25,17 +26,4 @@ cargo ledger build nanos|nanosplus|nanox
 cd ../plugin-erc20
 cago clean
 cargo ledger build nanos|nanosplus|nanox
-```
-
-
-Build for Nano device:
-```
-docker run --rm -ti -v $(pwd)/app:/app ledger-starknet-app-builder:latest
-export BOLOS_SDK=/opt/nanos-secure-sdk|nanosplus-secure-sdk|nanox-secure-sdk
-cd nano-rapp-starknet/
-cargo clean
-cargo ledger build nanos|nanosplus|nanox -- --no-default-features --features device
-cd ../plugin-erc20
-cago clean
-cargo ledger build nanos|nanosplus|nanox -- --no-default-features --features device
 ```
