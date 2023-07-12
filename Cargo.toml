@@ -5,11 +5,9 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-#nanos_sdk = { git = "https://github.com/yogh333/ledger-nanos-sdk.git", branch="feat/libcall_support" }
-#nanos_ui = { git = "https://github.com/yogh333/ledger-nanos-ui.git", branch="feat/use_fork_nanos_sdk" }
-nanos_sdk = { path = "../ledger-nanos-sdk" }
-nanos_ui = { path = "../ledger-nanos-ui" }
-starknet_sdk = {path = "../starknet-sdk"}
+nanos_sdk = { git = "https://github.com/yogh333/ledger-nanos-sdk.git", branch="feat/libcall_support" }
+nanos_ui = { git = "https://github.com/yogh333/ledger-nanos-ui.git", branch="feat/use_fork_nanos_sdk" }
+starknet_sdk = {git = "https://github.com/LedgerHQ/starknet-sdk.git"}
 
 [features]
 default = [ "speculos" ]
@@ -26,7 +24,6 @@ opt-level = 'z'
 lto = true
 
 [package.metadata.nanos]
-api_level = "1"
 curve = ["secp256k1"]
 path = ["m/2645'"]
 flags = "0"
