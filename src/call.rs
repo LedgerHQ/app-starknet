@@ -7,7 +7,7 @@ use nanos_sdk::plugin::{
     PluginResult,
     PluginInteractionType,
     PluginParam,
-    plugin_call_v2
+    plugin_call
 };
 use nanos_sdk::string;
 use nanos_ui::ui;
@@ -146,7 +146,7 @@ fn process_call(ctx: &mut Ctx) -> bool {
             data_out: &mut ctx.a_call as *mut AbstractCall as *mut u8,
             result: PluginResult::Err
         };
-        plugin_call_v2("plugin-bmc\0", &mut params, PluginInteractionType::Feed);
+        plugin_call("plugin-bmc\0", &mut params, PluginInteractionType::Feed);
     }
     else {
         ctx.a_call.copy_from(&ctx.call);
@@ -165,7 +165,7 @@ fn process_call(ctx: &mut Ctx) -> bool {
             data_out: core::ptr::null_mut(),
             result: PluginResult::Err
         };
-        plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Init);
+        plugin_call(plugin_name, &mut params, PluginInteractionType::Init);
 
         /* FEED */
         let mut params = PluginParam {
@@ -175,7 +175,7 @@ fn process_call(ctx: &mut Ctx) -> bool {
             data_out: core::ptr::null_mut(),
             result: PluginResult::Err
         };
-        plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Feed);
+        plugin_call(plugin_name, &mut params, PluginInteractionType::Feed);
 
         /* FINALIZE */
         let mut ui: UiParam = Default::default();
@@ -186,7 +186,7 @@ fn process_call(ctx: &mut Ctx) -> bool {
             data_out: &mut ui as *mut UiParam as *mut u8,
             result: PluginResult::Err
         };
-        plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Finalize);
+        plugin_call(plugin_name, &mut params, PluginInteractionType::Finalize);
 
         ctx.num_ui_screens = ui.num_ui_screens;
         ctx.call_to_string[ctx.nb_call_rcv].copy_from(&ui.msg);
@@ -216,7 +216,7 @@ fn process_call(ctx: &mut Ctx) -> bool {
                 data_out: &mut ui.title as *mut string::String<32> as *mut u8,
                 result: PluginResult::Err
             };
-            plugin_call_v2(plugin_name, &mut params, PluginInteractionType::QueryUi);
+            plugin_call(plugin_name, &mut params, PluginInteractionType::QueryUi);
 
             ui::popup(ui.title.as_str());
 
@@ -230,7 +230,7 @@ fn process_call(ctx: &mut Ctx) -> bool {
                     data_out: &mut ui as *mut UiParam as *mut u8,
                     result: PluginResult::Err
                 };
-                plugin_call_v2(plugin_name, &mut params, PluginInteractionType::GetUi);
+                plugin_call(plugin_name, &mut params, PluginInteractionType::GetUi);
 
                 debug_print(ui.title.as_str());
                 debug_print("\n");

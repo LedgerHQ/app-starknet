@@ -4,7 +4,7 @@ use nanos_sdk::plugin::{
     PluginResult,
     PluginInteractionType,
     PluginParam,
-    plugin_call_v2
+    plugin_call
 };
 
 use crate::context::Ctx;
@@ -64,6 +64,6 @@ pub fn plugin_find(ctx: &mut Ctx) -> Option<&'static str> {
         data_out: core::ptr::null_mut(),
         result: PluginResult::Err,
     };
-    plugin_call_v2(plugin_name, &mut params, PluginInteractionType::Check);
+    plugin_call(plugin_name, &mut params, PluginInteractionType::Check);
     Some(plugin_name)
 }
