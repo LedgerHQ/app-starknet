@@ -7,7 +7,8 @@ use nanos_sdk::plugin::{
     PluginResult,
     PluginInteractionType,
     PluginParam,
-    plugin_call
+    plugin_call,
+    PluginCallError 
 };
 use nanos_sdk::string;
 use nanos_ui::ui;
@@ -130,8 +131,22 @@ fn process_call(ctx: &mut Ctx) -> bool {
             update_pedersen(&ctx.call, &mut ctx.hash);
             ctx.nb_hash += 3 + ctx.call.calldata_len;
 
-            // To do: check BMC plugin
-            ctx.is_bettermulticall = true;
+             /* CHECK BMC Plugin Presence */
+
+            debug_print("==========================================> Test BMC plugin presence\n");
+
+            let mut params = PluginParam {
+                plugin_internal_ctx: core::ptr::null_mut(),
+                plugin_internal_ctx_len: 0,
+                data_in: core::ptr::null(),
+                data_out: core::ptr::null_mut(),
+                result: PluginResult::Err,
+            };
+            let res = plugin_call("plugin-bmc\0", &mut params, PluginInteractionType::Check);
+            ctx.is_bettermulticall = match res {
+                Ok(()) => true,
+                Err(e) => false
+            };
             ctx.nb_call_rcv += 1;
             return true;
         }
