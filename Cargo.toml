@@ -23,10 +23,17 @@ panic = "abort"
 opt-level = 'z' 
 lto = true
 
-[package.metadata.nanos]
+[package.metadata.ledger]
 curve = ["secp256k1"]
 path = ["m/2645'"]
 flags = "0"
-icon = "crab.gif"
-icon_small = "starknet_small.gif"
 name = "staRknet"
+
+[package.metadata.ledger.nanos]
+icon = "crab.gif"
+
+[package.metadata.ledger.nanox]
+icon = "starknet_small.gif"
+
+[package.metadata.ledger.nanosplus]
+icon = "starknet_small.gif"
