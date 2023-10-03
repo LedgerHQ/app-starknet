@@ -1,4 +1,4 @@
-from starkware.crypto.signature.signature import verify, private_to_stark_key, sign
+from starknet_py.hash.utils import verify_message_signature
 
 bip32_path: str = "m/2645'/1195502025'/1148870696'/0'/0'/0"
 
@@ -37,9 +37,8 @@ def test_sign_hash(cmd, button, model):
         print(int.from_bytes(s, byteorder='big'))
 
         assert(
-            verify(
+            verify_message_signature(
                 msg_hash=int(hash, 16), 
-                r=int.from_bytes(r, byteorder='big'), 
-                s=int.from_bytes(s, byteorder='big'), 
+                signature = [int.from_bytes(r, byteorder='big'), int.from_bytes(s, byteorder='big')], 
                 public_key=int.from_bytes(pub_key_x, byteorder='big'))
         )
