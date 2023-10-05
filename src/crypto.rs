@@ -11,9 +11,9 @@ const EIP2645_PATH_PREFIX: u32 = 0x80000A55;
 
 #[derive(Debug)]
 pub enum CryptoError {
-    UnvalidPathPrefixError = 0xFF00,
-    UnvalidPathLengthError = 0xFF01,
-    SignError = 0xFF02,
+    UnvalidPathPrefix = 0xFF00,
+    UnvalidPathLength = 0xFF01,
+    Sign = 0xFF02,
 }
 
 impl From<CryptoError> for Reply {
@@ -33,7 +33,7 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
             ctx.hash_info.v = s.2 as u8;
             Ok(())
         }
-        Err(_) => Err(CryptoError::SignError),
+        Err(_) => Err(CryptoError::Sign),
     }
 }
 
@@ -62,10 +62,10 @@ pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(), CryptoE
 
             match ctx.bip32_path[0] {
                 EIP2645_PATH_PREFIX => Ok(()),
-                _ => Err(CryptoError::UnvalidPathPrefixError),
+                _ => Err(CryptoError::UnvalidPathPrefix),
             }
         }
-        _ => Err(CryptoError::UnvalidPathLengthError),
+        _ => Err(CryptoError::UnvalidPathLength),
     }
 }
 
@@ -84,11 +84,7 @@ enum ConvertError<const R: usize, const S: usize> {
     /// Passed signature was too short to be read properly
     TooShort,
     /// Passed signature encoded payload len was not in the expected range
-    InvalidPayloadLen {
-        min: usize,
-        payload: usize,
-        max: usize,
-    },
+    InvalidPayloadLen(usize, usize, usize),
 }
 
 /// Converts a DER encoded signature into a (r, s) encoded signture
@@ -127,11 +123,11 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     let min_payload_len = 2 + MINPAYLOADLEN + 2 + MINPAYLOADLEN;
     let max_payload_len = 2 + MAXPAYLOADLEN + 2 + MAXPAYLOADLEN;
     if payload_len < min_payload_len || payload_len > max_payload_len {
-        return Err(ConvertError::InvalidPayloadLen {
-            min: min_payload_len,
-            payload: payload_len,
-            max: max_payload_len,
-        });
+        return Err(ConvertError::InvalidPayloadLen(
+            min_payload_len,
+            payload_len,
+            max_payload_len,
+        ));
     }
 
     //check that the input slice is at least as long as the encoded len

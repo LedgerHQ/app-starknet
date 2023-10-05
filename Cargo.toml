@@ -26,7 +26,7 @@ lto = true
 curve = ["secp256k1"]
 path = ["m/2645'"]
 flags = "0"
-name = "staRknet"
+name = "Starknet"
 
 [package.metadata.ledger.nanos]
 icon = "crab.gif"
