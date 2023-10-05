@@ -6,22 +6,14 @@ mod crypto;
 mod utils;
 mod context;
 mod display;
-mod transaction;
 
 use crypto::{
     sign_hash, 
-    pedersen, 
     get_pubkey, 
     set_derivation_path
 };
 
-use context::{Ctx, RequestType, FieldElement};
-use transaction::{
-    set_tx_fields,
-    set_tx_calldata_lengths,
-    set_tx_callarray,
-    set_tx_calldata
-};
+use context::{Ctx, RequestType};
 
 use nanos_sdk::buttons::ButtonEvent;
 use nanos_sdk::io;
@@ -83,8 +75,6 @@ enum Ins {
     GetVersion,
     GetPubkey,
     SignHash,
-    PedersenHash,
-    SignTx,
 }
 
 impl TryFrom<io::ApduHeader> for Ins {
@@ -94,8 +84,6 @@ impl TryFrom<io::ApduHeader> for Ins {
             0 => Ok(Ins::GetVersion),
             1 => Ok(Ins::GetPubkey),
             2 => Ok(Ins::SignHash),
-            3 => Ok(Ins::SignTx),
-            4 => Ok(Ins::PedersenHash),
             _ => Err(())
         }
     }
@@ -185,59 +173,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
             }
         }  
-        Ins::PedersenHash => {
-            ctx.clear();
-            ctx.req_type = RequestType::ComputePedersen;
-            let data = comm.get_data()?;
-            let (a_s, b_s) = data.split_at(32);
-            let mut a: FieldElement = a_s.into();
-            let b: FieldElement = b_s.into();
-            pedersen::pedersen_hash(&mut a, &b);
-            comm.append(&a.value[..]);
-        }
-        Ins::SignTx => {
-            
-            let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-            let mut data = comm.get_data()?;
-
-            match p1 {
-                0 => {
-                    ctx.clear();
-                    ctx.req_type = RequestType::SignTransaction;
-                    set_derivation_path(&mut data, ctx)?;
-                }
-                1 => {
-                    set_tx_fields(&mut data, ctx);
-                }
-                2 => {
-                    set_tx_calldata_lengths(&mut data, ctx);
-                }
-                3 => {
-                    set_tx_callarray(&mut data, ctx, p2 as usize);
-                }
-                4 => {
-
-                    match set_tx_calldata(data, ctx, p2 as usize) {
-                        Ok(flag) => {
-                            if !flag {
-                                return Err(io::StatusWords::UserCancelled.into());
-                            }
-                        }
-                        _ => ()
-                    }
-
-                    if p2 + 1 == ctx.tx_info.calldata.call_array_len.into() {
-                        sign_hash(ctx).unwrap();
-                        comm.append([65u8].as_slice());
-                        comm.append(ctx.hash_info.r.as_ref());
-                        comm.append(ctx.hash_info.s.as_ref());
-                        comm.append([ctx.hash_info.v].as_slice());
-                    }
-                }
-                _ => return Err(io::StatusWords::BadP1P2.into()),
-            }
-        }
     }
     Ok(())
 }

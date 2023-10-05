@@ -1,6 +1,3 @@
-//use crypto_bigint::U256;
-//pub struct NewFieldElement(U256);
-
 #[derive(Debug, Copy, Clone)]
 pub struct FieldElement {
     pub value: [u8; 32]
@@ -148,14 +145,10 @@ impl Transaction {
     }
 }
 
-const MAX_TRANSACTION_LEN: usize = 510;
-
 pub enum RequestType {
     Unknown,
     GetPubkey,     
-    SignHash,
-    SignTransaction,
-	ComputePedersen
+    SignHash
 }
 
 pub struct HashInfo {

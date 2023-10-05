@@ -1,17 +1,14 @@
 use nanos_sdk::ecc::{Stark256, ECPublicKey, SeedDerive};
 use nanos_sdk::io::{SyscallError, Reply};
 
-use crate::context::{
-    Ctx
-};
+use crate::context::Ctx;
+
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
 /// with every step encoded with 4 bytes (total length = 6 x 4 = 24 bytes)
 const EIP2645_PATH_BYTES_LENGTH: usize = 24;
 /// Hardened 2645 value
-const EIP2645_PATH_PREFIX: u32 = 0x80000A55;   
-
-pub mod pedersen;
+const EIP2645_PATH_PREFIX: u32 = 0x80000A55;
 
 #[derive(Debug)]
 pub enum CryptoError {
