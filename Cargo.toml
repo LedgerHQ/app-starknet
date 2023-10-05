@@ -1,5 +1,5 @@
 [package]
-name = "app-starknet"
+name = "starknet"
 version = "0.1.1"
 edition = "2021"
 authors = ["grom"]
@@ -25,8 +25,8 @@ lto = true
 [package.metadata.ledger]
 curve = ["secp256k1"]
 path = ["m/2645'"]
-flags = "0"
 name = "Starknet"
+flags = "0"
 
 [package.metadata.ledger.nanos]
 icon = "crab.gif"
