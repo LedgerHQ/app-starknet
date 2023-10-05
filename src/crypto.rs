@@ -1,8 +1,7 @@
-use nanos_sdk::ecc::{Stark256, ECPublicKey, SeedDerive};
-use nanos_sdk::io::{SyscallError, Reply};
+use nanos_sdk::ecc::{ECPublicKey, SeedDerive, Stark256};
+use nanos_sdk::io::{Reply, SyscallError};
 
 use crate::context::Ctx;
-
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
 /// with every step encoded with 4 bytes (total length = 6 x 4 = 24 bytes)
@@ -24,22 +23,22 @@ impl From<CryptoError> for Reply {
 }
 
 /// Helper function that signs with ECDSA in deterministic nonce
-pub fn sign_hash(ctx: &mut Ctx) -> Result<() , CryptoError> {
-
-    match Stark256::derive_from_path(ctx.bip32_path.as_ref()).deterministic_sign(ctx.hash_info.m_hash.value.as_ref()) {
+pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
+    match Stark256::derive_from_path(ctx.bip32_path.as_ref())
+        .deterministic_sign(ctx.hash_info.m_hash.value.as_ref())
+    {
         Ok(s) => {
             let der = s.0;
             convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
             ctx.hash_info.v = s.2 as u8;
             Ok(())
-        },
-        Err(_) => Err(CryptoError::SignError)
+        }
+        Err(_) => Err(CryptoError::SignError),
     }
 }
 
 /// Helper function that retrieves public key
 pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
-
     let private_key = Stark256::derive_from_path(&ctx.bip32_path);
 
     /*crate::utils::print::printf("private key is: \n");
@@ -48,15 +47,13 @@ pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
 
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
-        Err(_) => Err(SyscallError::Unspecified)
+        Err(_) => Err(SyscallError::Unspecified),
     }
 }
 
-pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(),  CryptoError>  {
-
+pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(), CryptoError> {
     match buf.len() {
         EIP2645_PATH_BYTES_LENGTH => {
-            
             for i in 0..5 {
                 let (int_bytes, rest) = buf.split_at(4);
                 *buf = rest;
@@ -67,7 +64,7 @@ pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(),  Crypto
                 EIP2645_PATH_PREFIX => Ok(()),
                 _ => Err(CryptoError::UnvalidPathPrefixError),
             }
-        },
+        }
         _ => Err(CryptoError::UnvalidPathLengthError),
     }
 }
@@ -176,6 +173,3 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     Ok(())
 }
-
-
-

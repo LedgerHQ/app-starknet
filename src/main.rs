@@ -1,17 +1,12 @@
 #![no_std]
 #![no_main]
 
-
-mod crypto;
-mod utils;
 mod context;
+mod crypto;
 mod display;
+mod utils;
 
-use crypto::{
-    sign_hash, 
-    get_pubkey, 
-    set_derivation_path
-};
+use crypto::{get_pubkey, set_derivation_path, sign_hash};
 
 use context::{Ctx, RequestType};
 
@@ -44,7 +39,6 @@ extern "C" fn sample_pending() {
 
 #[no_mangle]
 extern "C" fn sample_main() {
-
     let mut comm = io::Comm::new();
 
     // Draw some 'welcome' screen
@@ -52,11 +46,11 @@ extern "C" fn sample_main() {
 
     let mut ctx: Ctx = Ctx::new();
 
-    loop {        
+    loop {
         // Wait for either a specific button push to exit the app
         // or an APDU command
         match comm.next_event() {
-            io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),        
+            io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),
             io::Event::Command(ins) => {
                 match handle_apdu(&mut comm, ins, &mut ctx) {
                     Ok(()) => comm.reply_ok(),
@@ -64,7 +58,7 @@ extern "C" fn sample_main() {
                 }
                 ui::clear_screen();
                 ui::SingleMessage::new(display::WELCOME_SCREEN).show();
-            },
+            }
             _ => (),
         }
     }
@@ -84,7 +78,7 @@ impl TryFrom<io::ApduHeader> for Ins {
             0 => Ok(Ins::GetVersion),
             1 => Ok(Ins::GetPubkey),
             2 => Ok(Ins::SignHash),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
@@ -92,11 +86,10 @@ impl TryFrom<io::ApduHeader> for Ins {
 use nanos_sdk::io::Reply;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
-    
     if comm.rx == 0 {
         return Err(io::StatusWords::NothingReceived.into());
     }
-    
+
     let apdu_header = comm.get_apdu_metadata();
     if apdu_header.cla != 0x80 {
         return Err(io::StatusWords::BadCla.into());
@@ -110,30 +103,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             comm.append([version_major, version_minor, version_patch].as_slice());
         }
         Ins::GetPubkey => {
-
             ctx.clear();
             ctx.req_type = RequestType::GetPubkey;
 
             let mut data = comm.get_data()?;
 
             match set_derivation_path(&mut data, ctx) {
-                Ok(()) => {
-                    match get_pubkey(ctx) {
-                        Ok(k) => {
-                            comm.append(k.as_ref());
-                        }
-                        Err(e) => {
-                            return Err(Reply::from(e));
-                        } 
+                Ok(()) => match get_pubkey(ctx) {
+                    Ok(k) => {
+                        comm.append(k.as_ref());
                     }
-                }
+                    Err(e) => {
+                        return Err(Reply::from(e));
+                    }
+                },
                 Err(e) => {
                     return Err(e.into());
                 }
             }
         }
         Ins::SignHash => {
-
             let p1 = apdu_header.p1;
             let p2 = apdu_header.p2;
 
@@ -153,8 +142,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             Ok(v) => {
                                 if v {
                                     sign_hash(ctx).unwrap();
-                                }
-                                else {
+                                } else {
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             }
@@ -162,8 +150,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 return Err(io::SyscallError::Unspecified.into());
                             }
                         }
-                    }
-                    else {
+                    } else {
                         sign_hash(ctx).unwrap();
                     }
                     comm.append([0x41].as_slice());
@@ -172,7 +159,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     comm.append([ctx.hash_info.v].as_slice());
                 }
             }
-        }  
+        }
     }
     Ok(())
 }
