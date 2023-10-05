@@ -20,4 +20,4 @@ jobs:
     with:
       upload_app_binaries_artifact: "compiled_app_binaries"
       builder: ledger-app-builder
-      run_for_devices: '["nanos", "nanos", "nanosp"]'
+      run_for_devices: '["nanos", "nanox", "nanosp"]'
