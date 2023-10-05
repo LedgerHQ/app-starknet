@@ -24,7 +24,7 @@ lto = true
 
 [package.metadata.ledger]
 curve = ["secp256k1"]
-path = ["m/2645'"]
+path = ["2645'"]
 name = "Starknet"
 flags = "0"
 
