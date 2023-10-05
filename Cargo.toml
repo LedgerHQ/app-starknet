@@ -1,8 +1,8 @@
 [package]
-name = "nano-rapp-starknet"
+name = "app-starknet"
 version = "0.1.1"
 edition = "2021"
-authors = ["yogh333"]
+authors = ["grom"]
 
 [dependencies]
 nanos_sdk = { git = "https://github.com/LedgerHQ/ledger-nanos-sdk.git" }

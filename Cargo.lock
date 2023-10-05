@@ -3,6 +3,14 @@
 version = 3
 
 [[package]]
+name = "app-starknet"
+version = "0.1.1"
+dependencies = [
+ "nanos_sdk",
+ "nanos_ui",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -37,14 +45,6 @@ source = "git+https://github.com/LedgerHQ/sdk_include_gif#699d28c6157518c4493899
 dependencies = [
  "gif",
  "syn",
-]
-
-[[package]]
-name = "nano-rapp-starknet"
-version = "0.1.1"
-dependencies = [
- "nanos_sdk",
- "nanos_ui",
 ]
 
 [[package]]
