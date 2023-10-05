@@ -23,16 +23,14 @@ extern "C" fn sample_pending() {
     ui::SingleMessage::new("Pending").show();
 
     loop {
-        match comm.next_event::<Ins>() {
-            io::Event::Button(ButtonEvent::RightButtonRelease) => break,
-            _ => (),
+        if let io::Event::Button(ButtonEvent::RightButtonRelease) = comm.next_event::<Ins>() {
+            break;
         }
     }
     ui::SingleMessage::new("Ledger review").show();
     loop {
-        match comm.next_event::<Ins>() {
-            io::Event::Button(ButtonEvent::BothButtonsRelease) => break,
-            _ => (),
+        if let io::Event::Button(ButtonEvent::RightButtonRelease) = comm.next_event::<Ins>() {
+            break;
         }
     }
 }

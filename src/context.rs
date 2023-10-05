@@ -23,11 +23,17 @@ impl FieldElement {
     }
 }
 
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl From<&[u8]> for FieldElement {
     fn from(data: &[u8]) -> Self {
         let mut value: [u8; 32] = [0; 32];
         value.copy_from_slice(data);
-        Self { value: value }
+        Self { value }
     }
 }
 

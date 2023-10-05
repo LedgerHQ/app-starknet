@@ -3,7 +3,7 @@
 
 -------------------
 
-Official Ledger Nano App Starknet application
+Official Ledger Nano S/S+/X Starknet application
 
 -------------------
 
