@@ -1,7 +1,4 @@
-use ledger_device_sdk::io;
 use ledger_device_sdk::ui::*;
-
-use crate::utils;
 
 pub const WELCOME_SCREEN: &str = "S T A R K N E T";
 
