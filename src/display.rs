@@ -6,6 +6,7 @@ use crate::utils;
 pub const WELCOME_SCREEN: &str = "S T A R K N E T";
 
 use core::fmt::{Error, Write};
+use core::ops::Shr;
 
 struct Buf {
     buf: [u8; 64],
@@ -28,18 +29,37 @@ impl Write for Buf {
 /// This is the UI flow for signing, composed of a scroller
 /// to read the incoming message, a panel that requests user
 /// validation, and an exit message.
-pub fn sign_ui(message: &[u8]) -> Result<bool, io::SyscallError> {
-    gadgets::popup("Tx hash review:");
-    {
-        let hex: [u8; 64] = utils::to_hex(message).map_err(|_| io::SyscallError::Overflow)?;
-        let m = core::str::from_utf8(&hex).map_err(|_| io::SyscallError::InvalidParameter)?;
-        gadgets::MessageScroller::new(m).event_loop();
-    }
+pub fn sign_ui(message: &[u8]) -> bool {
+    let mut b = Buf {
+        buf: [0u8; 64],
+        len: 0,
+    };
 
-    match gadgets::Validator::new("Sign?").ask() {
-        true => Ok(true),
-        false => Ok(false),
+    /* Display 252-bit length Pedersen Hash */
+    for v in &message[..31] {
+        write!(&mut b, "{:X}", (*v).shr(4));
+        write!(&mut b, "{:X}", *v & 15u8);
     }
+    write!(&mut b, "{:X}", message[31].shr(4));
+
+    let hash = core::str::from_utf8(&b.buf[..b.len]).unwrap();
+
+    let my_field = [gadgets::Field {
+        name: "Hash",
+        value: hash,
+    }];
+
+    let my_review = gadgets::MultiFieldReview::new(
+        &my_field,
+        &["Confirm Hash to sign"],
+        Some(&bitmaps::EYE),
+        "Approve",
+        Some(&bitmaps::VALIDATE_14),
+        "Reject",
+        Some(&bitmaps::CROSSMARK),
+    );
+
+    my_review.show()
 }
 
 pub fn pkey_ui(key: &[u8]) -> bool {

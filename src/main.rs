@@ -45,18 +45,20 @@ extern "C" fn sample_main() {
 #[repr(u8)]
 enum Ins {
     GetVersion,
-    GetPubkey,
+    GetPubkey { display: bool },
     SignHash,
 }
 
 impl TryFrom<io::ApduHeader> for Ins {
     type Error = io::StatusWords;
     fn try_from(header: io::ApduHeader) -> Result<Self, Self::Error> {
-        match header.ins {
-            0 => Ok(Ins::GetVersion),
-            1 => Ok(Ins::GetPubkey),
-            2 => Ok(Ins::SignHash),
-            _ => Err(io::StatusWords::BadIns),
+        match (header.ins, header.p1) {
+            (0, _) => Ok(Ins::GetVersion),
+            (1, 0 | 1) => Ok(Ins::GetPubkey {
+                display: header.p1 != 0,
+            }),
+            (2, _) => Ok(Ins::SignHash),
+            (_, _) => Err(io::StatusWords::BadIns),
         }
     }
 }
@@ -80,23 +82,33 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             let version_patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
             comm.append([version_major, version_minor, version_patch].as_slice());
         }
-        Ins::GetPubkey => {
+        Ins::GetPubkey { display } => {
             ctx.clear();
             ctx.req_type = RequestType::GetPubkey;
 
             let mut data = comm.get_data()?;
 
-            match set_derivation_path(&mut data, ctx) {
-                Ok(()) => match get_pubkey(ctx) {
-                    Ok(k) => {
-                        comm.append(k.as_ref());
-                    }
-                    Err(e) => {
-                        return Err(Reply::from(e));
-                    }
-                },
+            let res = set_derivation_path(&mut data, ctx);
+            match res {
                 Err(e) => {
                     return Err(e.into());
+                }
+                Ok(()) => {
+                    let pub_key = get_pubkey(ctx);
+                    match pub_key {
+                        Err(e) => {
+                            return Err(Reply::from(e));
+                        }
+                        Ok(key) => {
+                            let ret = match display {
+                                false => true,
+                                true => display::pkey_ui(key.as_ref()),
+                            };
+                            if ret {
+                                comm.append(key.as_ref());
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -117,15 +129,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.hash_info.m_hash = data.into();
                     if p2 > 0 {
                         match display::sign_ui(data) {
-                            Ok(v) => {
-                                if v {
-                                    sign_hash(ctx).unwrap();
-                                } else {
-                                    return Err(io::StatusWords::UserCancelled.into());
-                                }
+                            true => {
+                                sign_hash(ctx).unwrap();
                             }
-                            Err(_e) => {
-                                return Err(io::SyscallError::Unspecified.into());
+                            false => {
+                                return Err(io::StatusWords::UserCancelled.into());
                             }
                         }
                     } else {
