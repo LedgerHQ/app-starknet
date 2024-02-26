@@ -10,37 +10,17 @@ use crypto::{get_pubkey, set_derivation_path, sign_hash};
 
 use context::{Ctx, RequestType};
 
-use nanos_sdk::buttons::ButtonEvent;
-use nanos_sdk::io;
-use nanos_ui::ui;
+use ledger_device_sdk::{io, ui};
+use ledger_secure_sdk_sys::buttons::ButtonEvent;
 
-nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
-
-#[no_mangle]
-extern "C" fn sample_pending() {
-    let mut comm = io::Comm::new();
-
-    ui::SingleMessage::new("Pending").show();
-
-    loop {
-        if let io::Event::Button(ButtonEvent::RightButtonRelease) = comm.next_event::<Ins>() {
-            break;
-        }
-    }
-    ui::SingleMessage::new("Ledger review").show();
-    loop {
-        if let io::Event::Button(ButtonEvent::RightButtonRelease) = comm.next_event::<Ins>() {
-            break;
-        }
-    }
-}
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
 
     // Draw some 'welcome' screen
-    ui::SingleMessage::new(display::WELCOME_SCREEN).show();
+    ui::gadgets::SingleMessage::new(display::WELCOME_SCREEN).show();
 
     let mut ctx: Ctx = Ctx::new();
 
@@ -48,14 +28,14 @@ extern "C" fn sample_main() {
         // Wait for either a specific button push to exit the app
         // or an APDU command
         match comm.next_event() {
-            io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),
+            io::Event::Button(ButtonEvent::RightButtonRelease) => ledger_device_sdk::exit_app(0),
             io::Event::Command(ins) => {
                 match handle_apdu(&mut comm, ins, &mut ctx) {
                     Ok(()) => comm.reply_ok(),
                     Err(sw) => comm.reply(sw),
                 }
-                ui::clear_screen();
-                ui::SingleMessage::new(display::WELCOME_SCREEN).show();
+                ui::gadgets::clear_screen();
+                ui::gadgets::SingleMessage::new(display::WELCOME_SCREEN).show();
             }
             _ => (),
         }
@@ -70,18 +50,18 @@ enum Ins {
 }
 
 impl TryFrom<io::ApduHeader> for Ins {
-    type Error = ();
+    type Error = io::StatusWords;
     fn try_from(header: io::ApduHeader) -> Result<Self, Self::Error> {
         match header.ins {
             0 => Ok(Ins::GetVersion),
             1 => Ok(Ins::GetPubkey),
             2 => Ok(Ins::SignHash),
-            _ => Err(()),
+            _ => Err(io::StatusWords::BadIns),
         }
     }
 }
 
-use nanos_sdk::io::Reply;
+use ledger_device_sdk::io::Reply;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     if comm.rx == 0 {

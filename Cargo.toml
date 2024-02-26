@@ -1,18 +1,18 @@
 [package]
 name = "starknet"
-version = "0.1.1"
+version = "1.0.0"
 edition = "2021"
-authors = ["grom"]
+authors = ["yogh333"]
 
 [dependencies]
-nanos_sdk = { git = "https://github.com/LedgerHQ/ledger-nanos-sdk.git" }
-nanos_ui = { git = "https://github.com/LedgerHQ/ledger-nanos-ui.git" }
+#nanos_sdk = { git = "https://github.com/LedgerHQ/ledger-nanos-sdk.git" }
+#nanos_ui = { git = "https://github.com/LedgerHQ/ledger-nanos-ui.git" }
+ledger_device_sdk = "1.6.0"
+ledger_secure_sdk_sys = "1.2.0"
 
 [features]
-default = [ "speculos" ]
-speculos = ["nanos_sdk/speculos", "nanos_ui/speculos"]
-device = ["pending_review"]
-pending_review = ["nanos_sdk/pending_review_screen"]
+default = ["pending_review_screen"]
+pending_review_screen = []
 
 [profile.dev]
 panic = "abort"
@@ -36,3 +36,7 @@ icon = "starknet_small.gif"
 
 [package.metadata.ledger.nanosplus]
 icon = "starknet_small.gif"
+
+[patch.crates-io]
+ledger_device_sdk = {path = "../ledger-device-rust-sdk/ledger_device_sdk"}
+ledger_secure_sdk_sys = {path = "../ledger-device-rust-sdk/ledger_secure_sdk_sys"}

@@ -14,7 +14,6 @@ git clone https://github.com/LedgerHQ/nano-rapp-starknet.git
 Build:
 ```
 docker run --rm -ti -v $(pwd)/app:/app ledger-app-builder:full
-cargo ledger setup
 cd nano-rapp-starknet/
 cargo clean
 cargo ledger build nanos|nanosplus|nanox
@@ -24,7 +23,6 @@ cargo ledger build nanos|nanosplus|nanox
 Build for Nano device:
 ```
 docker run --rm -ti -v $(pwd)/app:/app ledger-app-builder:full
-cargo ledger setup
 cd nano-rapp-starknet/
 cargo ledger build nanos|nanosplus|nanox -- --no-default-features --features device
 ```
