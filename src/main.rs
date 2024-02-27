@@ -4,14 +4,12 @@
 mod context;
 mod crypto;
 mod display;
-mod utils;
 
 use crypto::{get_pubkey, set_derivation_path, sign_hash};
 
 use context::{Ctx, RequestType};
 
-use ledger_device_sdk::{io, ui};
-use ledger_secure_sdk_sys::buttons::ButtonEvent;
+use ledger_device_sdk::io;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -19,25 +17,16 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
 
-    // Draw some 'welcome' screen
-    ui::gadgets::SingleMessage::new(display::WELCOME_SCREEN).show();
-
     let mut ctx: Ctx = Ctx::new();
 
     loop {
         // Wait for either a specific button push to exit the app
         // or an APDU command
-        match comm.next_event() {
-            io::Event::Button(ButtonEvent::RightButtonRelease) => ledger_device_sdk::exit_app(0),
-            io::Event::Command(ins) => {
-                match handle_apdu(&mut comm, ins, &mut ctx) {
-                    Ok(()) => comm.reply_ok(),
-                    Err(sw) => comm.reply(sw),
-                }
-                ui::gadgets::clear_screen();
-                ui::gadgets::SingleMessage::new(display::WELCOME_SCREEN).show();
+        if let io::Event::Command(ins) = display::main_ui(&mut comm) {
+            match handle_apdu(&mut comm, ins, &mut ctx) {
+                Ok(()) => comm.reply_ok(),
+                Err(sw) => comm.reply(sw),
             }
-            _ => (),
         }
     }
 }
