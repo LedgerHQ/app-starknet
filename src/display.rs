@@ -7,7 +7,7 @@ use ledger_device_sdk::ui::gadgets::{
     EventOrPageIndex, Field, MultiFieldReview, MultiPageMenu, Page,
 };
 
-pub const WELCOME_SCREEN: &str = "STARKNET";
+pub const WELCOME_SCREEN: &str = "Starknet";
 
 use core::fmt::{Error, Write};
 use core::ops::Shr;
