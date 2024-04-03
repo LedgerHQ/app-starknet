@@ -5,7 +5,7 @@ from boilerplate_client.exception import *
 
 @pytest.mark.xfail(raises=ClaNotSupportedError)
 def test_bad_cla(cmd):
-    sw, _ = cmd.transport.exchange(cla=0xa0,  # 0xa0 instead of 0xe0
+    sw, _ = cmd.transport.exchange(cla=0xa0,  # 0xa0 instead of 0x5a
                                    ins=0x01,
                                    p1=0x00,
                                    p2=0x00,

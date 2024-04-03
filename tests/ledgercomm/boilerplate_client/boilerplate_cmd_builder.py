@@ -49,7 +49,7 @@ class BoilerplateCommandBuilder:
         Whether you want to see logging or not.
 
     """
-    CLA: int = 0x80
+    CLA: int = 0x5A
 
     def __init__(self, debug: bool = False):
         """Init constructor."""
