@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-ledger_device_sdk = "1.7.1"
+ledger_device_sdk = "1.8.0"
 include_gif = "1.0.1"
 
 [features]
@@ -34,3 +34,7 @@ icon = "starknet_small.gif"
 
 [package.metadata.ledger.nanosplus]
 icon = "starknet_small.gif"
+
+[patch.crates-io]
+ledger_device_sdk = {path = "../ledger-device-rust-sdk/ledger_device_sdk"}
+include_gif = {path = "../ledger-device-rust-sdk/include_gif"}

@@ -1,2 +1,5 @@
 /target
 *.pyc
+
+# Temporary directory with snapshots taken during test runs
+tests/snapshots-tmp/
