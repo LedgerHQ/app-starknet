@@ -46,13 +46,15 @@ enum Ins {
 impl TryFrom<io::ApduHeader> for Ins {
     type Error = io::StatusWords;
     fn try_from(header: io::ApduHeader) -> Result<Self, Self::Error> {
-        match (header.ins, header.p1) {
-            (0, _) => Ok(Ins::GetVersion),
-            (1, 0 | 1) => Ok(Ins::GetPubkey {
+        match (header.ins, header.p1, header.p2) {
+            (0, 0, 0) => Ok(Ins::GetVersion),
+            (0, _, _) => Err(io::StatusWords::BadP1P2),
+            (1, 0 | 1, 0) => Ok(Ins::GetPubkey {
                 display: header.p1 != 0,
             }),
-            (2, _) => Ok(Ins::SignHash),
-            (_, _) => Err(io::StatusWords::BadIns),
+            (1, _, _) => Err(io::StatusWords::BadP1P2),
+            (2, _, _) => Ok(Ins::SignHash),
+            (_, _, _) => Err(io::StatusWords::BadIns),
         }
     }
 }
@@ -100,6 +102,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             };
                             if ret {
                                 comm.append(key.as_ref());
+                            } else {
+                                return Err(io::StatusWords::UserCancelled.into());
                             }
                         }
                     }
