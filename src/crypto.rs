@@ -47,15 +47,18 @@ pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
     }
 }
 
+fn read_be_u32(input: &mut &[u8]) -> u32 {
+    let (int_bytes, rest) = input.split_at(core::mem::size_of::<u32>());
+    *input = rest;
+    u32::from_be_bytes(int_bytes.try_into().unwrap())
+}
+
 pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(), CryptoError> {
     match buf.len() {
         EIP2645_PATH_BYTES_LENGTH => {
-            for i in 0..5 {
-                let (int_bytes, rest) = buf.split_at(4);
-                *buf = rest;
-                ctx.bip32_path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
+            for i in 0..6 {
+                ctx.bip32_path[i] = read_be_u32(buf);
             }
-
             match ctx.bip32_path[0] {
                 EIP2645_PATH_PREFIX => Ok(()),
                 _ => Err(CryptoError::UnvalidPathPrefix),
