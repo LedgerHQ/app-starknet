@@ -34,7 +34,3 @@ icon = "starknet_small.gif"
 
 [package.metadata.ledger.nanosplus]
 icon = "starknet_small.gif"
-
-[patch.crates-io]
-ledger_device_sdk = {path = "../ledger-device-rust-sdk/ledger_device_sdk"}
-include_gif = {path = "../ledger-device-rust-sdk/include_gif"}

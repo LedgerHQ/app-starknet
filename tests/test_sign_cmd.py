@@ -279,7 +279,7 @@ def test_sign_hash_4(firmware, backend, navigator, test_name):
 
 # Hash signature refused test
 # The test will ask for a transaction hash that will be refused on screen
-def test_sign_tx_refused(firmware, backend, navigator, test_name):
+def test_sign_hash_refused(firmware, backend, navigator, test_name):
     # Use the app interface instead of raw interface
     client = CommandSender(backend)
     path: str = "m/2645'/1195502025'/1148870696'/0'/0'/5"
