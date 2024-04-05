@@ -16,7 +16,10 @@ def test_get_public_key_no_confirm(backend):
         public_key_x, public_key_y = unpack_get_public_key_response(response)
 
         #ref_public_key, _ = calculate_public_key_and_chaincode(CurveChoice.Secp256k1, path=path)
-        assert True
+        ref_public_key_x = bytes.fromhex("04ac45fea8814cc2c2bbca343f4280b25d2a5f6d65e511dd16977f35c3e64b74")
+        ref_public_key_y = bytes.fromhex("023e4ce66d2d3a466f4326a2def52c68eae80588a36b26574b369d6716fc16bd")
+        assert public_key_x == ref_public_key_x
+        assert public_key_y == ref_public_key_y
 
 
 # In this test we check that the GET_PUBLIC_KEY works in confirmation mode
@@ -42,11 +45,14 @@ def test_get_public_key_confirm_accepted(firmware, backend, navigator, test_name
                                            test_name,
                                            instructions)
     response = client.get_async_response().data
-    _, _ = unpack_get_public_key_response(response)
+    public_key_x, public_key_y = unpack_get_public_key_response(response)
 
-    #ref_public_key, _ = calculate_public_key_and_chaincode(CurveChoice.Secp256k1, path=path)
-    #assert public_key.hex() == ref_public_key
-    assert True
+
+    ref_public_key_x = bytes.fromhex("04ac45fea8814cc2c2bbca343f4280b25d2a5f6d65e511dd16977f35c3e64b74")
+    ref_public_key_y = bytes.fromhex("023e4ce66d2d3a466f4326a2def52c68eae80588a36b26574b369d6716fc16bd")
+    assert public_key_x == ref_public_key_x
+    assert public_key_y == ref_public_key_y
+
 
 
 # In this test we check that the GET_PUBLIC_KEY in confirmation mode replies an error if the user refuses
@@ -63,7 +69,7 @@ def test_get_public_key_confirm_refused(firmware, backend, navigator, test_name)
                                                           ROOT_SCREENSHOT_PATH,
                                                           test_name)
         # Assert that we have received a refusal
-        #assert e.value.status == Errors.SW_DENY
+        assert e.value.status == Errors.SW_DENY
         assert len(e.value.data) == 0
     else:
         instructions_set = [
