@@ -153,7 +153,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     }
 
     let s_len = sig[4 + r_len + 1] as usize;
-    if !payload_range.contains(&r_len) {
+    if !payload_range.contains(&s_len) {
         return Err(ConvertError::InvalidSLen(s_len));
     }
 
