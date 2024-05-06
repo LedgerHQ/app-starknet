@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["yogh333"]
 
 [dependencies]
-ledger_device_sdk = "1.7.1"
+ledger_device_sdk = "1.8.2"
 include_gif = "1.0.1"
 
 [features]
