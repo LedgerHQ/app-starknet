@@ -1,0 +1,3 @@
+pytest
+ragger[speculos,ledgerwallet]
+starknet-py

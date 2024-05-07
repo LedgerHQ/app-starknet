@@ -1,5 +1,5 @@
-use nanos_sdk::ecc::{ECPublicKey, SeedDerive, Stark256};
-use nanos_sdk::io::{Reply, SyscallError};
+use ledger_device_sdk::ecc::{ECPublicKey, SeedDerive, Stark256};
+use ledger_device_sdk::io::{Reply, SyscallError};
 
 use crate::context::Ctx;
 
@@ -41,25 +41,24 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
 pub fn get_pubkey(ctx: &Ctx) -> Result<ECPublicKey<65, 'W'>, SyscallError> {
     let private_key = Stark256::derive_from_path(&ctx.bip32_path);
 
-    /*crate::utils::print::printf("private key is: \n");
-    crate::utils::print::printf_slice::<64>(&private_key.key[..]);
-    crate::utils::print::printf("\n");*/
-
     match private_key.public_key() {
         Ok(public_key) => Ok(public_key),
         Err(_) => Err(SyscallError::Unspecified),
     }
 }
 
+fn read_be_u32(input: &mut &[u8]) -> u32 {
+    let (int_bytes, rest) = input.split_at(core::mem::size_of::<u32>());
+    *input = rest;
+    u32::from_be_bytes(int_bytes.try_into().unwrap())
+}
+
 pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(), CryptoError> {
     match buf.len() {
         EIP2645_PATH_BYTES_LENGTH => {
-            for i in 0..5 {
-                let (int_bytes, rest) = buf.split_at(4);
-                *buf = rest;
-                ctx.bip32_path[i] = u32::from_be_bytes(int_bytes.try_into().unwrap());
+            for i in 0..6 {
+                ctx.bip32_path[i] = read_be_u32(buf);
             }
-
             match ctx.bip32_path[0] {
                 EIP2645_PATH_PREFIX => Ok(()),
                 _ => Err(CryptoError::UnvalidPathPrefix),
@@ -154,7 +153,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     }
 
     let s_len = sig[4 + r_len + 1] as usize;
-    if !payload_range.contains(&r_len) {
+    if !payload_range.contains(&s_len) {
         return Err(ConvertError::InvalidSLen(s_len));
     }
 

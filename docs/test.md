@@ -1,26 +1,24 @@
-Use [ledger_app_builder](https://github.com/LedgerHQ/ledger-app-builder)
+Use [ledger_app_builder](https://github.com/LedgerHQ/ledger-app-builder) Docker container
 
+Prerequisite:
 ```
 # Get Docker container
-git clone https://github.com/LedgerHQ/ledger-app-builder
-cd ledger-app-builder
-docker build -t ledger-app-builder:latest -f dev-tools/Dockerfile .
+docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools
+```
+`
+### Run Ragger tests
+```
+docker run --rm -it -v "$(pwd -P):/apps" --publish 5001:5001 --publish 9999:9999 ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools
+cd /apps/app-starknet
+pip install -r tests/requirements.txt 
+pytest tests/ --tb=short -v --device {nanos | nanosp | nanox}
+```
 
-### Nano S
+### Emulator
+From the Docker container, you can also run the app directly with the [Speculos](https://github.com/LedgerHQ/speculos) emulator.
+For instance, for Nano S+:
 ```
-docker run --rm -it -v $(pwd)/target/nanos/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 ledger-app-builder:latest --display headless --api-port 5001 --apdu-port 9999 --model nanos apps/nano-rapp-starknet
-```
-### Nano S+
-```
-docker run --rm -it -v $(pwd)/target/nanosplus/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 ledger-app-builder:latest --display headless --api-port 5001 --apdu-port 9999 --model nanosp --apiLevel 1 apps/nano-rapp-starknet
-```
-### Nano X
-```
-docker run --rm -it -v $(pwd)/target/nanox/release:/speculos/apps --publish 5001:5001 --publish 9999:9999 ledger-app-builder:latest --display headless --api-port 5001 --apdu-port 9999 --model nanox --apiLevel 1 apps/nano-rapp-starknet
-```
-Use [ledgercomm](https://github.com/LedgerHQ/ledgercomm) to send APDU e.g :
-```
-ledgercomm-send file test/sign.apdu
+speculos -m nanosp --apdu-port 9999 --api-port 5001 target/nanosplus/release/starknet
 ```
 
 # Device

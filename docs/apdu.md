@@ -10,7 +10,7 @@ The general structure of a reqeuest and response is as followed:
 
 | Field   | Type     | Content                | Note                   |
 |:--------|:---------|:-----------------------|------------------------|
-| CLA     | byte (1) | Application Identifier | 0x80, To be determined |
+| CLA     | byte (1) | Application Identifier | 0x5A                   |
 | INS     | byte (1) | Instruction ID         |                        |
 | P1      | byte (1) | Parameter 1            |                        |
 | P2      | byte (1) | Parameter 2            |                        |
@@ -28,16 +28,16 @@ The general structure of a reqeuest and response is as followed:
 
 | Return code | Description             |
 | ----------- | ----------------------- |
-| 0x6400      | Execution Error         |
-| 0x6982      | Empty buffer            |
-| 0x6983      | Output buffer too small |
-| 0x6986      | Command not allowed     |
-| 0x6D00      | Unknown                 |
-| 0x6E00      | CLA not supported       |
-| 0xE000      | Panic                   |
 | 0x9000      | Success                 |
+| 0x68xx      | Syscall Error           |
+| 0x6982      | Empty buffer            |
+| 0x6e00      | Bad Cla                 |
+| 0x6e01      | Bad Ins                 |
+| 0x6e02      | Bad P1/P2               |
+| 0x6e03      | Bad Len                 |
+| 0x6e04      | User Cancelled          |
+| 0xe000      | Panic                   |
 
----
 
 ## Commands definitions
 
@@ -49,7 +49,7 @@ This command will return the app version
 
 | Field | Type     | Content                | Expected |
 |-------|----------|------------------------|----------|
-| CLA   | byte (1) | Application Identifier | 0x80     |
+| CLA   | byte (1) | Application Identifier | 0x5A     |
 | INS   | byte (1) | Instruction ID         | 0x00     |
 | P1    | byte (1) | Parameter 1            | ignored  |
 | P2    | byte (1) | Parameter 2            | ignored  |
@@ -72,12 +72,11 @@ This command returns the public key corresponding to the secret key found at the
 
 | Field   | Type     | Content                   | Expected        |
 |---------|----------|---------------------------|-----------------|
-| CLA     | byte (1) | Application Identifier    | 0x80            |
+| CLA     | byte (1) | Application Identifier    | 0x5A            |
 | INS     | byte (1) | Instruction ID            | 0x01            |
-| P1      | byte (1) | Parameter 1               | ignored         |
-| P2      | byte (1) | Parameter 1               | ignored         |
-| L       | byte (1) | Bytes in payload          | (depends)       |
-| PathN   | byte (1) | Number of path components | 6               |
+| P1      | byte (1) | Parameter 1               | if not 0, user will have to confirm          |
+| P2      | byte (1) | Parameter 2               | ignored         |
+| L       | byte (1) | Bytes in payload          | 0x18            |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55      |
 | Path[1] | byte (4) | Derivation Path Data      | ?               |
 | Path[2] | byte (4) | Derivation Path Data      | ?               |
@@ -89,8 +88,8 @@ This command returns the public key corresponding to the secret key found at the
 
 | Field      | Type      | Content           | Note                     |
 | ---------- | --------- | ----------------- | ------------------------ |
-| PK_LEN     | byte (1)  | Bytes in PKEY     |                          |
-| PKEY       | byte (??) | Public key bytes  |                          |
+| PK_LEN     | byte (1)  | Bytes in PKEY     | 64                       |
+| PKEY       | byte (??) | Public key bytes  | 32 (x) + 32 (y)          |
 | SW1-SW2    | byte (2)  | Return code       | see list of return codes |
 
 ### Sign

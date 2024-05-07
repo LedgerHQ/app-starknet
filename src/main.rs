@@ -4,60 +4,29 @@
 mod context;
 mod crypto;
 mod display;
-mod utils;
 
 use crypto::{get_pubkey, set_derivation_path, sign_hash};
 
 use context::{Ctx, RequestType};
 
-use nanos_sdk::buttons::ButtonEvent;
-use nanos_sdk::io;
-use nanos_ui::ui;
+use ledger_device_sdk::io;
 
-nanos_sdk::set_panic!(nanos_sdk::exiting_panic);
-
-#[no_mangle]
-extern "C" fn sample_pending() {
-    let mut comm = io::Comm::new();
-
-    ui::SingleMessage::new("Pending").show();
-
-    loop {
-        if let io::Event::Button(ButtonEvent::RightButtonRelease) = comm.next_event::<Ins>() {
-            break;
-        }
-    }
-    ui::SingleMessage::new("Ledger review").show();
-    loop {
-        if let io::Event::Button(ButtonEvent::RightButtonRelease) = comm.next_event::<Ins>() {
-            break;
-        }
-    }
-}
+ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
-
-    // Draw some 'welcome' screen
-    ui::SingleMessage::new(display::WELCOME_SCREEN).show();
 
     let mut ctx: Ctx = Ctx::new();
 
     loop {
         // Wait for either a specific button push to exit the app
         // or an APDU command
-        match comm.next_event() {
-            io::Event::Button(ButtonEvent::RightButtonRelease) => nanos_sdk::exit_app(0),
-            io::Event::Command(ins) => {
-                match handle_apdu(&mut comm, ins, &mut ctx) {
-                    Ok(()) => comm.reply_ok(),
-                    Err(sw) => comm.reply(sw),
-                }
-                ui::clear_screen();
-                ui::SingleMessage::new(display::WELCOME_SCREEN).show();
+        if let io::Event::Command(ins) = display::main_ui(&mut comm) {
+            match handle_apdu(&mut comm, ins, &mut ctx) {
+                Ok(()) => comm.reply_ok(),
+                Err(sw) => comm.reply(sw),
             }
-            _ => (),
         }
     }
 }
@@ -65,23 +34,27 @@ extern "C" fn sample_main() {
 #[repr(u8)]
 enum Ins {
     GetVersion,
-    GetPubkey,
+    GetPubkey { display: bool },
     SignHash,
 }
 
 impl TryFrom<io::ApduHeader> for Ins {
-    type Error = ();
+    type Error = io::StatusWords;
     fn try_from(header: io::ApduHeader) -> Result<Self, Self::Error> {
-        match header.ins {
-            0 => Ok(Ins::GetVersion),
-            1 => Ok(Ins::GetPubkey),
-            2 => Ok(Ins::SignHash),
-            _ => Err(()),
+        match (header.ins, header.p1, header.p2) {
+            (0, 0, 0) => Ok(Ins::GetVersion),
+            (0, _, _) => Err(io::StatusWords::BadP1P2),
+            (1, 0 | 1, 0) => Ok(Ins::GetPubkey {
+                display: header.p1 != 0,
+            }),
+            (1, _, _) => Err(io::StatusWords::BadP1P2),
+            (2, _, _) => Ok(Ins::SignHash),
+            (_, _, _) => Err(io::StatusWords::BadIns),
         }
     }
 }
 
-use nanos_sdk::io::Reply;
+use ledger_device_sdk::io::Reply;
 
 fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     if comm.rx == 0 {
@@ -89,7 +62,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
     }
 
     let apdu_header = comm.get_apdu_metadata();
-    if apdu_header.cla != 0x80 {
+    if apdu_header.cla != 0x5A {
         return Err(io::StatusWords::BadCla.into());
     }
 
@@ -100,23 +73,35 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             let version_patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
             comm.append([version_major, version_minor, version_patch].as_slice());
         }
-        Ins::GetPubkey => {
+        Ins::GetPubkey { display } => {
             ctx.clear();
             ctx.req_type = RequestType::GetPubkey;
 
             let mut data = comm.get_data()?;
 
-            match set_derivation_path(&mut data, ctx) {
-                Ok(()) => match get_pubkey(ctx) {
-                    Ok(k) => {
-                        comm.append(k.as_ref());
-                    }
-                    Err(e) => {
-                        return Err(Reply::from(e));
-                    }
-                },
+            let res = set_derivation_path(&mut data, ctx);
+            match res {
                 Err(e) => {
                     return Err(e.into());
+                }
+                Ok(()) => {
+                    let pub_key = get_pubkey(ctx);
+                    match pub_key {
+                        Err(e) => {
+                            return Err(Reply::from(e));
+                        }
+                        Ok(key) => {
+                            let ret = match display {
+                                false => true,
+                                true => display::pkey_ui(key.as_ref()),
+                            };
+                            if ret {
+                                comm.append(key.as_ref());
+                            } else {
+                                return Err(io::StatusWords::UserCancelled.into());
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -137,15 +122,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.hash_info.m_hash = data.into();
                     if p2 > 0 {
                         match display::sign_ui(data) {
-                            Ok(v) => {
-                                if v {
-                                    sign_hash(ctx).unwrap();
-                                } else {
-                                    return Err(io::StatusWords::UserCancelled.into());
-                                }
+                            true => {
+                                sign_hash(ctx).unwrap();
                             }
-                            Err(_e) => {
-                                return Err(io::SyscallError::Unspecified.into());
+                            false => {
+                                return Err(io::StatusWords::UserCancelled.into());
                             }
                         }
                     } else {
