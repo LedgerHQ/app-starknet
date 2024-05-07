@@ -10,17 +10,12 @@ use crypto::{get_pubkey, set_derivation_path, sign_hash};
 use context::{Ctx, RequestType};
 
 use ledger_device_sdk::io;
-use ledger_device_sdk::ui::gadgets::display_pending_review;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
-
-    // Developer mode / pending review popup
-    // must be cleared with user interaction
-    display_pending_review(&mut comm);
 
     let mut ctx: Ctx = Ctx::new();
 

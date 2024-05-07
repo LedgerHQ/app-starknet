@@ -9,7 +9,7 @@ ledger_device_sdk = "1.8.2"
 include_gif = "1.0.1"
 
 [features]
-default = ["pending_review_screen"]
+default = []
 pending_review_screen = []
 
 [profile.dev]
