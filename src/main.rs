@@ -40,12 +40,9 @@ extern "C" fn sample_main() {
                 match evt {
                     ledger_device_sdk::buttons::ButtonEvent::BothButtonsRelease => {
                         let pl = menu.pagelinks[page_index];
-                        match pl.link {
-                            Some(m) => {
-                                menu = m;
-                                page_index = 0;
-                            }
-                            None => (),
+                        if let Some(m) = pl.link {
+                            menu = m;
+                            page_index = 0;
                         }
                     }
                     ledger_device_sdk::buttons::ButtonEvent::LeftButtonRelease => {
@@ -64,7 +61,7 @@ extern "C" fn sample_main() {
                     }
                     _ => (),
                 }
-                if menu.pagelinks.len() == 0 {
+                if menu.pagelinks.is_empty() {
                     // In the HELL menu
                     ledger_device_sdk::exit_app(0);
                 }
