@@ -10,6 +10,11 @@ use crypto::{get_pubkey, set_derivation_path, sign_hash};
 use context::{Ctx, RequestType};
 
 use ledger_device_sdk::io;
+use ledger_device_sdk::ui::bagls::*;
+use ledger_device_sdk::ui::gadgets::*;
+use ledger_device_sdk::ui::layout::Draw;
+use ledger_device_sdk::ui::screen_util::*;
+use ledger_device_sdk::uxapp::{UxEvent, BOLOS_UX_OK};
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -19,13 +24,75 @@ extern "C" fn sample_main() {
 
     let mut ctx: Ctx = Ctx::new();
 
+    let mut menu = &display::HOME_MENU;
+    menu.pagelinks[0].page.place();
+    LEFT_ARROW.display();
+    RIGHT_ARROW.display();
+    screen_update();
+
+    let mut page_index: usize = 0;
+
     loop {
         // Wait for either a specific button push to exit the app
         // or an APDU command
-        if let io::Event::Command(ins) = display::main_ui(&mut comm) {
-            match handle_apdu(&mut comm, ins, &mut ctx) {
-                Ok(()) => comm.reply_ok(),
-                Err(sw) => comm.reply(sw),
+        match comm.next_event() {
+            io::Event::Button(evt) => {
+                match evt {
+                    ledger_device_sdk::buttons::ButtonEvent::BothButtonsRelease => {
+                        let pl = menu.pagelinks[page_index];
+                        if let Some(m) = pl.link {
+                            menu = m;
+                            page_index = 0;
+                        }
+                    }
+                    ledger_device_sdk::buttons::ButtonEvent::LeftButtonRelease => {
+                        if page_index as i16 - 1 < 0 {
+                            page_index = menu.pagelinks.len() - 1;
+                        } else {
+                            page_index = page_index.saturating_sub(1);
+                        }
+                    }
+                    ledger_device_sdk::buttons::ButtonEvent::RightButtonRelease => {
+                        if page_index < menu.pagelinks.len() - 1 {
+                            page_index += 1;
+                        } else {
+                            page_index = 0;
+                        }
+                    }
+                    _ => (),
+                }
+                if menu.pagelinks.is_empty() {
+                    // In the HELL menu
+                    ledger_device_sdk::exit_app(0);
+                }
+                clear_screen();
+                menu.pagelinks[page_index].page.place();
+                LEFT_ARROW.display();
+                RIGHT_ARROW.display();
+                screen_update();
+            }
+            io::Event::Command(ins) => {
+                match handle_apdu(&mut comm, ins, &mut ctx) {
+                    Ok(()) => comm.reply_ok(),
+                    Err(sw) => comm.reply(sw),
+                }
+                clear_screen();
+                menu.pagelinks[page_index].page.place();
+                LEFT_ARROW.display();
+                RIGHT_ARROW.display();
+                screen_update();
+            }
+            io::Event::Ticker => {
+                // Pin lock management
+                if UxEvent::Event.request() != BOLOS_UX_OK {
+                    UxEvent::block();
+                    // Redisplay screen
+                    clear_screen();
+                    menu.pagelinks[page_index].page.place();
+                    LEFT_ARROW.display();
+                    RIGHT_ARROW.display();
+                    screen_update();
+                }
             }
         }
     }
@@ -107,8 +174,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::SignHash => {
             let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-
             let mut data = comm.get_data()?;
 
             match p1 {
@@ -120,17 +185,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => {
                     ctx.hash_info.m_hash = data.into();
-                    if p2 > 0 {
-                        match display::sign_ui(data) {
-                            true => {
-                                sign_hash(ctx).unwrap();
-                            }
-                            false => {
-                                return Err(io::StatusWords::UserCancelled.into());
-                            }
+                    match display::sign_ui(data) {
+                        true => {
+                            sign_hash(ctx).unwrap();
                         }
-                    } else {
-                        sign_hash(ctx).unwrap();
+                        false => {
+                            return Err(io::StatusWords::UserCancelled.into());
+                        }
                     }
                     comm.append([0x41].as_slice());
                     comm.append(ctx.hash_info.r.as_ref());

@@ -1,18 +1,11 @@
 use include_gif::include_gif;
-use ledger_device_sdk::io::{Comm, Event};
 use ledger_device_sdk::ui::bitmaps::{
     Glyph, BACK, CERTIFICATE, CROSSMARK, DASHBOARD_X, EYE, VALIDATE_14,
 };
-use ledger_device_sdk::ui::gadgets::{
-    EventOrPageIndex, Field, MultiFieldReview, MultiPageMenu, Page,
-};
-
-pub const WELCOME_SCREEN: &str = "Starknet";
+use ledger_device_sdk::ui::gadgets::{Field, MultiFieldReview, Page};
 
 use core::fmt::{Error, Write};
 use core::ops::Shr;
-
-use crate::Ins;
 
 struct Buf {
     buf: [u8; 64],
@@ -97,36 +90,67 @@ pub fn pkey_ui(key: &[u8]) -> bool {
     my_review.show()
 }
 
-fn about_ui(comm: &mut Comm) -> Event<Ins> {
-    let pages = [
-        &Page::from((["Starknet", "(c) 2024 Ledger"], true)),
-        &Page::from(("Back", &BACK)),
-    ];
-    loop {
-        match MultiPageMenu::new(comm, &pages).show() {
-            EventOrPageIndex::Event(e) => return e,
-            EventOrPageIndex::Index(1) => return main_ui(comm),
-            EventOrPageIndex::Index(_) => (),
-        }
-    }
+use ledger_device_sdk::ui::gadgets::PageStyle;
+
+pub const APP_ICON: Glyph = Glyph::from_include(include_gif!("starknet_small.gif"));
+pub const WELCOME_PAGE: Page = Page::new(
+    PageStyle::PictureNormal,
+    ["Starknet", "is ready"],
+    Some(&APP_ICON),
+);
+pub const VERSION_PAGE: Page = Page::new(
+    PageStyle::BoldNormal,
+    ["Version", env!("CARGO_PKG_VERSION")],
+    None,
+);
+pub const ABOUT_PAGE: Page = Page::new(PageStyle::PictureBold, ["About", ""], Some(&CERTIFICATE));
+pub const QUIT_PAGE: Page = Page::new(PageStyle::PictureBold, ["Quit", ""], Some(&DASHBOARD_X));
+pub const INFO_PAGE: Page = Page::new(PageStyle::BoldNormal, ["Starknet", "(c) 2024 Ledger"], None);
+pub const BACK_PAGE: Page = Page::new(PageStyle::PictureBold, ["Back", ""], Some(&BACK));
+
+pub struct PageLink<'a> {
+    pub page: &'a Page<'a>,
+    pub link: Option<&'a Menu<'a>>,
 }
 
-pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
-    const APP_ICON: Glyph = Glyph::from_include(include_gif!("starknet_small.gif"));
-    let pages = [
-        // The from trait allows to create different styles of pages
-        // without having to use the new() function.
-        &Page::from(([WELCOME_SCREEN, "is ready"], &APP_ICON)),
-        &Page::from((["Version", env!("CARGO_PKG_VERSION")], true)),
-        &Page::from(("About", &CERTIFICATE)),
-        &Page::from(("Quit", &DASHBOARD_X)),
-    ];
-    loop {
-        match MultiPageMenu::new(comm, &pages).show() {
-            EventOrPageIndex::Event(e) => return e,
-            EventOrPageIndex::Index(2) => return about_ui(comm),
-            EventOrPageIndex::Index(3) => ledger_device_sdk::exit_app(0),
-            EventOrPageIndex::Index(_) => (),
-        }
-    }
+pub static WELCOME_PL: PageLink = PageLink {
+    page: &WELCOME_PAGE,
+    link: None,
+};
+pub static VERSION_PL: PageLink = PageLink {
+    page: &VERSION_PAGE,
+    link: None,
+};
+
+pub static ABOUT_PL: PageLink = PageLink {
+    page: &ABOUT_PAGE,
+    link: Some(&ABOUT_MENU),
+};
+pub static QUIT_PL: PageLink = PageLink {
+    page: &QUIT_PAGE,
+    link: Some(&HELL_MENU),
+};
+
+pub static INFO_PL: PageLink = PageLink {
+    page: &INFO_PAGE,
+    link: None,
+};
+
+pub static BACK_PL: PageLink = PageLink {
+    page: &BACK_PAGE,
+    link: Some(&HOME_MENU),
+};
+
+pub struct Menu<'a> {
+    pub pagelinks: &'a [&'a PageLink<'a>],
 }
+
+pub static HELL_MENU: Menu = Menu { pagelinks: &[] };
+
+pub static HOME_MENU: Menu = Menu {
+    pagelinks: &[&WELCOME_PL, &VERSION_PL, &ABOUT_PL, &QUIT_PL],
+};
+
+pub static ABOUT_MENU: Menu = Menu {
+    pagelinks: &[&INFO_PL, &BACK_PL],
+};
