@@ -174,8 +174,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::SignHash => {
             let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-
             let mut data = comm.get_data()?;
 
             match p1 {
@@ -187,17 +185,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => {
                     ctx.hash_info.m_hash = data.into();
-                    if p2 > 0 {
-                        match display::sign_ui(data) {
-                            true => {
-                                sign_hash(ctx).unwrap();
-                            }
-                            false => {
-                                return Err(io::StatusWords::UserCancelled.into());
-                            }
+                    match display::sign_ui(data) {
+                        true => {
+                            sign_hash(ctx).unwrap();
                         }
-                    } else {
-                        sign_hash(ctx).unwrap();
+                        false => {
+                            return Err(io::StatusWords::UserCancelled.into());
+                        }
                     }
                     comm.append([0x41].as_slice());
                     comm.append(ctx.hash_info.r.as_ref());
