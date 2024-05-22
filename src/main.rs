@@ -85,7 +85,10 @@ extern "C" fn sample_main() {
             io::Event::Ticker => {
                 // Pin lock management
                 if UxEvent::Event.request() != BOLOS_UX_OK {
-                    UxEvent::block();
+                    let (_res, ins) = UxEvent::block_and_get_event::<Ins>(&mut comm);
+                    if let Some(_e) = ins {
+                        comm.reply::<io::StatusWords>(io::StatusWords::Unknown);
+                    }
                     // Redisplay screen
                     clear_screen();
                     menu.pagelinks[page_index].page.place();
