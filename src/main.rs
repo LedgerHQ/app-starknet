@@ -11,11 +11,20 @@ use context::{Ctx, RequestType};
 
 use ledger_device_sdk::io;
 
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
+
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+use ledger_device_sdk::nbgl::init_comm;
 
 #[no_mangle]
 extern "C" fn sample_main() {
     let mut comm = io::Comm::new();
+
+    // Initialize reference to Comm instance for NBGL
+    // API calls.
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    init_comm(&mut comm);
 
     let mut ctx: Ctx = Ctx::new();
 
