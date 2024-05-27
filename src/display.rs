@@ -8,7 +8,7 @@ use ledger_device_sdk::ui::{
 };
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-use ledger_device_sdk::nbgl::{NbglAddressConfirm, NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::nbgl::{NbglAddressReview, NbglGlyph, NbglHomeAndSettings};
 
 use crate::Ins;
 
@@ -47,7 +47,7 @@ pub fn sign_ui(message: &[u8]) -> bool {
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
         // Display the address confirmation screen.
-        NbglAddressConfirm::new().glyph(&APP_ICON).show(hash)
+        NbglAddressReview::new().glyph(&APP_ICON).show(hash)
     }
 }
 
@@ -81,7 +81,7 @@ pub fn pkey_ui(key: &[u8]) -> bool {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-        NbglAddressConfirm::new().glyph(&APP_ICON).show(m)
+        NbglAddressReview::new().glyph(&APP_ICON).show(m)
     }
 }
 
