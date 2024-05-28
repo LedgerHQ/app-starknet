@@ -36,10 +36,8 @@ def test_get_public_key_confirm_accepted(firmware, backend, navigator, test_name
         else:
             instructions = [
                 NavInsID.USE_CASE_REVIEW_TAP,
-                NavIns(NavInsID.TOUCH, (200, 335)),
-                NavInsID.USE_CASE_ADDRESS_CONFIRMATION_EXIT_QR,
-                NavInsID.USE_CASE_ADDRESS_CONFIRMATION_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
+                NavIns(NavInsID.USE_CASE_ADDRESS_CONFIRMATION_CONFIRM),
+                NavIns(NavInsID.USE_CASE_STATUS_DISMISS)
             ]
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                            test_name,
