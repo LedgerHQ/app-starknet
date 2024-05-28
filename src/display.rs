@@ -18,11 +18,13 @@ use crate::Ins;
 pub fn sign_ui(message: &[u8]) -> bool {
     let mut hash_hex = [0u8; 64];
     hex::encode_to_slice(&message[0..32], &mut hash_hex[0..]).unwrap();
+    let hash = core::str::from_utf8_mut(&mut hash_hex[..63]).unwrap();
+    hash.make_ascii_uppercase();
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let hash = core::str::from_utf8_mut(&mut hash_hex[..63]).unwrap();
-        hash.make_ascii_uppercase();
+        /*let hash = core::str::from_utf8_mut(&mut hash_hex[..63]).unwrap();
+        hash.make_ascii_uppercase();*/
 
         let my_field = [Field {
             name: "Hash",
@@ -44,9 +46,9 @@ pub fn sign_ui(message: &[u8]) -> bool {
 
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        hash_hex[63] = 0u8;
+        /*hash_hex[63] = 0u8;
         let hash = core::str::from_utf8_mut(&mut hash_hex[..64]).unwrap();
-        hash.make_ascii_uppercase();
+        hash.make_ascii_uppercase();*/
 
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
@@ -57,12 +59,17 @@ pub fn sign_ui(message: &[u8]) -> bool {
 }
 
 pub fn pkey_ui(key: &[u8]) -> bool {
+    let mut pk_hex = [0u8; 64];
+    hex::encode_to_slice(&key[1..33], &mut pk_hex[0..]).unwrap();
+    let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
+    m[0..].make_ascii_uppercase();
+
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let mut pk_hex = [0u8; 64];
+        /*let mut pk_hex = [0u8; 64];
         hex::encode_to_slice(&key[1..33], &mut pk_hex[0..]).unwrap();
         let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
-        m[0..].make_ascii_uppercase();
+        m[0..].make_ascii_uppercase();*/
 
         let my_field = [Field {
             name: "Public Key",
@@ -83,13 +90,12 @@ pub fn pkey_ui(key: &[u8]) -> bool {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let mut pk_hex = [0u8; 65];
+        /*let mut pk_hex = [0u8; 65];
         hex::encode_to_slice(&key[1..33], &mut pk_hex[0..64]).unwrap();
         pk_hex[64] = 0u8;
         let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
-        m[0..].make_ascii_uppercase();
+        m[0..].make_ascii_uppercase();*/
 
-        ledger_device_sdk::testing::debug_print("Yo !\n");
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
@@ -143,10 +149,15 @@ pub fn main_ui(_comm: &mut Comm) -> Event<Ins> {
 
     // Display the home screen.
     NbglHomeAndSettings::new(
-        concat!("Starknet", "\0"),
-        concat!(env!("CARGO_PKG_VERSION"), "\0"),
-        concat!(env!("CARGO_PKG_AUTHORS"), "\0"),
+        //concat!("Starknet", "\0"),
+        //concat!(env!("CARGO_PKG_VERSION"), "\0"),
+        //concat!(env!("CARGO_PKG_AUTHORS"), "\0"),
     )
     .glyph(&APP_ICON)
+    .infos(
+        "Starknet",
+        env!("CARGO_PKG_VERSION"),
+        env!("CARGO_PKG_AUTHORS"),
+    )
     .show()
 }
