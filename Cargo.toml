@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = "1.8.2"
-include_gif = "1.0.1"
+ledger_device_sdk = "1.9.1"
+include_gif = "1.1.0"
 hex = { version = "0.4", default-features = false }
 
 [features]
@@ -41,7 +41,3 @@ icon = "starknet_32x32.gif"
 
 [package.metadata.ledger.flex]
 icon = "starknet_40x40.gif"
-
-[patch.crates-io]
-ledger_device_sdk = { path = "../ledger-device-rust-sdk/ledger_device_sdk" }
-include_gif = { path = "../ledger-device-rust-sdk/include_gif" }

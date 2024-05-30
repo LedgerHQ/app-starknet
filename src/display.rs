@@ -8,7 +8,9 @@ use ledger_device_sdk::ui::{
 };
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-use ledger_device_sdk::nbgl::{NbglAddressReview, NbglGlyph, NbglHomeAndSettings};
+use ledger_device_sdk::nbgl::{
+    Field, NbglAddressReview, NbglGlyph, NbglHomeAndSettings, NbglReview,
+};
 
 use crate::Ins;
 
@@ -53,8 +55,16 @@ pub fn sign_ui(message: &[u8]) -> bool {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-        // Display the address confirmation screen.
-        NbglAddressReview::new().glyph(&APP_ICON).show(hash)
+        // Display Tx Review screen.
+        let my_fields = [Field {
+            name: "Transaction Hash",
+            value: hash,
+        }];
+
+        let mut review = NbglReview::<1, 256>::new()
+            .titles("Review", "Transaction Hash", "Sign Transaction")
+            .glyph(&APP_ICON);
+        review.show(&my_fields)
     }
 }
 
