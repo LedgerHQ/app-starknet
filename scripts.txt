@@ -1,0 +1,6 @@
+speculos -m nanosp --apdu-port 9999 --api-port 5001 --display headless target/nanosplus/release/starknet
+
+speculos -m stax --apdu-port 9999 --api-port 5001 target/stax/release/starknet
+
+docker run --rm -it -v "$(pwd -P):/apps" --publish 5001:5001 --publish 9999:9999 -e DISPLAY='host.docker.internal:0' -v '/tmp/.X11-unix:/tmp/.X11-unix' --privileged ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools
+
