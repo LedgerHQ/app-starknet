@@ -11,7 +11,6 @@ use context::{Ctx, RequestType};
 
 use ledger_device_sdk::io;
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
