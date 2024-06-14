@@ -1,3 +1,4 @@
 pytest
 ragger[speculos,ledgerwallet]
+toml
 starknet-py

@@ -117,7 +117,6 @@ This command will return a signature of the passed payload
 
 | Field    | Type      | Content     | Note                                  |
 |----------|-----------|-------------|---------------------------------------|
-| SIG      | byte (64) | Signature   | (R,S) encoded signature               |
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
 #### Command #2
@@ -127,8 +126,8 @@ This command will return a signature of the passed payload
 | CLA   | byte (1) | Application Identifier      | 0x80              |
 | INS   | byte (1) | Instruction ID              | 0x02              |
 | P1    | byte (1) | Payload desc                | 1                 |
-| P2    | byte (1) | ignored                     | display ?         |
-| L     | byte (1) | Bytes in payload            | 20                |
+| P2    | byte (1) | ignored                     |                   |
+| L     | byte (1) | Bytes in payload            | 0x20              |
 | Hash  | byte (32)| Pedersen hash               | (depends)         |
 
 #### Response
