@@ -1,16 +1,16 @@
-# Ledger Starknet Nano App
+# Ledger Starknet App
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 -------------------
 
-Official Ledger Nano S/S+/X Starknet application
+Official Starknet application
 
 -------------------
 
 <img src="docs/LedgerXStarknetXRust.png"/>
 
 
-This project contains the Starknet app (https://starkware.co/) for Ledger Nano S, SP and X.
+This project contains the Starknet app (https://starkware.co/) for Ledger devices.
 
 For more information:
 
