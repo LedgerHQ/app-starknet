@@ -109,7 +109,10 @@ pub fn pkey_ui(key: &[u8]) -> bool {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-        NbglAddressReview::new().glyph(&APP_ICON).show(m)
+        NbglAddressReview::new()
+            .glyph(&APP_ICON)
+            .verify_str("Verify public key")
+            .show(m)
     }
 }
 
