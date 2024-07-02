@@ -8,10 +8,10 @@ docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder
 git clone https://github.com/LedgerHQ/app-starknet.git
 ```
 
-Build for Nano S/S+/X/Stax/Flex:
+Build for Nano S+/X/Stax/Flex:
 ```
 docker run --rm -it -v "$(pwd -P):/apps" ghcr.io/ledgerhq ledger-app-builder/ledger-app-builder
 cd /apps/app-starknet/
 cargo clean
-cargo ledger build nanos|nanosplus|nanox|stax|flex
+cargo ledger build nanosplus|nanox|stax|flex
 ```

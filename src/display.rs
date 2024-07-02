@@ -61,7 +61,7 @@ pub fn sign_ui(message: &[u8]) -> bool {
             value: hash,
         }];
 
-        let mut review = NbglReview::<1, 256>::new()
+        let mut review = NbglReview::new()
             .titles("Review", "Transaction Hash", "Sign Transaction")
             .glyph(&APP_ICON);
         review.show(&my_fields)
