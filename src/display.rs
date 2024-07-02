@@ -61,7 +61,7 @@ pub fn sign_ui(message: &[u8]) -> bool {
             value: hash,
         }];
 
-        let mut review = NbglReview::<1, 256>::new()
+        let mut review = NbglReview::new()
             .titles("Review", "Transaction Hash", "Sign Transaction")
             .glyph(&APP_ICON);
         review.show(&my_fields)
@@ -109,7 +109,10 @@ pub fn pkey_ui(key: &[u8]) -> bool {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-        NbglAddressReview::new().glyph(&APP_ICON).show(m)
+        NbglAddressReview::new()
+            .glyph(&APP_ICON)
+            .verify_str("Verify public key")
+            .show(m)
     }
 }
 

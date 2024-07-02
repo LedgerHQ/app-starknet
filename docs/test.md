@@ -11,7 +11,7 @@ docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools
 docker run --rm -it -v "$(pwd -P):/apps" --publish 5001:5001 --publish 9999:9999 ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools
 cd /apps/app-starknet
 pip install -r tests/requirements.txt 
-pytest tests/ --tb=short -v --device {nanos | nanosp | nanox | stax | flex}
+pytest tests/ --tb=short -v --device {nanosp | nanox | stax | flex}
 ```
 
 ### Emulator

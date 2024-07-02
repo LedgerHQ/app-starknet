@@ -1,11 +1,11 @@
 [package]
 name = "starknet"
-version = "1.2.1"
+version = "1.2.2"
 edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = "1.10.2"
+ledger_device_sdk = "1.10.5"
 include_gif = "1.1.0"
 hex = { version = "0.4", default-features = false }
 
@@ -26,9 +26,6 @@ curve = ["secp256k1"]
 path = ["2645'"]
 name = "Starknet"
 flags = "0"
-
-[package.metadata.ledger.nanos]
-icon = "crab.gif"
 
 [package.metadata.ledger.nanox]
 icon = "starknet_small.gif"
