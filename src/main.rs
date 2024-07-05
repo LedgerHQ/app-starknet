@@ -4,12 +4,12 @@
 mod context;
 mod crypto;
 mod display;
-
-use crypto::{get_pubkey, set_derivation_path, sign_hash};
+mod types;
 
 use context::{Ctx, RequestType};
-
+use crypto::{get_pubkey, set_derivation_path, sign_hash};
 use ledger_device_sdk::io;
+use types::FieldElement;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -44,6 +44,7 @@ enum Ins {
     GetVersion,
     GetPubkey { display: bool },
     SignHash,
+    Poseidon,
 }
 
 impl TryFrom<io::ApduHeader> for Ins {
@@ -57,6 +58,7 @@ impl TryFrom<io::ApduHeader> for Ins {
             }),
             (1, _, _) => Err(io::StatusWords::BadP1P2),
             (2, _, _) => Ok(Ins::SignHash),
+            (3, _, _) => Ok(Ins::Poseidon),
             (_, _, _) => Err(io::StatusWords::BadIns),
         }
     }
@@ -140,6 +142,18 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     comm.append([ctx.hash_info.v].as_slice());
                 }
             }
+        }
+        Ins::Poseidon => {
+            let data = comm.get_data()?;
+            let a = FieldElement::from(&data[0..32]);
+            let b = FieldElement::from(&data[32..64]);
+            comm.append((a + b).value.as_ref());
+            comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+            comm.append((a - b).value.as_ref());
+            comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+            comm.append((a * b).value.as_ref());
+            comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+            comm.append((a / b).value.as_ref());
         }
     }
     Ok(())
