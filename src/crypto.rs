@@ -2,6 +2,7 @@ use ledger_device_sdk::ecc::{ECPublicKey, SeedDerive, Stark256};
 use ledger_device_sdk::io::{Reply, SyscallError};
 
 pub mod poseidon;
+pub mod poseidon2;
 
 use crate::context::Ctx;
 

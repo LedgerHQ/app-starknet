@@ -154,17 +154,71 @@ impl PoseidonCairoStark252 {
 
     #[inline]
     fn full_round(state: &mut [FieldElement], index: usize) {
-        for (i, value) in state.iter_mut().enumerate() {
-            *value = (*value) + FieldElement::from(ROUND_CONSTANTS[index + i]);
-            *value = *value * *value * *value;
+        unsafe {
+            let mut bn_s: cx_bn_t = cx_bn_t::default();
+            let mut bn_p: cx_bn_t = cx_bn_t::default();
+            let mut bn_res: cx_bn_t = cx_bn_t::default();
+            let mut bn_rc: cx_bn_t = cx_bn_t::default();
+            let mut bn_e: cx_bn_t = cx_bn_t::default();
+
+            cx_bn_lock(32, 0);
+            cx_bn_alloc(&mut bn_res, 32);
+            cx_bn_alloc_init(&mut bn_p, 32, P.value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_e, 32, [3u8; 1].as_ptr(), 1);
+
+            for (i, value) in state.iter_mut().enumerate() {
+                /* state[i] = state[i] + ROUND_CONSTANTS[index + i] */
+                cx_bn_alloc_init(&mut bn_s, 32, value.value.as_ptr(), 32);
+                cx_bn_alloc_init(
+                    &mut bn_rc,
+                    32,
+                    FieldElement::from(ROUND_CONSTANTS[index + i])
+                        .value
+                        .as_ptr(),
+                    32,
+                );
+                cx_bn_mod_add(bn_res, bn_s, bn_rc, bn_p);
+                /* state[i] = state[i] * state[i] * state[i] */
+                cx_bn_mod_pow_bn(bn_s, bn_res, bn_e, bn_p);
+                cx_bn_export(bn_s, value.value.as_mut_ptr(), 32);
+            }
+            cx_bn_unlock();
         }
         Self::mix(state);
     }
 
     #[inline]
     fn partial_round(state: &mut [FieldElement], index: usize) {
-        state[2] = state[2] + FieldElement::from(ROUND_CONSTANTS[index]);
-        state[2] = state[2] * state[2] * state[2];
+        unsafe {
+            let mut bn_s2: cx_bn_t = cx_bn_t::default();
+            let mut bn_p: cx_bn_t = cx_bn_t::default();
+            let mut bn_res: cx_bn_t = cx_bn_t::default();
+            let mut bn_rc: cx_bn_t = cx_bn_t::default();
+            let mut bn_e: cx_bn_t = cx_bn_t::default();
+
+            cx_bn_lock(32, 0);
+
+            cx_bn_alloc(&mut bn_res, 32);
+
+            /* s2 = s2 + ROUND_CONSTANTS[index] */
+            cx_bn_alloc_init(&mut bn_s2, 32, state[2].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_p, 32, P.value.as_ptr(), 32);
+            cx_bn_alloc_init(
+                &mut bn_rc,
+                32,
+                FieldElement::from(ROUND_CONSTANTS[index]).value.as_ptr(),
+                32,
+            );
+            cx_bn_mod_add(bn_res, bn_s2, bn_rc, bn_p);
+
+            /* s2 = s2 * s2 * s2 */
+            cx_bn_alloc_init(&mut bn_e, 32, [3u8; 1].as_ptr(), 1);
+            cx_bn_mod_pow_bn(bn_s2, bn_res, bn_e, bn_p);
+
+            cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
+
+            cx_bn_unlock();
+        }
         Self::mix(state);
     }
 
@@ -218,9 +272,50 @@ impl PoseidonCairoStark252 {
 
     #[inline(always)]
     fn mix(state: &mut [FieldElement]) {
-        let t = state[0] + state[1] + state[2];
-        state[0] = t + state[0] * FieldElement::TWO;
-        state[1] = t - state[1] * FieldElement::TWO;
-        state[2] = t - (state[2] + state[2] + state[2]);
+        unsafe {
+            let mut bn_s0: cx_bn_t = cx_bn_t::default();
+            let mut bn_s1: cx_bn_t = cx_bn_t::default();
+            let mut bn_s2: cx_bn_t = cx_bn_t::default();
+            let mut bn_t: cx_bn_t = cx_bn_t::default();
+            let mut bn_p: cx_bn_t = cx_bn_t::default();
+            let mut bn_res: cx_bn_t = cx_bn_t::default();
+            let mut bn_two: cx_bn_t = cx_bn_t::default();
+
+            cx_bn_lock(32, 0);
+
+            cx_bn_alloc(&mut bn_t, 32);
+
+            cx_bn_alloc_init(&mut bn_s0, 32, state[0].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_s1, 32, state[1].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_s2, 32, state[2].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_p, 32, P.value.as_ptr(), 32);
+
+            /* Compute t */
+            cx_bn_mod_add(bn_t, bn_s0, bn_s1, bn_p);
+            cx_bn_mod_add(bn_t, bn_t, bn_s2, bn_p);
+
+            /* Update state */
+            cx_bn_alloc(&mut bn_res, 32);
+            cx_bn_alloc_init(&mut bn_two, 32, FieldElement::TWO.value.as_ptr(), 32);
+
+            /* s0 = t + 2 * s0 */
+            cx_bn_mod_mul(bn_res, bn_s0, bn_two, bn_p);
+            cx_bn_mod_add(bn_s0, bn_t, bn_res, bn_p);
+
+            /* s1 = t - 2 * s1 */
+            cx_bn_mod_mul(bn_res, bn_s1, bn_two, bn_p);
+            cx_bn_mod_sub(bn_s1, bn_t, bn_res, bn_p);
+
+            /* s2 = t - 3 * s2 */
+            cx_bn_mod_add(bn_res, bn_s2, bn_s2, bn_p);
+            cx_bn_mod_add(bn_res, bn_res, bn_s2, bn_p);
+            cx_bn_mod_sub(bn_s2, bn_t, bn_res, bn_p);
+
+            cx_bn_export(bn_s0, state[0].value.as_mut_ptr(), 32);
+            cx_bn_export(bn_s1, state[1].value.as_mut_ptr(), 32);
+            cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
+
+            cx_bn_unlock();
+        }
     }
 }

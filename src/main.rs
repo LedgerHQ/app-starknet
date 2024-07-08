@@ -145,6 +145,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::Poseidon => {
             let data = comm.get_data()?;
+            let p1 = apdu_header.p1;
+
             let a = FieldElement::from(data[0]);
             let b = FieldElement::from(data[1]);
             let c = FieldElement::from(data[2]);
@@ -153,8 +155,17 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             let f = FieldElement::from(data[5]);
 
             let values: [FieldElement; 6] = [a, b, c, d, e, f];
-            let hash = crypto::poseidon::PoseidonCairoStark252::hash_many(&values);
-            comm.append(hash.value.as_ref());
+
+            match p1 {
+                0 => {
+                    let hash = crypto::poseidon::PoseidonCairoStark252::hash_many(&values);
+                    comm.append(hash.value.as_ref());
+                }
+                _ => {
+                    let hash = crypto::poseidon2::PoseidonCairoStark252::hash_many(&values);
+                    comm.append(hash.value.as_ref());
+                }
+            }
         }
     }
     Ok(())
