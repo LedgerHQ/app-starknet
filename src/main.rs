@@ -145,15 +145,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
         }
         Ins::Poseidon => {
             let data = comm.get_data()?;
-            let a = FieldElement::from(&data[0..32]);
-            let b = FieldElement::from(&data[32..64]);
-            comm.append((a + b).value.as_ref());
-            comm.append(&[0xde, 0xad, 0xbe, 0xef]);
-            comm.append((a - b).value.as_ref());
-            comm.append(&[0xde, 0xad, 0xbe, 0xef]);
-            comm.append((a * b).value.as_ref());
-            comm.append(&[0xde, 0xad, 0xbe, 0xef]);
-            comm.append((a / b).value.as_ref());
+            let a = FieldElement::from(data[0]);
+            let b = FieldElement::from(data[1]);
+            let c = FieldElement::from(data[2]);
+            let d = FieldElement::from(data[3]);
+            let e = FieldElement::from(data[4]);
+            let f = FieldElement::from(data[5]);
+
+            let values: [FieldElement; 6] = [a, b, c, d, e, f];
+            let hash = crypto::poseidon::PoseidonCairoStark252::hash_many(&values);
+            comm.append(hash.value.as_ref());
         }
     }
     Ok(())

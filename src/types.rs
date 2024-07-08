@@ -1,3 +1,4 @@
+extern crate alloc;
 use core::cmp::Ordering;
 use core::ops::{Add, Div, Mul, Rem, Sub};
 use ledger_secure_sdk_sys::*;
@@ -227,5 +228,18 @@ impl From<FieldElement> for usize {
         }
 
         value
+    }
+}
+
+impl From<&str> for FieldElement {
+    fn from(data: &str) -> Self {
+        let mut fe = FieldElement::default();
+        if data.len() != 64 {
+            panic!("Invalid hex string length for FieldElement");
+        }
+        match hex::decode_to_slice(data, &mut fe.value[..]) {
+            Ok(_) => fe,
+            Err(_) => FieldElement::default(),
+        }
     }
 }
