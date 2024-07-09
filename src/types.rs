@@ -1,6 +1,6 @@
 extern crate alloc;
 use core::cmp::Ordering;
-use core::ops::{Add, Div, Mul, Rem, Sub};
+use core::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
 use ledger_secure_sdk_sys::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default, PartialOrd)]
@@ -169,6 +169,21 @@ impl Div for FieldElement {
 
         // Use the multiplication method defined earlier
         self * other_inverse
+    }
+}
+
+impl AddAssign for FieldElement {
+    fn add_assign(&mut self, other: Self) {
+        unsafe {
+            let value = self.value;
+            cx_math_addm_no_throw(
+                self.value.as_mut_ptr(),
+                value.as_ptr(),
+                other.value.as_ptr(),
+                P.value.as_ptr(),
+                32,
+            );
+        }
     }
 }
 

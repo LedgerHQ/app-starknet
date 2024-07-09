@@ -147,23 +147,48 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             let data = comm.get_data()?;
             let p1 = apdu_header.p1;
 
-            let a = FieldElement::from(data[0]);
-            let b = FieldElement::from(data[1]);
-            let c = FieldElement::from(data[2]);
-            let d = FieldElement::from(data[3]);
-            let e = FieldElement::from(data[4]);
-            let f = FieldElement::from(data[5]);
-
-            let values: [FieldElement; 6] = [a, b, c, d, e, f];
-
             match p1 {
                 0 => {
-                    let hash = crypto::poseidon::PoseidonCairoStark252::hash_many(&values);
+                    let x = FieldElement::from(&data[0..32]);
+                    let hash = crypto::poseidon::PoseidonStark252::hash_single(&x);
                     comm.append(hash.value.as_ref());
                 }
-                _ => {
-                    let hash = crypto::poseidon2::PoseidonCairoStark252::hash_many(&values);
+                1 => {
+                    let x = FieldElement::from(&data[0..32]);
+                    let y = FieldElement::from(&data[32..64]);
+                    let hash = crypto::poseidon::PoseidonStark252::hash(&x, &y);
                     comm.append(hash.value.as_ref());
+                }
+                2 => {
+                    let a = FieldElement::from(data[0]);
+                    let b = FieldElement::from(data[1]);
+                    let c = FieldElement::from(data[2]);
+                    let d = FieldElement::from(data[3]);
+                    let e = FieldElement::from(data[4]);
+                    let f = FieldElement::from(data[5]);
+
+                    let values: [FieldElement; 6] = [a, b, c, d, e, f];
+                    let hash = crypto::poseidon::PoseidonStark252::hash_many(&values);
+                    comm.append(hash.value.as_ref());
+                }
+                3 => {
+                    let a = FieldElement::from(data[0]);
+                    let b = FieldElement::from(data[1]);
+                    let c = FieldElement::from(data[2]);
+                    let d = FieldElement::from(data[3]);
+                    let e = FieldElement::from(data[4]);
+                    let f = FieldElement::from(data[5]);
+                    let mut hasher = crypto::poseidon::PoseidonHasher::new();
+                    hasher.update(a);
+                    hasher.update(b);
+                    hasher.update(c);
+                    hasher.update(d);
+                    hasher.update(e);
+                    hasher.update(f);
+                    comm.append(hasher.finalize().value.as_ref());
+                }
+                _ => {
+                    return Err(io::StatusWords::BadP1P2.into());
                 }
             }
         }
