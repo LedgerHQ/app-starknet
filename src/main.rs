@@ -4,7 +4,11 @@
 mod context;
 mod crypto;
 mod display;
+mod transaction;
 mod types;
+
+extern crate alloc;
+use alloc::{format, vec::Vec};
 
 use context::{Ctx, RequestType};
 use crypto::{get_pubkey, set_derivation_path, sign_hash};
@@ -44,6 +48,7 @@ enum Ins {
     GetVersion,
     GetPubkey { display: bool },
     SignHash,
+    SignTx,
     Poseidon,
 }
 
@@ -58,7 +63,8 @@ impl TryFrom<io::ApduHeader> for Ins {
             }),
             (1, _, _) => Err(io::StatusWords::BadP1P2),
             (2, _, _) => Ok(Ins::SignHash),
-            (3, _, _) => Ok(Ins::Poseidon),
+            (3, _, _) => Ok(Ins::SignTx),
+            (4, _, _) => Ok(Ins::Poseidon),
             (_, _, _) => Err(io::StatusWords::BadIns),
         }
     }
@@ -84,7 +90,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
             comm.append([version_major, version_minor, version_patch].as_slice());
         }
         Ins::GetPubkey { display } => {
-            ctx.clear();
+            ctx.reset();
             ctx.req_type = RequestType::GetPubkey;
 
             let mut data = comm.get_data()?;
@@ -121,13 +127,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
 
             match p1 {
                 0 => {
-                    ctx.clear();
+                    ctx.reset();
                     ctx.req_type = RequestType::SignHash;
 
                     set_derivation_path(&mut data, ctx)?;
                 }
                 _ => {
-                    ctx.hash_info.m_hash = data.into();
+                    ctx.hash.m_hash = data.into();
                     match display::sign_ui(data) {
                         true => {
                             sign_hash(ctx).unwrap();
@@ -137,9 +143,83 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         }
                     }
                     comm.append([0x41].as_slice());
-                    comm.append(ctx.hash_info.r.as_ref());
-                    comm.append(ctx.hash_info.s.as_ref());
-                    comm.append([ctx.hash_info.v].as_slice());
+                    comm.append(ctx.hash.r.as_ref());
+                    comm.append(ctx.hash.s.as_ref());
+                    comm.append([ctx.hash.v].as_slice());
+                }
+            }
+        }
+        Ins::SignTx => {
+            let mut data = comm.get_data()?;
+            let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
+
+            match p1 {
+                0 => {
+                    ctx.reset();
+                    ctx.req_type = RequestType::SignTx;
+
+                    set_derivation_path(&mut data, ctx)?;
+                }
+                1 => transaction::set_tx_fields(data, &mut ctx.tx),
+                2 => transaction::set_paymaster_data(data, p2, &mut ctx.tx.paymaster_data),
+                3 => transaction::set_account_deployment_data(
+                    data,
+                    p2,
+                    &mut ctx.tx.account_deployment_data,
+                ),
+                4 => {
+                    let nb_calls: u8 = FieldElement::from(data).into();
+                    ctx.tx.calls = Vec::with_capacity(nb_calls as usize);
+                }
+                5 => {
+                    transaction::set_call(data, p2, &mut ctx.tx.calls);
+                    if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
+                        let mut hasher = crypto::poseidon::PoseidonHasher::new();
+                        /* "invoke" */
+                        hasher.update(FieldElement::INVOKE);
+                        /* version = 3 */
+                        hasher.update(FieldElement::from(3u8));
+                        /* sender_address */
+                        hasher.update(ctx.tx.sender_address);
+                        /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+                        let fee_hash = crypto::poseidon::PoseidonStark252::hash_many(&[
+                            ctx.tx.tip,
+                            ctx.tx.l1_gas_bounds,
+                            ctx.tx.l2_gas_bounds,
+                        ]);
+                        hasher.update(fee_hash);
+                        /* h(paymaster_data) */
+                        let paymaster_hash =
+                            crypto::poseidon::PoseidonStark252::hash_many(&ctx.tx.paymaster_data);
+                        hasher.update(paymaster_hash);
+                        /* chain_id */
+                        hasher.update(ctx.tx.chain_id);
+                        /* nonce */
+                        hasher.update(ctx.tx.nonce);
+                        /* data_availability_modes */
+                        hasher.update(ctx.tx.data_availability_mode);
+                        /* h(account_deployment_data) */
+                        hasher.update(crypto::poseidon::PoseidonStark252::hash_many(
+                            &ctx.tx.account_deployment_data,
+                        ));
+                        /* h(calldata) */
+                        let mut hasher_calldata = crypto::poseidon::PoseidonHasher::new();
+
+                        ctx.tx.calls.iter().for_each(|c| {
+                            hasher_calldata.update(c.to);
+                            hasher_calldata.update(c.selector);
+                            c.calldata.iter().for_each(|d| hasher_calldata.update(*d));
+                        });
+                        let hash_calldata = hasher_calldata.finalize();
+                        hasher.update(hash_calldata);
+
+                        ctx.hash.m_hash = hasher.finalize();
+                        comm.append(ctx.hash.m_hash.value.as_ref());
+                    }
+                }
+                _ => {
+                    return Err(io::StatusWords::BadP1P2.into());
                 }
             }
         }

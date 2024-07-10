@@ -1,94 +1,57 @@
 use crate::types::FieldElement;
 
-#[derive(Debug, Copy, Clone)]
-pub struct CallArray {
+extern crate alloc;
+use alloc::vec::Vec;
+
+#[derive(Default, Debug)]
+pub struct Call {
     pub to: FieldElement,
-    pub entry_point_length: u8,
-    pub entry_point: [u8; 32],
     pub selector: FieldElement,
-    pub data_offset: FieldElement,
-    pub data_len: FieldElement,
+    pub calldata: Vec<FieldElement>,
 }
 
-impl CallArray {
-    pub fn new() -> Self {
-        Self {
-            to: FieldElement::new(),
-            entry_point_length: 0,
-            entry_point: [0u8; 32],
-            selector: FieldElement::new(),
-            data_offset: FieldElement::new(),
-            data_len: FieldElement::new(),
-        }
-    }
-
-    pub fn clear(&mut self) {
+impl Call {
+    pub fn reset(&mut self) {
         self.to.clear();
-        self.entry_point_length = 0;
-        self.entry_point.fill(0);
         self.selector.clear();
-        self.data_offset.clear();
-        self.data_len.clear();
-    }
-}
-
-/// Maximum numbers of calls in a multicall Tx (out of memory)
-/// NanoS = 3
-/// NanoS+ = 10 (maybe more ?)
-const MAX_TX_CALLS: usize = 3;
-
-pub struct CallData {
-    pub call_array_len: FieldElement,
-    pub calls: [CallArray; MAX_TX_CALLS],
-    pub calldata_len: FieldElement,
-}
-
-impl CallData {
-    pub fn new() -> Self {
-        Self {
-            call_array_len: FieldElement::new(),
-            calls: [CallArray::new(); MAX_TX_CALLS],
-            calldata_len: FieldElement::new(),
+        for c in self.calldata.iter_mut() {
+            c.clear();
         }
     }
-
-    pub fn clear(&mut self) {
-        self.call_array_len.clear();
-        for i in 1..self.calls.len() {
-            self.calls[i].clear();
-        }
-        self.calldata_len.clear();
-    }
 }
 
+#[derive(Default, Debug)]
 pub struct Transaction {
     pub sender_address: FieldElement,
-    pub calldata: CallData,
-    pub max_fee: FieldElement,
-    pub nonce: FieldElement,
-    pub version: FieldElement,
+    pub tip: FieldElement,
+    pub l1_gas_bounds: FieldElement,
+    pub l2_gas_bounds: FieldElement,
+    pub paymaster_data: Vec<FieldElement>,
     pub chain_id: FieldElement,
+    pub nonce: FieldElement,
+    pub data_availability_mode: FieldElement,
+    pub account_deployment_data: Vec<FieldElement>,
+    pub calls: Vec<Call>,
 }
 
 impl Transaction {
-    pub fn new() -> Self {
-        Self {
-            sender_address: FieldElement::new(),
-            calldata: CallData::new(),
-            max_fee: FieldElement::new(),
-            nonce: FieldElement::new(),
-            version: FieldElement::new(),
-            chain_id: FieldElement::new(),
-        }
-    }
-
-    pub fn clear(&mut self) {
+    pub fn reset(&mut self) {
         self.sender_address.clear();
-        self.calldata.clear();
-        self.max_fee.clear();
-        self.nonce.clear();
-        self.version.clear();
+        self.tip.clear();
+        self.l1_gas_bounds.clear();
+        self.l2_gas_bounds.clear();
         self.chain_id.clear();
+        self.nonce.clear();
+        self.data_availability_mode.clear();
+        for c in self.paymaster_data.iter_mut() {
+            c.clear();
+        }
+        for c in self.account_deployment_data.iter_mut() {
+            c.clear();
+        }
+        for c in self.calls.iter_mut() {
+            c.reset();
+        }
     }
 }
 
@@ -96,13 +59,13 @@ pub enum RequestType {
     Unknown,
     GetPubkey,
     SignHash,
+    SignTx,
 }
 
-pub struct HashInfo {
-    /// message hash digest (Pedersen)
+#[derive(Default, Debug)]
+pub struct Hash {
+    /// tx hash digest (Poseidon)
     pub m_hash: FieldElement,
-    /// calldata_hash
-    pub calldata_hash: FieldElement,
     /// signature r
     pub r: [u8; 32],
     /// signature s
@@ -111,20 +74,9 @@ pub struct HashInfo {
     pub v: u8,
 }
 
-impl HashInfo {
-    pub fn new() -> Self {
-        Self {
-            m_hash: FieldElement::new(),
-            calldata_hash: FieldElement::new(),
-            r: [0u8; 32],
-            s: [0u8; 32],
-            v: 0,
-        }
-    }
-
-    pub fn clear(&mut self) {
+impl Hash {
+    pub fn reset(&mut self) {
         self.m_hash.clear();
-        self.calldata_hash.clear();
         self.r.fill(0);
         self.s.fill(0);
         self.v = 0;
@@ -132,30 +84,26 @@ impl HashInfo {
 }
 
 pub struct Ctx {
-    //state_e state;  /// state of the context
     pub req_type: RequestType,
-    pub tx_info: Transaction,
-    pub hash_info: HashInfo,
+    pub tx: Transaction,
+    pub hash: Hash,
     pub bip32_path: [u32; 6],
-    pub bip32_path_len: u8,
 }
 
 impl Ctx {
     pub fn new() -> Self {
         Self {
-            tx_info: Transaction::new(),
-            hash_info: HashInfo::new(),
+            tx: Transaction::default(),
+            hash: Hash::default(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
-            bip32_path_len: 0,
         }
     }
 
-    pub fn clear(&mut self) {
+    pub fn reset(&mut self) {
         self.req_type = RequestType::Unknown;
         self.bip32_path.fill(0);
-        self.bip32_path_len = 0;
-        self.tx_info.clear();
-        self.hash_info.clear();
+        self.tx.reset();
+        self.hash.reset();
     }
 }

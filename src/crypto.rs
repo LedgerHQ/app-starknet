@@ -27,12 +27,12 @@ impl From<CryptoError> for Reply {
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
     match Stark256::derive_from_path(ctx.bip32_path.as_ref())
-        .deterministic_sign(ctx.hash_info.m_hash.value.as_ref())
+        .deterministic_sign(ctx.hash.m_hash.value.as_ref())
     {
         Ok(s) => {
             let der = s.0;
-            convert_der_to_rs(&der[..], &mut ctx.hash_info.r, &mut ctx.hash_info.s).unwrap();
-            ctx.hash_info.v = s.2 as u8;
+            convert_der_to_rs(&der[..], &mut ctx.hash.r, &mut ctx.hash.s).unwrap();
+            ctx.hash.v = s.2 as u8;
             Ok(())
         }
         Err(_) => Err(CryptoError::Sign),
