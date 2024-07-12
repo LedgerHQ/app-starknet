@@ -206,9 +206,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         /* h(calldata) */
                         let mut hasher_calldata = crypto::poseidon::PoseidonHasher::new();
 
+                        hasher_calldata.update(FieldElement::from(ctx.tx.calls.len() as u8));
                         ctx.tx.calls.iter().for_each(|c| {
                             hasher_calldata.update(c.to);
                             hasher_calldata.update(c.selector);
+                            hasher_calldata.update(FieldElement::from(c.calldata.len() as u8));
                             c.calldata.iter().for_each(|d| hasher_calldata.update(*d));
                         });
                         let hash_calldata = hasher_calldata.finalize();
