@@ -1,7 +1,9 @@
 extern crate alloc;
+use alloc::string::{String, ToString};
 use core::cmp::Ordering;
 use core::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
 use ledger_secure_sdk_sys::*;
+use num_bigint::BigUint;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default, PartialOrd)]
 pub struct FieldElement {
@@ -65,6 +67,33 @@ impl FieldElement {
         }
 
         res
+    }
+
+    pub fn to_dec_string(&self, decimals: Option<usize>) -> String {
+        let bn = BigUint::from_bytes_be(self.value.as_ref());
+        match decimals {
+            Some(d) => {
+                let bn_str = bn.to_string();
+                let len = bn_str.len();
+                if len <= d {
+                    let mut s = String::from("0.");
+                    s.push_str(&"0".repeat(d - len));
+                    s.push_str(&bn_str);
+                    s
+                } else {
+                    let (int_part, dec_part) = bn_str.split_at(len - d);
+                    let mut s = String::from(int_part);
+                    s.push_str(".");
+                    s.push_str(dec_part);
+                    s
+                }
+            }
+            None => bn.to_string(),
+        }
+    }
+
+    pub fn to_hex_string(&self) -> String {
+        hex::encode(&self.value)
     }
 }
 

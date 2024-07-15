@@ -342,7 +342,7 @@ impl PoseidonStark252 {
 // https://github.com/xJonathanLEI/starknet-rs/blob/7bb13d3f02f23949cf3c263e1b53ffcc43990ce6/starknet-crypto/src/poseidon_hash.rs#L13
 #[derive(Debug, Default)]
 pub struct PoseidonHasher {
-    state: [FieldElement; 3],
+    pub state: [FieldElement; 3],
     buffer: Option<FieldElement>,
 }
 

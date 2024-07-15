@@ -1,5 +1,17 @@
+extern crate alloc;
+use crate::{
+    erc20::{ERC20_TOKENS, TRANSFER},
+    types::FieldElement,
+};
+use alloc::format;
+use alloc::string::String;
 use include_gif::include_gif;
-use ledger_device_sdk::io::{Comm, Event};
+use ledger_device_sdk::{
+    io::{Comm, Event},
+    testing,
+};
+
+use crate::context::{Ctx, Transaction};
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::ui::{
@@ -14,12 +26,41 @@ use ledger_device_sdk::nbgl::{
 
 use crate::Ins;
 
+pub fn sign_tx(ctx: &mut Ctx) -> bool {
+    match support_clear_sign(&ctx.tx) {
+        Some(t) => {
+            testing::debug_print("Clear sign supported !!! \n");
+
+            {
+                let tx = &ctx.tx;
+                let call = &tx.calls[0];
+
+                let _selector = String::from("transfer");
+                let token = ERC20_TOKENS[t].ticker;
+                let to = call.calldata[0].to_hex_string();
+                let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[t].decimals));
+
+                testing::debug_print(&format!(
+                    "Token: {}\nTo: {}\nAmount: {}\n",
+                    token, to, amount
+                ));
+            }
+
+            return true;
+        }
+        None => {
+            testing::debug_print("Clear sign not supported !!! \n");
+            return false;
+        }
+    }
+}
+
 /// This is the UI flow for signing, composed of a scroller
 /// to read the incoming message, a panel that requests user
 /// validation, and an exit message.
-pub fn sign_ui(message: &[u8]) -> bool {
+pub fn sign_ui(ctx: &mut Ctx) -> bool {
     let mut hash_hex = [0u8; 64];
-    hex::encode_to_slice(&message[0..32], &mut hash_hex[0..]).unwrap();
+    hex::encode_to_slice(&ctx.hash.m_hash.value, &mut hash_hex[0..]).unwrap();
     let hash = core::str::from_utf8_mut(&mut hash_hex[..63]).unwrap();
     hash.make_ascii_uppercase();
 
@@ -173,4 +214,20 @@ pub fn main_ui(_comm: &mut Comm) -> Event<Ins> {
         env!("CARGO_PKG_AUTHORS"),
     )
     .show()
+}
+
+fn support_clear_sign(tx: &Transaction) -> Option<usize> {
+    match tx.calls.len() {
+        1 => {
+            for (idx, t) in ERC20_TOKENS.iter().enumerate() {
+                if tx.calls[0].to == FieldElement::from(t.address)
+                    && tx.calls[0].selector == FieldElement::from(TRANSFER)
+                {
+                    return Some(idx);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
 }

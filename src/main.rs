@@ -4,11 +4,12 @@
 mod context;
 mod crypto;
 mod display;
+mod erc20;
 mod transaction;
 mod types;
 
 extern crate alloc;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
 use context::{Ctx, RequestType};
 use crypto::{get_pubkey, set_derivation_path, sign_hash};
@@ -134,18 +135,18 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => {
                     ctx.hash.m_hash = data.into();
-                    match display::sign_ui(data) {
+                    match display::sign_ui(ctx) {
                         true => {
                             sign_hash(ctx).unwrap();
+                            comm.append([0x41].as_slice());
+                            comm.append(ctx.hash.r.as_ref());
+                            comm.append(ctx.hash.s.as_ref());
+                            comm.append([ctx.hash.v].as_slice());
                         }
                         false => {
                             return Err(io::StatusWords::UserCancelled.into());
                         }
                     }
-                    comm.append([0x41].as_slice());
-                    comm.append(ctx.hash.r.as_ref());
-                    comm.append(ctx.hash.s.as_ref());
-                    comm.append([ctx.hash.v].as_slice());
                 }
             }
         }
@@ -175,6 +176,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 5 => {
                     transaction::set_call(data, p2, &mut ctx.tx.calls);
                     if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
+                        //display::sign_tx(ctx);
+
                         let mut hasher = crypto::poseidon::PoseidonHasher::new();
                         /* "invoke" */
                         hasher.update(FieldElement::INVOKE);
@@ -216,7 +219,15 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         let hash_calldata = hasher_calldata.finalize();
                         hasher.update(hash_calldata);
 
+                        //comm.append(hasher.state[0].value.as_ref());
+                        //comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+                        //comm.append(hasher.state[1].value.as_ref());
+                        //comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+                        //comm.append(hasher.state[2].value.as_ref());
+                        //comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+
                         ctx.hash.m_hash = hasher.finalize();
+
                         comm.append(ctx.hash.m_hash.value.as_ref());
                     }
                 }
