@@ -142,11 +142,7 @@ impl PoseidonStark252 {
             Self::full_round(state, index);
             index += N_ROUND_CONSTANTS_COLS;
         }
-        for _ in 0..N_PARTIAL_ROUNDS {
-            Self::partial_round(state, index);
-            index += 1;
-        }
-        //Self::partial_round_loop(state, &mut index);
+        Self::partial_round_loop(state, &mut index);
         for _ in 0..N_FULL_ROUNDS / 2 {
             Self::full_round(state, index);
             index += N_ROUND_CONSTANTS_COLS;
@@ -314,6 +310,7 @@ impl PoseidonStark252 {
             let mut bn_t: cx_bn_t = cx_bn_t::default();
             let mut bn_two: cx_bn_t = cx_bn_t::default();
             let mut bn_three: cx_bn_t = cx_bn_t::default();
+            let mut bn_zero: cx_bn_t = cx_bn_t::default();
 
             cx_bn_lock(32, 0);
 
@@ -328,6 +325,7 @@ impl PoseidonStark252 {
             cx_bn_alloc(&mut bn_t, 32);
             cx_bn_alloc_init(&mut bn_two, 32, FieldElement::TWO.value.as_ptr(), 32);
             cx_bn_alloc_init(&mut bn_three, 32, FieldElement::THREE.value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_zero, 32, FieldElement::ZERO.value.as_ptr(), 32);
 
             for _ in 0..N_PARTIAL_ROUNDS {
                 /* s2 = s2 + ROUND_CONSTANTS[index] */
@@ -361,8 +359,6 @@ impl PoseidonStark252 {
                 cx_bn_mod_sub(bn_s2, bn_t, bn_res, bn_p);
 
                 /* Fix Sandra */
-                let mut bn_zero: cx_bn_t = cx_bn_t::default();
-                cx_bn_alloc_init(&mut bn_zero, 32, FieldElement::ZERO.value.as_ptr(), 32);
                 cx_bn_mod_sub(bn_s0, bn_s0, bn_zero, bn_p);
 
                 *index += 1;
