@@ -146,6 +146,7 @@ impl PoseidonStark252 {
             Self::partial_round(state, index);
             index += 1;
         }
+        //Self::partial_round_loop(state, &mut index);
         for _ in 0..N_FULL_ROUNDS / 2 {
             Self::full_round(state, index);
             index += N_ROUND_CONSTANTS_COLS;
@@ -291,6 +292,81 @@ impl PoseidonStark252 {
             let mut bn_zero: cx_bn_t = cx_bn_t::default();
             cx_bn_alloc_init(&mut bn_zero, 32, FieldElement::ZERO.value.as_ptr(), 32);
             cx_bn_mod_sub(bn_s0, bn_s0, bn_zero, bn_p);
+
+            cx_bn_export(bn_s0, state[0].value.as_mut_ptr(), 32);
+            cx_bn_export(bn_s1, state[1].value.as_mut_ptr(), 32);
+            cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
+
+            cx_bn_unlock();
+        }
+    }
+
+    #[inline]
+    fn partial_round_loop(state: &mut [FieldElement], index: &mut usize) {
+        unsafe {
+            let mut bn_p: cx_bn_t = cx_bn_t::default();
+            let mut bn_res: cx_bn_t = cx_bn_t::default();
+            let mut bn_rc: cx_bn_t = cx_bn_t::default();
+            let mut bn_e: cx_bn_t = cx_bn_t::default();
+            let mut bn_s2: cx_bn_t = cx_bn_t::default();
+            let mut bn_s0: cx_bn_t = cx_bn_t::default();
+            let mut bn_s1: cx_bn_t = cx_bn_t::default();
+            let mut bn_t: cx_bn_t = cx_bn_t::default();
+            let mut bn_two: cx_bn_t = cx_bn_t::default();
+            let mut bn_three: cx_bn_t = cx_bn_t::default();
+
+            cx_bn_lock(32, 0);
+
+            cx_bn_alloc(&mut bn_res, 32);
+
+            cx_bn_alloc_init(&mut bn_s0, 32, state[0].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_s1, 32, state[1].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_s2, 32, state[2].value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_p, 32, P.value.as_ptr(), 32);
+            cx_bn_alloc(&mut bn_rc, 32);
+            cx_bn_alloc_init(&mut bn_e, 32, [3u8; 1].as_ptr(), 1);
+            cx_bn_alloc(&mut bn_t, 32);
+            cx_bn_alloc_init(&mut bn_two, 32, FieldElement::TWO.value.as_ptr(), 32);
+            cx_bn_alloc_init(&mut bn_three, 32, FieldElement::THREE.value.as_ptr(), 32);
+
+            for _ in 0..N_PARTIAL_ROUNDS {
+                /* s2 = s2 + ROUND_CONSTANTS[index] */
+                cx_bn_init(
+                    bn_rc,
+                    FieldElement::from(ROUND_CONSTANTS[*index]).value.as_ptr(),
+                    32,
+                );
+                cx_bn_mod_add(bn_res, bn_s2, bn_rc, bn_p);
+
+                /* s2 = s2 * s2 * s2 */
+                cx_bn_mod_pow_bn(bn_s2, bn_res, bn_e, bn_p);
+
+                /**** Mix ****/
+
+                /* Compute t */
+                cx_bn_mod_add(bn_res, bn_s0, bn_s1, bn_p);
+                cx_bn_mod_add(bn_t, bn_res, bn_s2, bn_p);
+
+                /* Update state */
+                /* s0 = t + 2 * s0 */
+                cx_bn_mod_mul(bn_res, bn_s0, bn_two, bn_p);
+                cx_bn_mod_add(bn_s0, bn_t, bn_res, bn_p);
+
+                /* s1 = t - 2 * s1 */
+                cx_bn_mod_mul(bn_res, bn_s1, bn_two, bn_p);
+                cx_bn_mod_sub(bn_s1, bn_t, bn_res, bn_p);
+
+                /* s2 = t - 3 * s2 */
+                cx_bn_mod_mul(bn_res, bn_s2, bn_three, bn_p);
+                cx_bn_mod_sub(bn_s2, bn_t, bn_res, bn_p);
+
+                /* Fix Sandra */
+                let mut bn_zero: cx_bn_t = cx_bn_t::default();
+                cx_bn_alloc_init(&mut bn_zero, 32, FieldElement::ZERO.value.as_ptr(), 32);
+                cx_bn_mod_sub(bn_s0, bn_s0, bn_zero, bn_p);
+
+                *index += 1;
+            }
 
             cx_bn_export(bn_s0, state[0].value.as_mut_ptr(), 32);
             cx_bn_export(bn_s1, state[1].value.as_mut_ptr(), 32);
