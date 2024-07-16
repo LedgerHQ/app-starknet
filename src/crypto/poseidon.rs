@@ -156,10 +156,6 @@ impl PoseidonStark252 {
     fn full_round(state: &mut [FieldElement], index: usize) {
         unsafe {
             let mut bn_s0: cx_bn_t = cx_bn_t::default();
-            let mut bn_s1: cx_bn_t = cx_bn_t::default();
-            let mut bn_s2: cx_bn_t = cx_bn_t::default();
-            let mut bn_t: cx_bn_t = cx_bn_t::default();
-            let mut bn_two: cx_bn_t = cx_bn_t::default();
             let mut bn_p: cx_bn_t = cx_bn_t::default();
             let mut bn_res: cx_bn_t = cx_bn_t::default();
             let mut bn_rc: cx_bn_t = cx_bn_t::default();
@@ -190,6 +186,10 @@ impl PoseidonStark252 {
             }
 
             /* Mix */
+            //let mut bn_s1: cx_bn_t = cx_bn_t::default();
+            //let mut bn_s2: cx_bn_t = cx_bn_t::default();
+            //let mut bn_t: cx_bn_t = cx_bn_t::default();
+            //let mut bn_two: cx_bn_t = cx_bn_t::default();
             //cx_bn_alloc(&mut bn_t, 32);
             //cx_bn_init(bn_s0, state[0].value.as_ptr(), 32);
             //cx_bn_alloc_init(&mut bn_s1, 32, state[1].value.as_ptr(), 32);
@@ -226,15 +226,11 @@ impl PoseidonStark252 {
     #[inline]
     fn partial_round(state: &mut [FieldElement], index: usize) {
         unsafe {
-            let mut bn_s0: cx_bn_t = cx_bn_t::default();
-            let mut bn_s1: cx_bn_t = cx_bn_t::default();
-            let mut bn_s2: cx_bn_t = cx_bn_t::default();
-            let mut bn_t: cx_bn_t = cx_bn_t::default();
-            let mut bn_two: cx_bn_t = cx_bn_t::default();
             let mut bn_p: cx_bn_t = cx_bn_t::default();
             let mut bn_res: cx_bn_t = cx_bn_t::default();
             let mut bn_rc: cx_bn_t = cx_bn_t::default();
             let mut bn_e: cx_bn_t = cx_bn_t::default();
+            let mut bn_s2: cx_bn_t = cx_bn_t::default();
 
             cx_bn_lock(32, 0);
 
@@ -258,6 +254,10 @@ impl PoseidonStark252 {
             cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
 
             /**** Mix ****/
+            //let mut bn_s0: cx_bn_t = cx_bn_t::default();
+            //let mut bn_s1: cx_bn_t = cx_bn_t::default();
+            //let mut bn_t: cx_bn_t = cx_bn_t::default();
+            //let mut bn_two: cx_bn_t = cx_bn_t::default();
             //cx_bn_alloc(&mut bn_t, 32);
             //cx_bn_alloc_init(&mut bn_s0, 32, state[0].value.as_ptr(), 32);
             //cx_bn_alloc_init(&mut bn_s1, 32, state[1].value.as_ptr(), 32);
@@ -403,7 +403,7 @@ impl PoseidonStark252 {
 // https://github.com/xJonathanLEI/starknet-rs/blob/7bb13d3f02f23949cf3c263e1b53ffcc43990ce6/starknet-crypto/src/poseidon_hash.rs#L13
 #[derive(Debug, Default)]
 pub struct PoseidonHasher {
-    pub state: [FieldElement; 3],
+    state: [FieldElement; 3],
     buffer: Option<FieldElement>,
 }
 
