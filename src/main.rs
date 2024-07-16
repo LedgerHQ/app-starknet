@@ -9,11 +9,12 @@ mod transaction;
 mod types;
 
 extern crate alloc;
+use alloc::format;
 use alloc::vec::Vec;
 
 use context::{Ctx, RequestType};
 use crypto::{get_pubkey, set_derivation_path, sign_hash};
-use ledger_device_sdk::io;
+use ledger_device_sdk::{io, testing};
 use types::FieldElement;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -176,14 +177,24 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 5 => {
                     transaction::set_call(data, p2, &mut ctx.tx.calls);
                     if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
-                        //display::sign_tx(ctx);
+                        display::sign_tx(ctx);
 
                         let mut hasher = crypto::poseidon::PoseidonHasher::new();
                         /* "invoke" */
+                        /*testing::debug_print(
+                            format!("Invoke: {}\n", FieldElement::INVOKE.to_hex_string()).as_str(),
+                        );*/
                         hasher.update(FieldElement::INVOKE);
                         /* version = 3 */
+                        /*testing::debug_print(
+                            format!("Version: {}\n", FieldElement::from(3u8).to_hex_string())
+                                .as_str(),
+                        );*/
                         hasher.update(FieldElement::from(3u8));
                         /* sender_address */
+                        /*testing::debug_print(
+                            format!("Sender: {}\n", ctx.tx.sender_address.to_hex_string()).as_str(),
+                        );*/
                         hasher.update(ctx.tx.sender_address);
                         /* h(tip, l1_gas_bounds, l2_gas_bounds) */
                         let fee_hash = crypto::poseidon::PoseidonStark252::hash_many(&[
@@ -191,24 +202,51 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             ctx.tx.l1_gas_bounds,
                             ctx.tx.l2_gas_bounds,
                         ]);
+                        /*testing::debug_print(
+                            format!("Fee hash: {}\n", fee_hash.to_hex_string()).as_str(),
+                        );*/
                         hasher.update(fee_hash);
                         /* h(paymaster_data) */
                         let paymaster_hash =
                             crypto::poseidon::PoseidonStark252::hash_many(&ctx.tx.paymaster_data);
+                        /*testing::debug_print(
+                            format!("Paymaster: {}\n", paymaster_hash.to_hex_string()).as_str(),
+                        );*/
                         hasher.update(paymaster_hash);
                         /* chain_id */
+                        /*testing::debug_print(
+                            format!("Chain ID: {}\n", ctx.tx.chain_id.to_hex_string()).as_str(),
+                        );*/
                         hasher.update(ctx.tx.chain_id);
                         /* nonce */
+                        /*testing::debug_print(
+                            format!("Nonce: {}\n", ctx.tx.nonce.to_hex_string()).as_str(),
+                        );*/
                         hasher.update(ctx.tx.nonce);
                         /* data_availability_modes */
+                        /*testing::debug_print(
+                            format!(
+                                "Data availability: {}\n",
+                                ctx.tx.data_availability_mode.to_hex_string()
+                            )
+                            .as_str(),
+                        );*/
                         hasher.update(ctx.tx.data_availability_mode);
                         /* h(account_deployment_data) */
-                        hasher.update(crypto::poseidon::PoseidonStark252::hash_many(
-                            &ctx.tx.account_deployment_data,
-                        ));
+                        let accound_deployment_data_hash =
+                            crypto::poseidon::PoseidonStark252::hash_many(
+                                &ctx.tx.account_deployment_data,
+                            );
+                        /*testing::debug_print(
+                            format!(
+                                "Account deployment data: {}\n",
+                                accound_deployment_data_hash.to_hex_string()
+                            )
+                            .as_str(),
+                        );*/
+                        hasher.update(accound_deployment_data_hash);
                         /* h(calldata) */
                         let mut hasher_calldata = crypto::poseidon::PoseidonHasher::new();
-
                         hasher_calldata.update(FieldElement::from(ctx.tx.calls.len() as u8));
                         ctx.tx.calls.iter().for_each(|c| {
                             hasher_calldata.update(c.to);
@@ -217,18 +255,66 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             c.calldata.iter().for_each(|d| hasher_calldata.update(*d));
                         });
                         let hash_calldata = hasher_calldata.finalize();
-                        hasher.update(hash_calldata);
 
-                        //comm.append(hasher.state[0].value.as_ref());
-                        //comm.append(&[0xde, 0xad, 0xbe, 0xef]);
-                        //comm.append(hasher.state[1].value.as_ref());
-                        //comm.append(&[0xde, 0xad, 0xbe, 0xef]);
-                        //comm.append(hasher.state[2].value.as_ref());
-                        //comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+                        /*let hash_calldata = FieldElement::from(
+                            "05b1359e91b3ba9e56d0e8f72a15d4d08abd7627d8a6ce7c70f15715568d725e",
+                        );
+
+                        testing::debug_print(
+                            format!("Call data: {}\n", hash_calldata.to_hex_string()).as_str(),
+                        );*/
+
+                        /*comm.append(hasher.state[0].value.as_ref());
+                        comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+                        comm.append(hasher.state[1].value.as_ref());
+                        comm.append(&[0xde, 0xad, 0xbe, 0xef]);
+                        comm.append(hasher.state[2].value.as_ref());
+                        comm.append(&[0xde, 0xad, 0xbe, 0xef]);*/
+
+                        hasher.update(hash_calldata);
 
                         ctx.hash.m_hash = hasher.finalize();
 
                         comm.append(ctx.hash.m_hash.value.as_ref());
+
+                        /*let f0 = FieldElement::from(
+                            "0000000000000000000000000000000000000000000000000000696e766f6b65",
+                        );
+                        let f1 = FieldElement::from(
+                            "0000000000000000000000000000000000000000000000000000000000000003",
+                        );
+                        let f2 = FieldElement::from(
+                            "07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+                        );
+                        let f3 = FieldElement::from(
+                            "05954b27c99ffaf044a7aa9a2811a73376654cdca5c3b48ddbc47a6ba9b30e4e",
+                        );
+                        let f4 = FieldElement::from(
+                            "02272be0f580fd156823304800919530eaa97430e972d7213ee13f4fbf7a5dbc",
+                        );
+                        let f5 = FieldElement::from(
+                            "00000000000000000000000000000000000000000000000000534e5f4d41494e",
+                        );
+                        let f6 = FieldElement::from(
+                            "0000000000000000000000000000000000000000000000000000000000000001",
+                        );
+                        let f7 = FieldElement::from(
+                            "0000000000000000000000000000000000000000000000000000000000000000",
+                        );
+                        let f8 = FieldElement::from(
+                            "02272be0f580fd156823304800919530eaa97430e972d7213ee13f4fbf7a5dbc",
+                        );
+                        let f9 = FieldElement::from(
+                            "05b1359e91b3ba9e56d0e8f72a15d4d08abd7627d8a6ce7c70f15715568d725e",
+                        );
+
+                        let f_arr = [f0, f1, f2, f3, f4, f5, f6, f7, f8, f9];
+
+                        comm.append(
+                            crypto::poseidon::PoseidonStark252::hash_many(&f_arr)
+                                .value
+                                .as_ref(),
+                        );*/
                     }
                 }
                 _ => {

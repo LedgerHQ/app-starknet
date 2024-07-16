@@ -133,9 +133,9 @@ const ROUND_CONSTANTS: [&str; 107] = [
 ];
 
 #[derive(Clone)]
-pub struct PoseidonStark252;
+pub struct PoseidonCairoStark252;
 
-impl PoseidonStark252 {
+impl PoseidonCairoStark252 {
     pub fn hades_permutation(state: &mut [FieldElement]) {
         let mut index = 0;
         for _ in 0..N_FULL_ROUNDS / 2 {
@@ -154,28 +154,32 @@ impl PoseidonStark252 {
 
     #[inline]
     fn full_round(state: &mut [FieldElement], index: usize) {
+        for (i, value) in state.iter_mut().enumerate() {
+            *value = (*value) + FieldElement::from(ROUND_CONSTANTS[index + i]);
+            *value = *value * *value * *value;
+        }
+        Self::mix(state);
+    }
+
+    #[inline]
+    fn full_round2(state: &mut [FieldElement], index: usize) {
         unsafe {
-            let mut bn_s0: cx_bn_t = cx_bn_t::default();
-            let mut bn_s1: cx_bn_t = cx_bn_t::default();
-            let mut bn_s2: cx_bn_t = cx_bn_t::default();
-            let mut bn_t: cx_bn_t = cx_bn_t::default();
-            let mut bn_two: cx_bn_t = cx_bn_t::default();
+            let mut bn_s: cx_bn_t = cx_bn_t::default();
             let mut bn_p: cx_bn_t = cx_bn_t::default();
             let mut bn_res: cx_bn_t = cx_bn_t::default();
             let mut bn_rc: cx_bn_t = cx_bn_t::default();
             let mut bn_e: cx_bn_t = cx_bn_t::default();
 
             cx_bn_lock(32, 0);
-
             cx_bn_alloc(&mut bn_res, 32);
             cx_bn_alloc_init(&mut bn_p, 32, P.value.as_ptr(), 32);
             cx_bn_alloc_init(&mut bn_e, 32, [3u8; 1].as_ptr(), 1);
-            cx_bn_alloc(&mut bn_s0, 32);
+            cx_bn_alloc(&mut bn_s, 32);
             cx_bn_alloc(&mut bn_rc, 32);
 
             for (i, value) in state.iter_mut().enumerate() {
                 /* state[i] = state[i] + ROUND_CONSTANTS[index + i] */
-                cx_bn_init(bn_s0, value.value.as_ptr(), 32);
+                cx_bn_init(bn_s, value.value.as_ptr(), 32);
                 cx_bn_init(
                     bn_rc,
                     FieldElement::from(ROUND_CONSTANTS[index + i])
@@ -183,41 +187,11 @@ impl PoseidonStark252 {
                         .as_ptr(),
                     32,
                 );
-                cx_bn_mod_add(bn_res, bn_s0, bn_rc, bn_p);
+                cx_bn_mod_add(bn_res, bn_s, bn_rc, bn_p);
                 /* state[i] = state[i] * state[i] * state[i] */
-                cx_bn_mod_pow_bn(bn_s0, bn_res, bn_e, bn_p);
-                cx_bn_export(bn_s0, value.value.as_mut_ptr(), 32);
+                cx_bn_mod_pow_bn(bn_s, bn_res, bn_e, bn_p);
+                cx_bn_export(bn_s, value.value.as_mut_ptr(), 32);
             }
-
-            /* Mix */
-            //cx_bn_alloc(&mut bn_t, 32);
-            //cx_bn_init(bn_s0, state[0].value.as_ptr(), 32);
-            //cx_bn_alloc_init(&mut bn_s1, 32, state[1].value.as_ptr(), 32);
-            //cx_bn_alloc_init(&mut bn_s2, 32, state[2].value.as_ptr(), 32);
-            //cx_bn_alloc_init(&mut bn_two, 32, FieldElement::TWO.value.as_ptr(), 32);
-
-            /* Compute t */
-            //cx_bn_mod_add(bn_t, bn_s0, bn_s1, bn_p);
-            //cx_bn_mod_add(bn_t, bn_t, bn_s2, bn_p);
-
-            /* Update state */
-            /* s0 = t + 2 * s0 */
-            //cx_bn_mod_mul(bn_res, bn_s0, bn_two, bn_p);
-            //cx_bn_mod_add(bn_s0, bn_t, bn_res, bn_p);
-
-            /* s1 = t - 2 * s1 */
-            //cx_bn_mod_mul(bn_res, bn_s1, bn_two, bn_p);
-            //cx_bn_mod_sub(bn_s1, bn_t, bn_res, bn_p);
-
-            /* s2 = t - 3 * s2 */
-            //cx_bn_mod_add(bn_res, bn_s2, bn_s2, bn_p);
-            //cx_bn_mod_add(bn_res, bn_res, bn_s2, bn_p);
-            //cx_bn_mod_sub(bn_s2, bn_t, bn_res, bn_p);
-
-            //cx_bn_export(bn_s0, state[0].value.as_mut_ptr(), 32);
-            //cx_bn_export(bn_s1, state[1].value.as_mut_ptr(), 32);
-            //cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
-
             cx_bn_unlock();
         }
         Self::mix(state);
@@ -225,12 +199,15 @@ impl PoseidonStark252 {
 
     #[inline]
     fn partial_round(state: &mut [FieldElement], index: usize) {
+        state[2] = state[2] + FieldElement::from(ROUND_CONSTANTS[index]);
+        state[2] = state[2] * state[2] * state[2];
+        Self::mix(state);
+    }
+
+    #[inline]
+    fn partial_round2(state: &mut [FieldElement], index: usize) {
         unsafe {
-            let mut bn_s0: cx_bn_t = cx_bn_t::default();
-            let mut bn_s1: cx_bn_t = cx_bn_t::default();
             let mut bn_s2: cx_bn_t = cx_bn_t::default();
-            let mut bn_t: cx_bn_t = cx_bn_t::default();
-            let mut bn_two: cx_bn_t = cx_bn_t::default();
             let mut bn_p: cx_bn_t = cx_bn_t::default();
             let mut bn_res: cx_bn_t = cx_bn_t::default();
             let mut bn_rc: cx_bn_t = cx_bn_t::default();
@@ -257,38 +234,57 @@ impl PoseidonStark252 {
 
             cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
 
-            /**** Mix ****/
-            //cx_bn_alloc(&mut bn_t, 32);
-            //cx_bn_alloc_init(&mut bn_s0, 32, state[0].value.as_ptr(), 32);
-            //cx_bn_alloc_init(&mut bn_s1, 32, state[1].value.as_ptr(), 32);
-            //cx_bn_init(bn_s2, state[2].value.as_ptr(), 32);
-            //cx_bn_alloc_init(&mut bn_two, 32, FieldElement::TWO.value.as_ptr(), 32);
-
-            /* Compute t */
-            //cx_bn_mod_add(bn_t, bn_s0, bn_s1, bn_p);
-            //cx_bn_mod_add(bn_t, bn_t, bn_s2, bn_p);
-
-            /* Update state */
-            /* s0 = t + 2 * s0 */
-            //cx_bn_mod_mul(bn_res, bn_s0, bn_two, bn_p);
-            //cx_bn_mod_add(bn_s0, bn_t, bn_res, bn_p);
-
-            /* s1 = t - 2 * s1 */
-            //cx_bn_mod_mul(bn_res, bn_s1, bn_two, bn_p);
-            //cx_bn_mod_sub(bn_s1, bn_t, bn_res, bn_p);
-
-            /* s2 = t - 3 * s2 */
-            //cx_bn_mod_add(bn_res, bn_s2, bn_s2, bn_p);
-            //cx_bn_mod_add(bn_res, bn_res, bn_s2, bn_p);
-            //cx_bn_mod_sub(bn_s2, bn_t, bn_res, bn_p);
-
-            //cx_bn_export(bn_s0, state[0].value.as_mut_ptr(), 32);
-            //cx_bn_export(bn_s1, state[1].value.as_mut_ptr(), 32);
-            //cx_bn_export(bn_s2, state[2].value.as_mut_ptr(), 32);
-
             cx_bn_unlock();
         }
         Self::mix(state);
+    }
+
+    pub fn hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
+        let mut state: Vec<FieldElement> = Vec::with_capacity(3);
+        state.push(x.clone());
+        state.push(y.clone());
+        state.push(FieldElement::from(2u8));
+        Self::hades_permutation(&mut state);
+        let x = &state[0];
+        x.clone()
+    }
+
+    pub fn hash_single(x: &FieldElement) -> FieldElement {
+        let mut state: Vec<FieldElement> = Vec::with_capacity(3);
+        state.push(x.clone());
+        state.push(FieldElement::ZERO);
+        state.push(FieldElement::ONE);
+        Self::hades_permutation(&mut state);
+        let x = &state[0];
+        x.clone()
+    }
+
+    pub fn hash_many(inputs: &[FieldElement]) -> FieldElement {
+        let r = RATE; // chunk size
+
+        // Pad input with 1 followed by 0's (if necessary).
+        let mut values = inputs.to_owned();
+        values.push(FieldElement::from(1u8));
+        values.resize(((values.len() + r - 1) / r) * r, FieldElement::ZERO);
+
+        assert!(values.len() % r == 0);
+        let mut state: Vec<FieldElement> = Vec::from([FieldElement::ZERO; STATE_SIZE]);
+
+        // Process each block
+        for block in values.chunks(r) {
+            let mut block_state: Vec<FieldElement> = state[0..r]
+                .iter()
+                .zip(block)
+                .map(|(s, b)| *s + *b)
+                .collect();
+
+            block_state.extend_from_slice(&state[r..]);
+
+            Self::hades_permutation(&mut block_state);
+            state = block_state;
+        }
+
+        state[0].clone()
     }
 
     #[inline(always)]
@@ -348,99 +344,5 @@ impl PoseidonStark252 {
 
             cx_bn_unlock();
         }
-    }
-
-    pub fn hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
-        let mut state: Vec<FieldElement> = Vec::with_capacity(3);
-        state.push(x.clone());
-        state.push(y.clone());
-        state.push(FieldElement::from(2u8));
-        Self::hades_permutation(&mut state);
-        let x = &state[0];
-        x.clone()
-    }
-
-    pub fn hash_single(x: &FieldElement) -> FieldElement {
-        let mut state: Vec<FieldElement> = Vec::with_capacity(3);
-        state.push(x.clone());
-        state.push(FieldElement::ZERO);
-        state.push(FieldElement::ONE);
-        Self::hades_permutation(&mut state);
-        let x = &state[0];
-        x.clone()
-    }
-
-    pub fn hash_many(inputs: &[FieldElement]) -> FieldElement {
-        let r = RATE; // chunk size
-
-        // Pad input with 1 followed by 0's (if necessary).
-        let mut values = inputs.to_owned();
-        values.push(FieldElement::from(1u8));
-        values.resize(((values.len() + r - 1) / r) * r, FieldElement::ZERO);
-
-        assert!(values.len() % r == 0);
-        let mut state: Vec<FieldElement> = Vec::from([FieldElement::ZERO; STATE_SIZE]);
-
-        // Process each block
-        for block in values.chunks(r) {
-            let mut block_state: Vec<FieldElement> = state[0..r]
-                .iter()
-                .zip(block)
-                .map(|(s, b)| *s + *b)
-                .collect();
-
-            block_state.extend_from_slice(&state[r..]);
-
-            Self::hades_permutation(&mut block_state);
-            state = block_state;
-        }
-
-        state[0].clone()
-    }
-}
-
-// Code ported from the implementation here:
-// https://github.com/xJonathanLEI/starknet-rs/blob/7bb13d3f02f23949cf3c263e1b53ffcc43990ce6/starknet-crypto/src/poseidon_hash.rs#L13
-#[derive(Debug, Default)]
-pub struct PoseidonHasher {
-    pub state: [FieldElement; 3],
-    buffer: Option<FieldElement>,
-}
-
-impl PoseidonHasher {
-    /// Creates a new [PoseidonHasher].
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Absorbs message into the hash.
-    pub fn update(&mut self, msg: FieldElement) {
-        match self.buffer.take() {
-            Some(previous_message) => {
-                self.state[0] += previous_message;
-                self.state[1] += msg;
-                PoseidonStark252::hades_permutation(&mut self.state);
-            }
-            None => {
-                self.buffer = Some(msg);
-            }
-        }
-    }
-
-    /// Finishes and returns hash.
-    pub fn finalize(mut self) -> FieldElement {
-        // Applies padding
-        match self.buffer.take() {
-            Some(last_message) => {
-                self.state[0] += last_message;
-                self.state[1] += FieldElement::ONE;
-            }
-            None => {
-                self.state[0] += FieldElement::ONE;
-            }
-        }
-        PoseidonStark252::hades_permutation(&mut self.state);
-
-        self.state[0]
     }
 }
