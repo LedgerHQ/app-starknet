@@ -466,3 +466,34 @@ impl PoseidonHasher {
         self.state[0]
     }
 }
+
+pub fn poseidon_shift(hash: &mut FieldElement) {
+    let mut hash256: cx_bn_t = cx_bn_t::default();
+
+    unsafe {
+        cx_bn_lock(32, 0);
+        cx_bn_alloc_init(&mut hash256, 32, hash.value[..].as_ptr(), 32);
+
+        let mut bits_count: u32 = 256;
+        let mut set: bool = false;
+        while bits_count > 0 {
+            cx_bn_tst_bit(hash256, bits_count - 1, &mut set);
+            if set {
+                break;
+            } else {
+                bits_count = bits_count - 1;
+            }
+        }
+
+        if bits_count < 248 {
+            cx_bn_unlock();
+            return;
+        } else if bits_count >= 248 && bits_count % 8 >= 1 && bits_count % 8 <= 4 {
+            cx_bn_shl(hash256, 4);
+            cx_bn_export(hash256, hash.value[..].as_mut_ptr(), 32);
+            cx_bn_destroy(&mut hash256);
+            cx_bn_unlock();
+            return;
+        }
+    }
+}
