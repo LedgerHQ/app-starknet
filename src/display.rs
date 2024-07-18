@@ -29,28 +29,67 @@ use crate::Ins;
 pub fn sign_tx(ctx: &mut Ctx) -> bool {
     match support_clear_sign(&ctx.tx) {
         Some(t) => {
-            testing::debug_print("Clear sign supported !!! \n");
+            let tx = &ctx.tx;
+            let call = &tx.calls[0];
 
+            let selector = String::from("TRANSFER");
+            let token = ERC20_TOKENS[t].ticker;
+            let to = call.calldata[0].to_hex_string();
+            let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[t].decimals));
+
+            let my_fields = [
+                Field {
+                    name: "Operation",
+                    value: selector.as_str(),
+                },
+                Field {
+                    name: "Token",
+                    value: token,
+                },
+                Field {
+                    name: "To",
+                    value: to.as_str(),
+                },
+                Field {
+                    name: "Amount",
+                    value: amount.as_str(),
+                },
+            ];
+
+            testing::debug_print(&format!(
+                "Token: {}\nTo: {}\nAmount: {}\n",
+                token, to, amount
+            ));
+
+            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             {
-                let tx = &ctx.tx;
-                let call = &tx.calls[0];
+                let my_review = MultiFieldReview::new(
+                    &my_fields,
+                    &["Confirm Tx to sign"],
+                    Some(&EYE),
+                    "Approve",
+                    Some(&VALIDATE_14),
+                    "Reject",
+                    Some(&CROSSMARK),
+                );
 
-                let _selector = String::from("transfer");
-                let token = ERC20_TOKENS[t].ticker;
-                let to = call.calldata[0].to_hex_string();
-                let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[t].decimals));
-
-                testing::debug_print(&format!(
-                    "Token: {}\nTo: {}\nAmount: {}\n",
-                    token, to, amount
-                ));
+                my_review.show()
             }
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            {
+                // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-            return true;
+                let mut review = NbglReview::new()
+                    .titles("Review", "Transaction", "Sign Transaction")
+                    .glyph(&APP_ICON);
+                review.show(&my_fields)
+            }
         }
         None => {
             testing::debug_print("Clear sign not supported !!! \n");
-            return false;
+            sign_hash(ctx)
         }
     }
 }
@@ -58,22 +97,17 @@ pub fn sign_tx(ctx: &mut Ctx) -> bool {
 /// This is the UI flow for signing, composed of a scroller
 /// to read the incoming message, a panel that requests user
 /// validation, and an exit message.
-pub fn sign_ui(ctx: &mut Ctx) -> bool {
-    let mut hash_hex = [0u8; 64];
-    hex::encode_to_slice(&ctx.hash.m_hash.value, &mut hash_hex[0..]).unwrap();
-    let hash = core::str::from_utf8_mut(&mut hash_hex[..63]).unwrap();
+pub fn sign_hash(ctx: &mut Ctx) -> bool {
+    let mut hash = ctx.hash.m_hash.to_hex_string();
     hash.make_ascii_uppercase();
+
+    let my_field = [Field {
+        name: "Transaction Hash",
+        value: hash.as_str(),
+    }];
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        /*let hash = core::str::from_utf8_mut(&mut hash_hex[..63]).unwrap();
-        hash.make_ascii_uppercase();*/
-
-        let my_field = [Field {
-            name: "Hash",
-            value: hash,
-        }];
-
         let my_review = MultiFieldReview::new(
             &my_field,
             &["Confirm Hash to sign"],
@@ -89,23 +123,14 @@ pub fn sign_ui(ctx: &mut Ctx) -> bool {
 
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        /*hash_hex[63] = 0u8;
-        let hash = core::str::from_utf8_mut(&mut hash_hex[..64]).unwrap();
-        hash.make_ascii_uppercase();*/
-
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-        // Display Tx Review screen.
-        let my_fields = [Field {
-            name: "Transaction Hash",
-            value: hash,
-        }];
 
         let mut review = NbglReview::new()
-            .titles("Review", "Transaction Hash", "Sign Transaction")
+            .titles("Review", "Transaction", "Sign Transaction")
             .glyph(&APP_ICON);
-        review.show(&my_fields)
+        review.show(&my_field)
     }
 }
 
@@ -202,18 +227,14 @@ pub fn main_ui(_comm: &mut Comm) -> Event<Ins> {
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
     // Display the home screen.
-    NbglHomeAndSettings::new(
-        //concat!("Starknet", "\0"),
-        //concat!(env!("CARGO_PKG_VERSION"), "\0"),
-        //concat!(env!("CARGO_PKG_AUTHORS"), "\0"),
-    )
-    .glyph(&APP_ICON)
-    .infos(
-        "Starknet",
-        env!("CARGO_PKG_VERSION"),
-        env!("CARGO_PKG_AUTHORS"),
-    )
-    .show()
+    NbglHomeAndSettings::new()
+        .glyph(&APP_ICON)
+        .infos(
+            "Starknet",
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_AUTHORS"),
+        )
+        .show()
 }
 
 fn support_clear_sign(tx: &Transaction) -> Option<usize> {

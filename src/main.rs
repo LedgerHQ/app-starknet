@@ -136,7 +136,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => {
                     ctx.hash.m_hash = data.into();
-                    match display::sign_ui(ctx) {
+                    match display::sign_hash(ctx) {
                         true => {
                             sign_hash(ctx).unwrap();
                             comm.append([0x41].as_slice());
@@ -177,8 +177,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 5 => {
                     transaction::set_call(data, p2, &mut ctx.tx.calls);
                     if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
-                        display::sign_tx(ctx);
-
                         let mut hasher = crypto::poseidon::PoseidonHasher::new();
                         /* "invoke" */
                         hasher.update(FieldElement::INVOKE);
@@ -223,6 +221,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         hasher.update(hash_calldata);
 
                         ctx.hash.m_hash = hasher.finalize();
+
+                        display::sign_tx(ctx);
 
                         comm.append(ctx.hash.m_hash.value.as_ref());
                     }
