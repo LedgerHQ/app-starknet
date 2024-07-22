@@ -16,14 +16,15 @@ use crate::crypto;
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::ui::{
     bitmaps::{Glyph, BACK, CERTIFICATE, CROSSMARK, DASHBOARD_X, EYE, VALIDATE_14, WARNING},
-    gadgets::{EventOrPageIndex, Field, MessageValidator, MultiFieldReview, MultiPageMenu, Page},
+    gadgets::{
+        clear_screen, EventOrPageIndex, Field, MultiFieldReview, MultiPageMenu, Page, PageStyle,
+    },
 };
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     CenteredInfo, CenteredInfoStyle, Field, InfoButton, NbglAddressReview, NbglGenericReview,
-    NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview, TagValueConfirm, TagValueList,
-    TuneIndex,
+    NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview, TuneIndex,
 };
 
 use crate::Ins;
@@ -134,19 +135,63 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let my_review = MultiFieldReview::new(
-            &my_field,
-            &["Confirm Hash to sign"],
+        let page_0 = Page::new(
+            PageStyle::PictureNormal,
+            ["This transaction ", "cannot be trusted"],
+            Some(&WARNING),
+        );
+        let page_1 = Page::new(
+            PageStyle::PictureNormal,
+            ["Your Ledger cannot ", "decode this transaction."],
+            Some(&WARNING),
+        );
+        let page_2 = Page::new(
+            PageStyle::PictureNormal,
+            ["If you sign it, you", "could be authorizing"],
+            Some(&WARNING),
+        );
+        let page_3 = Page::new(
+            PageStyle::PictureNormal,
+            ["malicious actions that", "can drain your wallet."],
+            Some(&WARNING),
+        );
+
+        clear_screen();
+        page_0.place_and_wait();
+        clear_screen();
+        page_1.place_and_wait();
+        clear_screen();
+        page_2.place_and_wait();
+        clear_screen();
+        page_3.place_and_wait();
+
+        let warning_accept = MultiFieldReview::new(
+            &[],
+            &["I understand the risk"],
             Some(&EYE),
-            "Approve",
+            "Accept",
             Some(&VALIDATE_14),
             "Reject",
             Some(&CROSSMARK),
         );
 
-        my_review.show()
-    }
+        match warning_accept.show() {
+            false => return false,
+            true => {
+                let my_review = MultiFieldReview::new(
+                    &my_field,
+                    &["Confirm Hash to sign"],
+                    Some(&EYE),
+                    "Approve",
+                    Some(&VALIDATE_14),
+                    "Reject",
+                    Some(&CROSSMARK),
+                );
 
+                my_review.show()
+            }
+        }
+    }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
@@ -185,7 +230,7 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
             .add_content(NbglPageContent::CenteredInfo(centered_info_1))
             .add_content(NbglPageContent::InfoButton(info_button));
 
-        match review.show("Cancel", "I understand the risk", "Transaction rejected") {
+        match review.show("Reject", "Review transaction", "Transaction rejected") {
             false => return false,
             true => {
                 let mut review = NbglReview::new()

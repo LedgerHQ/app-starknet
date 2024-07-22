@@ -227,7 +227,7 @@ impl PoseidonStark252 {
     }
 
     #[inline]
-    fn partial_round(state: &mut [FieldElement], index: usize) {
+    fn _partial_round(state: &mut [FieldElement], index: usize) {
         unsafe {
             let mut bn_p: cx_bn_t = cx_bn_t::default();
             let mut bn_res: cx_bn_t = cx_bn_t::default();
