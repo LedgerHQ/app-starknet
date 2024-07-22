@@ -3,7 +3,8 @@ use ledger_device_sdk::io::{Reply, SyscallError};
 
 pub mod poseidon;
 
-use crate::context::Ctx;
+use crate::context::{Ctx, Transaction};
+use crate::types::FieldElement;
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
 /// with every step encoded with 4 bytes (total length = 6 x 4 = 24 bytes)
@@ -26,6 +27,8 @@ impl From<CryptoError> for Reply {
 
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
+    poseidon::poseidon_shift(&mut ctx.hash.m_hash);
+
     match Stark256::derive_from_path(ctx.bip32_path.as_ref())
         .deterministic_sign(ctx.hash.m_hash.value.as_ref())
     {
@@ -169,4 +172,47 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     out_s[PAYLOADLEN - s_len..].copy_from_slice(s);
 
     Ok(())
+}
+
+pub fn tx_hash(tx: &Transaction) -> FieldElement {
+    let mut hasher = poseidon::PoseidonHasher::new();
+    /* "invoke" */
+    hasher.update(FieldElement::INVOKE);
+    /* version = 3 */
+    hasher.update(FieldElement::from(3u8));
+    /* sender_address */
+    hasher.update(tx.sender_address);
+    /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+    let fee_hash =
+        poseidon::PoseidonStark252::hash_many(&[tx.tip, tx.l1_gas_bounds, tx.l2_gas_bounds]);
+    hasher.update(fee_hash);
+    /* h(paymaster_data) */
+    let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
+    hasher.update(paymaster_hash);
+    /* chain_id */
+    hasher.update(tx.chain_id);
+    /* nonce */
+    hasher.update(tx.nonce);
+    /* data_availability_modes */
+    hasher.update(tx.data_availability_mode);
+    /* h(account_deployment_data) */
+    let accound_deployment_data_hash =
+        poseidon::PoseidonStark252::hash_many(&tx.account_deployment_data);
+    hasher.update(accound_deployment_data_hash);
+    /* h(calldata) */
+    let mut hasher_calldata = poseidon::PoseidonHasher::new();
+    hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
+    tx.calls.iter().for_each(|c| {
+        hasher_calldata.update(c.to);
+        hasher_calldata.update(c.selector);
+        hasher_calldata.update(FieldElement::from(c.calldata.len() as u8));
+        c.calldata.iter().for_each(|d| hasher_calldata.update(*d));
+    });
+    let hash_calldata = hasher_calldata.finalize();
+
+    hasher.update(hash_calldata);
+
+    let hash = hasher.finalize();
+
+    return hash;
 }
