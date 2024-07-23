@@ -1,6 +1,6 @@
 use clap::Parser;
-use std::fs::File;
 use std::io::prelude::*;
+use std::{fs::File, path::Path};
 
 /// Utility to generate APDUs for Tx blur or clear signing with Starknet Nano application
 /// (see https://docs.starknet.io/documentation/architecture_and_concepts/Blocks/transactions/#invoke_transaction_version_1)
@@ -30,7 +30,9 @@ const PATH: &str = "m/2645'/1195502025'/1148870696'/0'/0'/0";
 fn main() {
     let args: Args = Args::parse();
 
-    let mut file = File::open(args.json).unwrap();
+    let path = Path::new(args.json.as_str());
+
+    let mut file = File::open(path).unwrap();
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
@@ -61,8 +63,33 @@ fn main() {
         apdus.append(&mut call_apdu);
     }
 
-    let mut json_out = File::create("apdu.json").unwrap();
-    let mut raw_out = File::create("apdu.dat").unwrap();
+    let out_name = path.file_name().unwrap().to_str().unwrap();
+    let out_name_with_ext_apdu = format!("{}.dat", out_name[0..out_name.len() - 5].to_string());
+    let out_name_with_ext_json = format!("{}.json", out_name[0..out_name.len() - 5].to_string());
+
+    let json_out_name = path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("apdu_samples")
+        .join(out_name_with_ext_json.clone());
+
+    let raw_out_name = path
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("apdu_samples")
+        .join(out_name_with_ext_apdu.clone());
+
+    println!(
+        "Writing APDUs to {:?} and {:?}",
+        json_out_name, raw_out_name
+    );
+
+    let mut json_out = File::create(json_out_name).unwrap();
+    let mut raw_out = File::create(raw_out_name).unwrap();
     for a in apdus.iter() {
         println!("=> {}", a);
         writeln!(raw_out, "=> {}", a).unwrap();

@@ -1,6 +1,10 @@
 use ethereum_types::U256;
 use serde::Deserialize;
+use starknet::core::utils::starknet_keccak;
 use std::fmt;
+
+const DEFAULT_ENTRY_POINT_NAME: &str = "__default__";
+const DEFAULT_L1_ENTRY_POINT_NAME: &str = "__l1_default__";
 
 #[derive(Copy, Clone, Debug)]
 pub struct FieldElement(pub U256);
@@ -71,6 +75,7 @@ impl From<u8> for Ins {
 #[derive(Deserialize, Debug)]
 pub struct Call {
     pub to: String,
+    pub entrypoint: String,
     pub selector: String,
     pub calldata: Vec<String>,
 }
@@ -82,7 +87,9 @@ impl From<&Call> for Vec<FieldElement> {
         let to = FieldElement(U256::from_str_radix(&c.to, 16).unwrap());
         v.push(to);
 
-        let selector = FieldElement(U256::from_str_radix(&c.selector, 16).unwrap());
+        //let selector = FieldElement(U256::from_str_radix(&c.selector, 16).unwrap());
+        let selector = get_selector_from_name(&c.entrypoint);
+
         v.push(selector);
 
         for c in c.calldata.iter() {
@@ -110,4 +117,16 @@ pub struct Tx {
 #[derive(Deserialize, Debug)]
 pub struct Data {
     pub felts: Vec<String>,
+}
+
+pub fn get_selector_from_name(func_name: &str) -> FieldElement {
+    if func_name == DEFAULT_ENTRY_POINT_NAME || func_name == DEFAULT_L1_ENTRY_POINT_NAME {
+        FieldElement(U256::from(0u8))
+    } else {
+        let name_bytes = func_name.as_bytes();
+
+        let selector = starknet_keccak(name_bytes);
+
+        FieldElement(U256::from_str_radix(selector.to_fixed_hex_string().as_str(), 16).unwrap())
+    }
 }
