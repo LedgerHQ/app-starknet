@@ -1,19 +1,7 @@
-[package]
-name = "starknet"
-version = "1.2.2"
-edition = "2021"
-authors = ["Ledger"]
+[workspace]
+members = ["tools/apdu-generator", "starknet"]
 
-[dependencies]
-ledger_device_sdk = "1.12.0"
-ledger_secure_sdk_sys = { version = "1.4.3", features = ["heap"]}
-include_gif = "1.1.0"
-hex = { version = "0.4", default-features = false, features = ["alloc"]}
-num-bigint = { version = "0.4", default-features = false }
-
-[features]
-default = []
-pending_review_screen = []
+resolver = "2"
 
 [profile.dev]
 panic = "abort"
@@ -22,22 +10,3 @@ panic = "abort"
 panic = "abort"
 opt-level = 'z' 
 lto = true
-
-[package.metadata.ledger]
-curve = ["secp256k1"]
-path = ["2645'"]
-name = "Starknet"
-flags = "0"
-
-[package.metadata.ledger.nanox]
-icon = "starknet_small.gif"
-
-[package.metadata.ledger.nanosplus]
-icon = "starknet_small.gif"
-
-[package.metadata.ledger.stax]
-icon = "starknet_32x32.gif"
-
-[package.metadata.ledger.flex]
-icon = "starknet_40x40.gif"
-

@@ -1,5 +1,5 @@
 [app]
-build_directory = "./"
+build_directory = "starknet/"
 sdk = "Rust"
 devices = ["nanox", "nanos+", "stax", "flex"]
 
