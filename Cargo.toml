@@ -1,5 +1,9 @@
 [workspace]
-members = ["tools/apdu-generator", "starknet"]
+members = [
+    "tools/apdu-generator", 
+    "tools/check-signature", 
+    "starknet"
+]
 
 resolver = "2"
 

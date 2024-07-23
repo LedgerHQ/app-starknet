@@ -1,0 +1,12 @@
+[package]
+name = "check-signature"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
+tokio = { version = "1.15.0", features = ["full"] }
+url = "2.3.1"
+starknet-types-core = "0.1.5"
