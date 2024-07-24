@@ -1,16 +1,38 @@
+use clap::Parser;
 use starknet::{
     accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount},
     core::{chain_id, crypto::Signature, utils::get_selector_from_name},
     providers::SequencerGatewayProvider,
     signers::{LocalWallet, Signer, SigningKey, VerifyingKey},
 };
-
 use starknet_types_core::felt::Felt;
-
 use url::Url;
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// public key in hexadecimal format (32 bytes)
+    #[arg(short, long)]
+    pkey: String,
+
+    /// Tx hash in hexadecimal format (32 bytes)
+    #[arg(short, long)]
+    txhash: String,
+
+    /// Signature r value in hexadecimal format (32 bytes)
+    #[arg(short, long)]
+    r: String,
+
+    /// Signature s value in hexadecimal format (32 bytes)
+    #[arg(short, long)]
+    s: String,
+}
 
 #[tokio::main]
 async fn main() {
+    let args: Args = Args::parse();
+
+    /*
     let provider = SequencerGatewayProvider::new(
         Url::parse("http://127.0.0.1:5050/gateway").unwrap(),
         Url::parse("http://127.0.0.1:5050/feeder_gateway").unwrap(),
@@ -51,31 +73,30 @@ async fn main() {
     println!("Transaction hash: {}", hash.to_biguint());
     println!("Transaction hash: {}", hash.to_hex_string());
     println!("Transaction hash: {}", hash.to_fixed_hex_string());
+    */
 
     /* Check signature (ref) */
-    let signature = signer.sign_hash(&hash).await.unwrap();
+    //let signature = signer.sign_hash(&hash).await.unwrap();
 
-    let public_key = signer.get_public_key().await.unwrap();
+    //let public_key = signer.get_public_key().await.unwrap();
 
-    let verify = public_key.verify(&hash, &signature).unwrap();
+    //let verify = public_key.verify(&hash, &signature).unwrap();
 
-    println!("Verify: {}", verify);
+    //println!("Verify: {}", verify);
 
     /* Check signature (device) */
 
-    let device_public_key = VerifyingKey::from_scalar(Felt::from_hex_unchecked(
-        "04ac45fea8814cc2c2bbca343f4280b25d2a5f6d65e511dd16977f35c3e64b74",
-    ));
+    let device_public_key = VerifyingKey::from_scalar(Felt::from_hex_unchecked(args.pkey.as_str()));
+
+    let tx_hash = Felt::from_hex_unchecked(args.txhash.as_str());
 
     let device_signature = Signature {
-        r: Felt::from_hex_unchecked(
-            "02726274683cc9a22261edbe3871ab5bf4ac9613388b9297b938c01ba3c79c63",
-        ),
-        s: Felt::from_hex_unchecked(
-            "0068d34a1d684a978d42aec24288ceca14edea61c27feb3d606461689a44c6ff",
-        ),
+        r: Felt::from_hex_unchecked(args.r.as_str()),
+        s: Felt::from_hex_unchecked(args.s.as_str()),
     };
 
-    let device_verify = device_public_key.verify(&hash, &device_signature).unwrap();
+    let device_verify = device_public_key
+        .verify(&tx_hash, &device_signature)
+        .unwrap();
     println!("Verify: {}", device_verify);
 }
