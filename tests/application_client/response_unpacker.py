@@ -56,11 +56,13 @@ def unpack_get_public_key_response(response: bytes) -> Tuple[bytes, bytes]:
     return pub_key_x, pub_key_y
 
 # Unpack from response:
-# response = sig_len (1)
+# response = hash (32)
+#            sig_len (1)
 #            r (32)
 #            s (32)
 #            v (1)
-def unpack_sign_hash_response(response: bytes) -> Tuple[int, int, int]:
+def unpack_sign_tx_response(response: bytes) -> Tuple[int, int, int, int]:
+    response, hash = pop_sized_buf_from_buffer(response, 32)
     response, len = pop_sized_buf_from_buffer(response, 1)
     response, r = pop_sized_buf_from_buffer(response, 32)
     response, s = pop_sized_buf_from_buffer(response, 32)
@@ -68,4 +70,4 @@ def unpack_sign_hash_response(response: bytes) -> Tuple[int, int, int]:
 
     #assert len(response) == 0
 
-    return int.from_bytes(r, byteorder='big'), int.from_bytes(s, byteorder='big'), int.from_bytes(v, byteorder='big')
+    return int.from_bytes(hash, byteorder='big'), int.from_bytes(r, byteorder='big'), int.from_bytes(s, byteorder='big'), int.from_bytes(v, byteorder='big')

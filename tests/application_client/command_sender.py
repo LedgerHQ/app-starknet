@@ -48,7 +48,6 @@ class CommandSender:
     def __init__(self, backend: BackendInterface) -> None:
         self.backend = backend
 
-
     def get_app_and_version(self) -> RAPDU:
         return self.backend.exchange(cla=0xB0,  # specific CLA for BOLOS
                                      ins=0x01,  # specific INS for get_app_and_version
@@ -65,24 +64,8 @@ class CommandSender:
                                      data=b"")
 
 
-    #def get_app_name(self) -> RAPDU:
-    #    return self.backend.exchange(cla=CLA,
-    #                                 ins=InsType.GET_APP_NAME,
-    #                                 p1=P1.P1_START,
-    #                                 p2=P2.P2_LAST,
-    #                                 data=b"")
-
-
-    def get_public_key(self, path: str) -> RAPDU:
-        bip32_paths: List[bytes] = bip32_path_from_string(path)
-        cdata: bytes = b"".join([
-            *bip32_paths
-        ])
-        return self.backend.exchange(cla=CLA,
-                                     ins=InsType.GET_PUBLIC_KEY,
-                                     p1=0x00,
-                                     p2=0x00,
-                                     data=cdata)
+    def get_public_key(self, data: bytes=b"") -> RAPDU:
+        return self.backend.exchange_raw(data)
 
 
     @contextmanager
@@ -117,6 +100,15 @@ class CommandSender:
                                          p2=0x01,
                                          data=hash) as response:
               yield response
+
+    @contextmanager
+    def sign_tx(self, apdus: List[bytes]) -> Generator[None, None, None]:
+        # send all apdus except last one
+        for apdu in apdus[:-1]:
+            self.backend.exchange_raw(apdu)
+        # send last apdu and yield the response
+        with self.backend.exchange_async_raw(apdus[-1]) as response:
+            yield response
 
     def get_async_response(self) -> Optional[RAPDU]:
         return self.backend.last_async_response

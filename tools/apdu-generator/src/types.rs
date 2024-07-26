@@ -76,7 +76,6 @@ impl From<u8> for Ins {
 pub struct Call {
     pub to: String,
     pub entrypoint: String,
-    pub selector: String,
     pub calldata: Vec<String>,
 }
 
