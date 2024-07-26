@@ -177,6 +177,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
                         match display::show_tx(ctx) {
                             true => {
+                                comm.append(ctx.hash.m_hash.value.as_ref());
                                 crypto::sign_hash(ctx).unwrap();
                                 comm.append([0x41].as_slice());
                                 comm.append(ctx.hash.r.as_ref());
