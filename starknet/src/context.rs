@@ -58,6 +58,7 @@ impl Transaction {
 pub enum RequestType {
     Unknown,
     GetPubkey,
+    #[cfg(feature = "signhash")]
     SignHash,
     SignTx,
 }

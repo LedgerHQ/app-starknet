@@ -372,6 +372,7 @@ impl PoseidonStark252 {
         }
     }
 
+    #[cfg(feature = "poseidon")]
     pub fn hash(x: &FieldElement, y: &FieldElement) -> FieldElement {
         let mut state: Vec<FieldElement> = Vec::with_capacity(3);
         state.push(x.clone());
@@ -382,6 +383,7 @@ impl PoseidonStark252 {
         x.clone()
     }
 
+    #[cfg(feature = "poseidon")]
     pub fn hash_single(x: &FieldElement) -> FieldElement {
         let mut state: Vec<FieldElement> = Vec::with_capacity(3);
         state.push(x.clone());

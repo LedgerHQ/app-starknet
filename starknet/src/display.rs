@@ -23,7 +23,8 @@ use ledger_device_sdk::ui::{
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
-    Field, NbglAddressReview, NbglGlyph, NbglHomeAndSettings, NbglReview,
+    Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
+    TagValueConfirm, TagValueList, TuneIndex,
 };
 
 use crate::Ins;
@@ -212,18 +213,13 @@ pub fn pkey_ui(key: &[u8]) -> bool {
     let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
     m[0..].make_ascii_uppercase();
 
+    let my_field = [Field {
+        name: "Public Key",
+        value: m,
+    }];
+
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        /*let mut pk_hex = [0u8; 64];
-        hex::encode_to_slice(&key[1..33], &mut pk_hex[0..]).unwrap();
-        let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
-        m[0..].make_ascii_uppercase();*/
-
-        let my_field = [Field {
-            name: "Public Key",
-            value: m,
-        }];
-
         let my_review = MultiFieldReview::new(
             &my_field,
             &["Confirm Public Key"],
@@ -238,19 +234,12 @@ pub fn pkey_ui(key: &[u8]) -> bool {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        /*let mut pk_hex = [0u8; 65];
-        hex::encode_to_slice(&key[1..33], &mut pk_hex[0..64]).unwrap();
-        pk_hex[64] = 0u8;
-        let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
-        m[0..].make_ascii_uppercase();*/
+        let tvl = TagValueList::new(&my_field, 4, false, true);
+        let tvc = TagValueConfirm::new(&tvl, TuneIndex::LookAtMe, "Approve", "");
 
-        // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
-        const APP_ICON: NbglGlyph =
-            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-        NbglAddressReview::new()
-            .glyph(&APP_ICON)
-            .verify_str("Verify public key")
-            .show(m)
+        NbglGenericReview::new()
+            .add_content(NbglPageContent::TagValueConfirm(tvc))
+            .show("Reject", "Public Key Approved", "Public Key Rejected")
     }
 }
 

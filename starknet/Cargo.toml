@@ -13,7 +13,8 @@ num-bigint = { version = "0.4", default-features = false }
 
 [features]
 default = []
-pending_review_screen = []
+poseidon = []
+signhash = []
 
 [package.metadata.ledger]
 curve = ["secp256k1"]

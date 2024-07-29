@@ -46,9 +46,13 @@ extern "C" fn sample_main() {
 #[repr(u8)]
 enum Ins {
     GetVersion,
-    GetPubkey { display: bool },
+    GetPubkey {
+        display: bool,
+    },
+    #[cfg(feature = "signhash")]
     SignHash,
     SignTx,
+    #[cfg(feature = "poseidon")]
     Poseidon,
 }
 
@@ -62,8 +66,10 @@ impl TryFrom<io::ApduHeader> for Ins {
                 display: header.p1 != 0,
             }),
             (1, _, _) => Err(io::StatusWords::BadP1P2),
+            #[cfg(feature = "signhash")]
             (2, _, _) => Ok(Ins::SignHash),
             (3, _, _) => Ok(Ins::SignTx),
+            #[cfg(feature = "poseidon")]
             (4, _, _) => Ok(Ins::Poseidon),
             (_, _, _) => Err(io::StatusWords::BadIns),
         }
@@ -121,6 +127,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
             }
         }
+        #[cfg(feature = "signhash")]
         Ins::SignHash => {
             let p1 = apdu_header.p1;
             let mut data = comm.get_data()?;
@@ -195,6 +202,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
             }
         }
+        #[cfg(feature = "poseidon")]
         Ins::Poseidon => {
             let data = comm.get_data()?;
             let p1 = apdu_header.p1;
