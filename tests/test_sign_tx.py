@@ -82,18 +82,29 @@ def test_blind_sign_tx(firmware, backend, navigator, test_name):
         bytes.fromhex("5a03020000"),
         bytes.fromhex("5a03030000"),
         bytes.fromhex("5a030400200000000000000000000000000000000000000000000000000000000000000001"),
-        bytes.fromhex("5a03050080049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc70083afd3f4caedc6eebf44246fe54e38c95e3179a5ec9ea81740eca5b482d12e07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a00000000000000000000000000000000000000000000000000000000000003e8")
+        bytes.fromhex("5a03050080049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc702f0b3c5710379609eb5495f1ecd348cb28167711b73609fe565a7273455035407e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a00000000000000000000000000000000000000000000000000000000000003e8")
         ]) as response:
         # Validate the on-screen request by performing the navigation appropriate for this device
         if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
+                NavInsID.CENTERED_FOOTER_TAP,
+                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,

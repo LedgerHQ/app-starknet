@@ -10,7 +10,7 @@ def test_version(backend):
     # Send the GET_VERSION instruction
     rapdu = client.get_version()
     # Read version from Cargo.toml
-    with open('Cargo.toml', 'r') as f:
+    with open('starknet/Cargo.toml', 'r') as f:
         config = toml.load(f)
         version = config['package']['version']
         major, minor, patch = version.split('.')

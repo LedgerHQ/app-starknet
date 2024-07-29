@@ -12,7 +12,7 @@ from utils import ROOT_SCREENSHOT_PATH
 def test_get_public_key_no_confirm(backend):
     for path in ["m/2645'/1195502025'/1148870696'/0'/0'/0"]:
         client = CommandSender(backend)
-        response = client.get_public_key(path=path).data
+        response = client.get_public_key(bytes.fromhex("5a0100001880000a55c741e9c9c47a6028800000008000000000000000")).data
         public_key_x, public_key_y = unpack_get_public_key_response(response)
 
         #ref_public_key, _ = calculate_public_key_and_chaincode(CurveChoice.Secp256k1, path=path)
