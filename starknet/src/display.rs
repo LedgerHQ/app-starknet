@@ -23,8 +23,7 @@ use ledger_device_sdk::ui::{
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
-    CenteredInfo, CenteredInfoStyle, Field, InfoButton, NbglAddressReview, NbglGenericReview,
-    NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview, TuneIndex,
+    Field, NbglAddressReview, NbglGlyph, NbglHomeAndSettings, NbglReview,
 };
 
 use crate::Ins;
@@ -198,49 +197,12 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-        let centered_info_0 = CenteredInfo::new(
-                "Security risk detected",
-                "It may not be safe to sign this transaction. To continue, you'll need to review the risk.",
-                "",
-                Some(&APP_ICON),
-                true,
-                CenteredInfoStyle::LargeCaseBoldInfo,
-                0,
-            );
+        let mut review = NbglReview::new()
+            .titles("Review", "Transaction", "Sign Transaction")
+            .glyph(&APP_ICON)
+            .blind();
 
-        let centered_info_1 = CenteredInfo::new(
-                "The transaction cannot be trusted",
-                "Your Ledger cannot decode this transaction. If you sign it, you could be authorizing malicious actions that can drain your wallet.",
-                "Learn more: ledger.com/e8",
-                Some(&APP_ICON),
-                true,
-                CenteredInfoStyle::LargeCaseBoldInfo,
-                0,
-            );
-
-        let info_button = InfoButton::new(
-            "",
-            Some(&APP_ICON),
-            "I understand the risk",
-            TuneIndex::Success,
-        );
-
-        let mut review = NbglGenericReview::new()
-            .add_content(NbglPageContent::CenteredInfo(centered_info_0))
-            .add_content(NbglPageContent::CenteredInfo(centered_info_1))
-            .add_content(NbglPageContent::InfoButton(info_button));
-
-        match review.show("Reject", "Review transaction", "Transaction rejected") {
-            false => return false,
-            true => {
-                let mut review = NbglReview::new()
-                    .titles("Review", "Transaction", "Sign Transaction")
-                    .glyph(&APP_ICON)
-                    .blind();
-
-                review.show(&my_field)
-            }
-        }
+        review.show(&my_field)
     }
 }
 
