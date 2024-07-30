@@ -1,5 +1,6 @@
 from typing import Tuple
 from struct import unpack
+from enum import IntEnum
 
 # remainder, data
 def pop_sized_buf_from_buffer(buffer:bytes, size:int) -> Tuple[bytes, bytes]:
@@ -71,3 +72,19 @@ def unpack_sign_tx_response(response: bytes) -> Tuple[int, int, int, int]:
     #assert len(response) == 0
 
     return int.from_bytes(hash, byteorder='big'), int.from_bytes(r, byteorder='big'), int.from_bytes(s, byteorder='big'), int.from_bytes(v, byteorder='big')
+
+class Errors(IntEnum):
+    SW_DENY                    = 0x6E04
+    SW_CLA_NOT_SUPPORTED       = 0x6E00
+    SW_INS_NOT_SUPPORTED       = 0x6E01
+    SW_WRONG_P1P2              = 0x6E02
+    SW_WRONG_APDU_LENGTH       = 0x6E03
+    SW_WRONG_RESPONSE_LENGTH   = 0xB000
+    SW_DISPLAY_BIP32_PATH_FAIL = 0xB001
+    SW_DISPLAY_ADDRESS_FAIL    = 0xB002
+    SW_DISPLAY_AMOUNT_FAIL     = 0xB003
+    SW_WRONG_TX_LENGTH         = 0xB004
+    SW_TX_PARSING_FAIL         = 0xB005
+    SW_TX_HASH_FAIL            = 0xB006
+    SW_BAD_STATE               = 0xB007
+    SW_SIGNATURE_FAIL          = 0xB008
