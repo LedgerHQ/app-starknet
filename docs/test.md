@@ -28,5 +28,5 @@ ledgerctl install -f app_nanosplus.json
 ```
 Use [ledgercomm](https://github.com/LedgerHQ/ledgercomm) to send APDU e.g :
 ```
-ledgercomm-send --hid file test/sign.apdu
+ledgercomm-send --hid file tools/apdu-generator/apdu_samples/get_pub_key_confirm.dat
 ```
