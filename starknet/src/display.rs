@@ -45,7 +45,8 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
             let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
             let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
             let max_fees = max_amount * max_price_per_unit;
-            let max_fees_str = max_fees.to_dec_string(Some(18));
+            let mut max_fees_str = max_fees.to_dec_string(None);
+            max_fees_str.push_str(" fri");
 
             testing::debug_print("Compute fees OK \n");
 
