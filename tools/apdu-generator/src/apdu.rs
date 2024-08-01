@@ -1,14 +1,14 @@
-use std::fmt;
 use serde::Serialize;
+use std::fmt;
 
 const MAX_APDU_DATA_SIZE: usize = 255;
 
 #[derive(Default, Clone, Serialize)]
 pub struct ApduHeader {
-      pub cla: u8,
-      pub ins: u8,
-      pub p1: u8,
-      pub p2: u8,
+    pub cla: u8,
+    pub ins: u8,
+    pub p1: u8,
+    pub p2: u8,
 }
 
 #[derive(Default, Clone, Serialize)]
