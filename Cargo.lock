@@ -1596,6 +1596,7 @@ checksum = "03087c2bad5e1034e8cace5926dec053fb3790248370865f5117a7d0213354c8"
 [[package]]
 name = "ledger-lib"
 version = "0.1.0"
+source = "git+https://github.com/LedgerHQ/ledger-rust.git?branch=y333/fix_timeout#8a514af25270a263942a8f3d9a541e4d55d80491"
 dependencies = [
  "async-trait",
  "btleplug",
@@ -1616,6 +1617,7 @@ dependencies = [
 [[package]]
 name = "ledger-proto"
 version = "0.1.0"
+source = "git+https://github.com/LedgerHQ/ledger-rust.git?branch=y333/fix_timeout#8a514af25270a263942a8f3d9a541e4d55d80491"
 dependencies = [
  "bitflags 2.5.0",
  "displaydoc",
