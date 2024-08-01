@@ -54,6 +54,8 @@ def test_clear_sign_tx(firmware, backend, navigator, test_name):
     
     hash, r, s, _ = unpack_sign_tx_response(response)
 
+    print("hash: ", hash)
+
     assert(
             verify_message_signature(
                 msg_hash=hash, 
@@ -104,6 +106,7 @@ def test_blind_sign_tx(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
+                NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,

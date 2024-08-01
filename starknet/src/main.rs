@@ -183,16 +183,41 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     transaction::set_call(data, p2, &mut ctx.tx.calls);
                     if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
                         match display::show_tx(ctx) {
-                            true => {
-                                comm.append(ctx.hash.m_hash.value.as_ref());
-                                crypto::sign_hash(ctx).unwrap();
-                                comm.append([0x41].as_slice());
-                                comm.append(ctx.hash.r.as_ref());
-                                comm.append(ctx.hash.s.as_ref());
-                                comm.append([ctx.hash.v].as_slice());
-                            }
-                            false => {
-                                return Err(io::StatusWords::UserCancelled.into());
+                            Some(approved) => match approved {
+                                true => {
+                                    display::show_pending();
+                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+                                    comm.append(ctx.hash.m_hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    display::show_status(true);
+                                    comm.append([0x41].as_slice());
+                                    comm.append(ctx.hash.r.as_ref());
+                                    comm.append(ctx.hash.s.as_ref());
+                                    comm.append([ctx.hash.v].as_slice());
+                                }
+                                false => {
+                                    display::show_status(false);
+                                    return Err(io::StatusWords::UserCancelled.into());
+                                }
+                            },
+                            None => {
+                                display::show_pending();
+                                ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+                                match display::show_hash(ctx) {
+                                    true => {
+                                        comm.append(ctx.hash.m_hash.value.as_ref());
+                                        crypto::sign_hash(ctx).unwrap();
+                                        display::show_status(true);
+                                        comm.append([0x41].as_slice());
+                                        comm.append(ctx.hash.r.as_ref());
+                                        comm.append(ctx.hash.s.as_ref());
+                                        comm.append([ctx.hash.v].as_slice());
+                                    }
+                                    false => {
+                                        display::show_status(false);
+                                        return Err(io::StatusWords::UserCancelled.into());
+                                    }
+                                }
                             }
                         }
                     }

@@ -11,3 +11,4 @@ tokio = { version = "1.15.0", features = ["full"] }
 url = "2.3.1"
 starknet-types-core = "0.1.5"
 clap = { version = "4.5.10", features = ["derive"] }
+ledger-lib = { path = "../../../ledger-rust/lib" }

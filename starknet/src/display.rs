@@ -11,7 +11,6 @@ use ledger_device_sdk::{
 };
 
 use crate::context::{Ctx, Transaction};
-use crate::crypto;
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::ui::{
@@ -24,12 +23,12 @@ use ledger_device_sdk::ui::{
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
-    TagValueConfirm, TagValueList, TuneIndex,
+    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TuneIndex,
 };
 
 use crate::Ins;
 
-pub fn show_tx(ctx: &mut Ctx) -> bool {
+pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     match support_clear_sign(&ctx.tx) {
         Some(t) => {
             testing::debug_print("Clear sign supported !!! \n");
@@ -90,13 +89,14 @@ pub fn show_tx(ctx: &mut Ctx) -> bool {
                     Some(&CROSSMARK),
                 );
 
-                match my_review.show() {
+                /*match my_review.show() {
                     true => {
                         ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                         true
                     }
                     false => false,
-                }
+                }*/
+                Some(my_review.show())
             }
             #[cfg(any(target_os = "stax", target_os = "flex"))]
             {
@@ -107,19 +107,23 @@ pub fn show_tx(ctx: &mut Ctx) -> bool {
                 let mut review = NbglReview::new()
                     .titles("Review", "Transaction", "Sign Transaction")
                     .glyph(&APP_ICON);
-                match review.show(&my_fields) {
+
+                Some(review.show(&my_fields))
+
+                /*match review.show(&my_fields) {
                     true => {
                         ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                         true
                     }
                     false => false,
-                }
+                }*/
             }
         }
         None => {
             testing::debug_print("Clear sign not supported !!! \n");
-            ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-            show_hash(ctx)
+            /*ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+            show_hash(ctx)*/
+            None
         }
     }
 }
@@ -207,6 +211,42 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
     }
 }
 
+pub fn show_pending() {
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        let page_0 = Page::new(
+            PageStyle::BoldNormal,
+            ["Processing ", "Transaction..."],
+            None,
+        );
+        clear_screen();
+        page_0.place();
+    }
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        let spinner = NbglStatus::new();
+        spinner.text("Processing Transaction...").show(true);
+    }
+}
+
+pub fn show_status(flag: bool) {
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        let content = match flag {
+            true => ["Transaction ", "signed"],
+            false => ["Transaction ", "rejected"],
+        };
+        let page_0 = Page::new(PageStyle::BoldNormal, content, None);
+        clear_screen();
+        page_0.place();
+    }
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        let status = NbglReviewStatus::new();
+        status.show(flag);
+    }
+}
+
 pub fn pkey_ui(key: &[u8]) -> bool {
     let mut pk_hex = [0u8; 64];
     hex::encode_to_slice(&key[1..33], &mut pk_hex[0..]).unwrap();
@@ -237,9 +277,21 @@ pub fn pkey_ui(key: &[u8]) -> bool {
         let tvl = TagValueList::new(&my_field, 4, false, true);
         let tvc = TagValueConfirm::new(&tvl, TuneIndex::LookAtMe, "Approve", "");
 
-        NbglGenericReview::new()
+        match NbglGenericReview::new()
             .add_content(NbglPageContent::TagValueConfirm(tvc))
-            .show("Reject", "Public Key Approved", "Public Key Rejected")
+            .show("Reject")
+        {
+            true => {
+                let status = NbglStatus::new();
+                status.text("Public Key Confirmed").show(true);
+                true
+            }
+            false => {
+                let status = NbglStatus::new();
+                status.text("Public Key Rejected").show(false);
+                false
+            }
+        }
     }
 }
 

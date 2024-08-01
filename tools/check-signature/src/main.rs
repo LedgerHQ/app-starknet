@@ -8,6 +8,8 @@ use starknet::{
 use starknet_types_core::felt::Felt;
 use url::Url;
 
+use ledger_lib::Transport;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -85,6 +87,25 @@ async fn main() {
     //println!("Verify: {}", verify);
 
     /* Check signature (device) */
+
+    // Initialise provider
+    let mut p = ledger_lib::LedgerProvider::init().await;
+
+    // Fetch list of available devices
+    let devices = p.list(ledger_lib::Filters::Hid).await.unwrap();
+
+    // Connect to device
+    let d = &devices[0];
+
+    // Connect to the device using the index offset
+    let device_handle = match p.connect(d.clone()).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("Failed to connect to device {:?}: {:?}", d, e);
+            return;
+        }
+    };
+    let mut buff = [0u8; 256];
 
     let device_public_key = VerifyingKey::from_scalar(Felt::from_hex_unchecked(args.pkey.as_str()));
 
