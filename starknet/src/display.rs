@@ -181,7 +181,7 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
         );
 
         match warning_accept.show() {
-            false => return false,
+            false => false,
             true => {
                 let my_review = MultiFieldReview::new(
                     &my_field,
