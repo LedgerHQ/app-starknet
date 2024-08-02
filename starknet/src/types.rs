@@ -1,6 +1,5 @@
 extern crate alloc;
 use alloc::string::{String, ToString};
-use core::cmp::Ordering;
 use core::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
 use ledger_secure_sdk_sys::*;
 use num_bigint::BigUint;
@@ -77,6 +76,7 @@ impl FieldElement {
         res
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_dec_string(&self, decimals: Option<usize>) -> String {
         let bn = BigUint::from_bytes_be(self.value.as_ref());
         match decimals {
@@ -91,7 +91,7 @@ impl FieldElement {
                 } else {
                     let (int_part, dec_part) = bn_str.split_at(len - d);
                     let mut s = String::from(int_part);
-                    s.push_str(".");
+                    s.push('.');
                     s.push_str(dec_part);
                     s
                 }
@@ -100,8 +100,9 @@ impl FieldElement {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_hex_string(&self) -> String {
-        hex::encode(&self.value)
+        hex::encode(self.value)
     }
 }
 
@@ -182,7 +183,7 @@ impl Rem for FieldElement {
     }
 }
 
-impl Ord for FieldElement {
+/*impl Ord for FieldElement {
     fn cmp(&self, other: &Self) -> Ordering {
         let mut result: i32 = 0;
 
@@ -196,8 +197,9 @@ impl Ord for FieldElement {
             _ => Ordering::Equal,
         }
     }
-}
+}*/
 
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl Div for FieldElement {
     type Output = Self;
 
@@ -228,7 +230,7 @@ impl From<&[u8]> for FieldElement {
     fn from(data: &[u8]) -> Self {
         let mut value: [u8; 32] = [0; 32];
         value[32 - data.len()..].copy_from_slice(data);
-        Self { value: value }
+        Self { value }
     }
 }
 

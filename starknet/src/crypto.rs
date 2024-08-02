@@ -212,7 +212,5 @@ pub fn tx_hash(tx: &Transaction) -> FieldElement {
 
     hasher.update(hash_calldata);
 
-    let hash = hasher.finalize();
-
-    return hash;
+    hasher.finalize()
 }

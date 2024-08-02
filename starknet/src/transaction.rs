@@ -17,12 +17,12 @@ pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
     tx.data_availability_mode = iter.next().unwrap().into();
 }
 
-pub fn set_paymaster_data(_data: &[u8], _p2: u8, _paymaster_data: &mut Vec<FieldElement>) {}
+pub fn set_paymaster_data(_data: &[u8], _p2: u8, _paymaster_data: &mut [FieldElement]) {}
 
 pub fn set_account_deployment_data(
     _data: &[u8],
     _p2: u8,
-    _account_deployment_data: &mut Vec<FieldElement>,
+    _account_deployment_data: &mut [FieldElement],
 ) {
 }
 

@@ -419,7 +419,7 @@ impl PoseidonStark252 {
             state = block_state;
         }
 
-        state[0].clone()
+        state[0]
     }
 }
 
@@ -483,13 +483,12 @@ pub fn poseidon_shift(hash: &mut FieldElement) {
             if set {
                 break;
             } else {
-                bits_count = bits_count - 1;
+                bits_count -= 1;
             }
         }
 
         if bits_count < 248 {
             cx_bn_unlock();
-            return;
         } else if bits_count >= 248 && bits_count % 8 >= 1 && bits_count % 8 <= 4 {
             cx_bn_shl(hash256, 4);
             cx_bn_export(hash256, hash.value[..].as_mut_ptr(), 32);
