@@ -65,15 +65,17 @@ impl FieldElement {
         let mut res = FieldElement::default();
 
         unsafe {
-            cx_math_invprimem_no_throw(
+            let err = cx_math_invprimem_no_throw(
                 res.value.as_mut_ptr(),
                 self.value.as_ptr(),
                 P.value.as_ptr(),
                 32,
             );
+            match err {
+                ledger_secure_sdk_sys::CX_OK => res,
+                _ => panic!("Error inverting FieldElement with error code: {}", err),
+            }
         }
-
-        res
     }
 
     #[allow(clippy::wrong_self_convention)]
@@ -122,15 +124,18 @@ impl Add for FieldElement {
         let mut res = FieldElement::default();
 
         unsafe {
-            cx_math_addm_no_throw(
+            let err = cx_math_addm_no_throw(
                 res.value.as_mut_ptr(),
                 self.value.as_ptr(),
                 other.value.as_ptr(),
                 P.value.as_ptr(),
                 32,
             );
+            match err {
+                ledger_secure_sdk_sys::CX_OK => res,
+                _ => panic!("Error adding FieldElement with error code: {}", err),
+            }
         }
-        res
     }
 }
 
@@ -141,15 +146,18 @@ impl Mul for FieldElement {
         let mut res = FieldElement::default();
 
         unsafe {
-            cx_math_multm_no_throw(
+            let err = cx_math_multm_no_throw(
                 res.value.as_mut_ptr(),
                 self.value.as_ptr(),
                 other.value.as_ptr(),
                 P.value.as_ptr(),
                 32,
             );
+            match err {
+                ledger_secure_sdk_sys::CX_OK => res,
+                _ => panic!("Error multiplying FieldElement with error code: {}", err),
+            }
         }
-        res
     }
 }
 
@@ -160,15 +168,18 @@ impl Sub for FieldElement {
         let mut res = FieldElement::default();
 
         unsafe {
-            cx_math_subm_no_throw(
+            let err = cx_math_subm_no_throw(
                 res.value.as_mut_ptr(),
                 self.value.as_ptr(),
                 other.value.as_ptr(),
                 P.value.as_ptr(),
                 32,
             );
+            match err {
+                ledger_secure_sdk_sys::CX_OK => res,
+                _ => panic!("Error subtracting FieldElement with error code: {}", err),
+            }
         }
-        res
     }
 }
 
@@ -177,27 +188,17 @@ impl Rem for FieldElement {
 
     fn rem(mut self, other: Self) -> Self {
         unsafe {
-            cx_math_modm_no_throw(self.value.as_mut_ptr(), 32, other.value.as_ptr(), 32);
+            let err = cx_math_modm_no_throw(self.value.as_mut_ptr(), 32, other.value.as_ptr(), 32);
+            match err {
+                ledger_secure_sdk_sys::CX_OK => self,
+                _ => panic!(
+                    "Error taking remainder of FieldElement with error code: {}",
+                    err
+                ),
+            }
         }
-        self
     }
 }
-
-/*impl Ord for FieldElement {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let mut result: i32 = 0;
-
-        unsafe {
-            cx_math_cmp_no_throw(self.value.as_ptr(), other.value.as_ptr(), 32, &mut result);
-        }
-
-        match result {
-            r if r < 0 => Ordering::Less,
-            r if r > 0 => Ordering::Greater,
-            _ => Ordering::Equal,
-        }
-    }
-}*/
 
 #[allow(clippy::suspicious_arithmetic_impl)]
 impl Div for FieldElement {
@@ -215,13 +216,17 @@ impl AddAssign for FieldElement {
     fn add_assign(&mut self, other: Self) {
         unsafe {
             let value = self.value;
-            cx_math_addm_no_throw(
+            let err = cx_math_addm_no_throw(
                 self.value.as_mut_ptr(),
                 value.as_ptr(),
                 other.value.as_ptr(),
                 P.value.as_ptr(),
                 32,
             );
+            match err {
+                ledger_secure_sdk_sys::CX_OK => (),
+                _ => panic!("Error adding FieldElement with error code: {}", err),
+            }
         }
     }
 }

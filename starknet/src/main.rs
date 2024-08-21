@@ -22,7 +22,8 @@ use ledger_device_sdk::nbgl::init_comm;
 
 #[no_mangle]
 extern "C" fn sample_main() {
-    let mut comm = io::Comm::new();
+    // Init comm and set the expected CLA byte for the application
+    let mut comm = io::Comm::new().set_expected_cla(0x5A);
 
     // Initialize reference to Comm instance for NBGL
     // API calls.
@@ -84,9 +85,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
     }
 
     let apdu_header = comm.get_apdu_metadata();
-    if apdu_header.cla != 0x5A {
-        return Err(io::StatusWords::BadCla.into());
-    }
 
     match ins {
         Ins::GetVersion => {
@@ -180,7 +178,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.tx.calls = Vec::with_capacity(nb_calls as usize);
                 }
                 5 => {
-                    transaction::set_call(data, p2, &mut ctx.tx.calls);
+                    if let Some(err) =
+                        transaction::set_call(data, p2.into(), &mut ctx.tx.calls).err()
+                    {
+                        return Err(Reply(err as u16));
+                    }
                     if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {

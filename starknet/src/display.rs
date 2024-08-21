@@ -89,14 +89,6 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                     "Reject",
                     Some(&CROSSMARK),
                 );
-
-                /*match my_review.show() {
-                    true => {
-                        ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                        true
-                    }
-                    false => false,
-                }*/
                 Some(my_review.show())
             }
             #[cfg(any(target_os = "stax", target_os = "flex"))]
@@ -110,20 +102,10 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                     .glyph(&APP_ICON);
 
                 Some(review.show(&my_fields))
-
-                /*match review.show(&my_fields) {
-                    true => {
-                        ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                        true
-                    }
-                    false => false,
-                }*/
             }
         }
         None => {
             testing::debug_print("Clear sign not supported !!! \n");
-            /*ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-            show_hash(ctx)*/
             None
         }
     }
