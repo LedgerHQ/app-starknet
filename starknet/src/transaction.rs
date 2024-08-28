@@ -37,6 +37,7 @@ pub enum SetCallError {
 pub enum SetCallStep {
     New = 0x00,
     Add = 0x01,
+    End = 0x02,
 }
 
 impl From<u8> for SetCallStep {
@@ -44,7 +45,18 @@ impl From<u8> for SetCallStep {
         match value {
             0x00 => SetCallStep::New,
             0x01 => SetCallStep::Add,
+            0x02 => SetCallStep::End,
             _ => panic!("Invalid SetCallStep value"),
+        }
+    }
+}
+
+impl From<SetCallStep> for u8 {
+    fn from(value: SetCallStep) -> Self {
+        match value {
+            SetCallStep::New => 0x00,
+            SetCallStep::Add => 0x01,
+            SetCallStep::End => 0x02,
         }
     }
 }
@@ -66,7 +78,7 @@ pub fn set_call(data: &[u8], p2: SetCallStep, calls: &mut Vec<Call>) -> Result<(
             calls.push(call);
             Ok(())
         }
-        SetCallStep::Add => {
+        SetCallStep::Add | SetCallStep::End => {
             let idx = calls.len() - 1;
             let call = calls.get_mut(idx).unwrap();
             let iter = data.chunks(FIELD_ELEMENT_SIZE);

@@ -183,7 +183,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     {
                         return Err(Reply(err as u16));
                     }
-                    if ctx.tx.calls.len() == ctx.tx.calls.capacity() {
+                    if p2 == transaction::SetCallStep::End.into()
+                        && ctx.tx.calls.len() == ctx.tx.calls.capacity()
+                    {
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {

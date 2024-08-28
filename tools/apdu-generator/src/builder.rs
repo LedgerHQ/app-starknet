@@ -172,6 +172,12 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
                 apdu.append(&fe).unwrap();
             }
             apdu_list.push(apdu);
+
+            apdu = Apdu::new(ApduHeader {
+                p2: 0x02,
+                ..apdu_header
+            });
+            apdu_list.push(apdu);
         }
         2.. => {
             let mut iter = data.chunks(7);
@@ -207,7 +213,14 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
                         }
                         apdu_list.push(apdu);
                     }
-                    None => break,
+                    None => {
+                        apdu = Apdu::new(ApduHeader {
+                            p2: 0x02,
+                            ..apdu_header
+                        });
+                        apdu_list.push(apdu);
+                        break;
+                    }
                 }
             }
         }

@@ -3,7 +3,7 @@ use std::fmt;
 
 const MAX_APDU_DATA_SIZE: usize = 255;
 
-#[derive(Default, Clone, Serialize)]
+#[derive(Default, Clone, Copy, Serialize)]
 pub struct ApduHeader {
     pub cla: u8,
     pub ins: u8,
