@@ -1,0 +1,36 @@
+[package]
+name = "starknet"
+version = "2.0.0"
+edition = "2021"
+authors = ["Ledger"]
+
+[dependencies]
+ledger_device_sdk = "1.15.2"
+ledger_secure_sdk_sys = { version = "1.4.6", features = ["heap"]}
+include_gif = "1.2.0"
+hex = { version = "0.4", default-features = false, features = ["alloc"]}
+num-bigint = { version = "0.4", default-features = false }
+
+[features]
+default = []
+poseidon = []
+signhash = []
+
+[package.metadata.ledger]
+curve = ["secp256k1"]
+path = ["2645'"]
+name = "Starknet"
+flags = "0"
+
+[package.metadata.ledger.nanox]
+icon = "starknet_small.gif"
+
+[package.metadata.ledger.nanosplus]
+icon = "starknet_small.gif"
+
+[package.metadata.ledger.stax]
+icon = "starknet_32x32.gif"
+
+[package.metadata.ledger.flex]
+icon = "starknet_40x40.gif"
+

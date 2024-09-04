@@ -1,8 +1,16 @@
 import pytest
 
 from ragger.error import ExceptionRAPDU
-from application_client.command_sender import CLA, InsType, Errors
+from application_client.response_unpacker import Errors
+from enum import IntEnum
 
+CLA: int = 0x5A
+
+class InsType(IntEnum):
+    GET_VERSION    = 0x00
+    GET_PUBLIC_KEY = 0x01
+    SIGN_HASH      = 0x02
+    SIGN_TX        = 0x03
 
 # Ensure the app returns an error when a bad CLA is used
 def test_bad_cla(backend):
