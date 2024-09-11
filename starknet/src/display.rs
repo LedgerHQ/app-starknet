@@ -42,11 +42,26 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
             testing::debug_print("Compute fees \n");
 
-            let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
-            let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
-            let max_fees = max_amount * max_price_per_unit;
-            let mut max_fees_str = max_fees.to_dec_string(None);
-            max_fees_str.push_str(" fri");
+            let max_fees_str = match tx.version {
+                FieldElement::ONE => {
+                    let mut max_fees_str = tx.max_fee.to_dec_string(None);
+                    max_fees_str.push_str(" wei");
+                    max_fees_str
+                }
+                FieldElement::THREE => {
+                    let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
+                    let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
+                    let max_fees = max_amount * max_price_per_unit;
+                    let mut max_fees_str = max_fees.to_dec_string(None);
+                    max_fees_str.push_str(" fri");
+                    max_fees_str
+                }
+                _ => {
+                    let mut max_fees_str = FieldElement::ZERO.to_dec_string(None);
+                    max_fees_str.push_str(" wei");
+                    max_fees_str
+                }
+            };
 
             testing::debug_print("Compute fees OK \n");
 
@@ -225,7 +240,7 @@ pub fn show_status(flag: bool) {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let status = NbglReviewStatus::new();
+        let mut status = NbglReviewStatus::new();
         status.show(flag);
     }
 }

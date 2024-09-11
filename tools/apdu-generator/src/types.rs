@@ -45,6 +45,7 @@ pub enum Ins {
     GetPubkey,
     SignHash,
     SignTx,
+    SignTxV1,
     Unknown,
 }
 
@@ -55,6 +56,7 @@ impl From<Ins> for u8 {
             Ins::GetPubkey => 1u8,
             Ins::SignHash => 2u8,
             Ins::SignTx => 3u8,
+            Ins::SignTxV1 => 4u8,
             Ins::Unknown => 0xff,
         }
     }
@@ -67,7 +69,8 @@ impl From<u8> for Ins {
             1 => Ins::GetPubkey,
             2 => Ins::SignHash,
             3 => Ins::SignTx,
-            4.. => Ins::Unknown,
+            4 => Ins::SignTxV1,
+            5.. => Ins::Unknown,
         }
     }
 }
@@ -100,7 +103,8 @@ impl From<&Call> for Vec<FieldElement> {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Tx {
+pub struct TxV3 {
+    pub version: u8,
     pub sender_address: String,
     pub tip: String,
     pub l1_gas_bounds: String,
@@ -111,6 +115,21 @@ pub struct Tx {
     pub data_availability_mode: String,
     pub account_deployment_data: Vec<String>,
     pub calls: Vec<Call>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TxV1 {
+    pub version: u8,
+    pub sender_address: String,
+    pub max_fee: String,
+    pub chain_id: String,
+    pub nonce: String,
+    pub calls: Vec<Call>,
+}
+
+pub enum Tx {
+    V1(TxV1),
+    V3(TxV3),
 }
 
 #[derive(Deserialize, Debug)]

@@ -53,6 +53,7 @@ enum Ins {
     #[cfg(feature = "signhash")]
     SignHash,
     SignTx,
+    SignTxV1,
     #[cfg(feature = "poseidon")]
     Poseidon,
 }
@@ -70,8 +71,9 @@ impl TryFrom<io::ApduHeader> for Ins {
             #[cfg(feature = "signhash")]
             (2, _, _) => Ok(Ins::SignHash),
             (3, _, _) => Ok(Ins::SignTx),
+            (4, _, _) => Ok(Ins::SignTxV1),
             #[cfg(feature = "poseidon")]
-            (4, _, _) => Ok(Ins::Poseidon),
+            (5, _, _) => Ok(Ins::Poseidon),
             (_, _, _) => Err(io::StatusWords::BadIns),
         }
     }
@@ -178,6 +180,77 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.tx.calls = Vec::with_capacity(nb_calls as usize);
                 }
                 5 => {
+                    if let Some(err) =
+                        transaction::set_call(data, p2.into(), &mut ctx.tx.calls).err()
+                    {
+                        return Err(Reply(err as u16));
+                    }
+                    if p2 == transaction::SetCallStep::End.into()
+                        && ctx.tx.calls.len() == ctx.tx.calls.capacity()
+                    {
+                        match display::show_tx(ctx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    display::show_pending();
+                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+                                    comm.append(ctx.hash.m_hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    display::show_status(true);
+                                    comm.append([0x41].as_slice());
+                                    comm.append(ctx.hash.r.as_ref());
+                                    comm.append(ctx.hash.s.as_ref());
+                                    comm.append([ctx.hash.v].as_slice());
+                                }
+                                false => {
+                                    display::show_status(false);
+                                    return Err(io::StatusWords::UserCancelled.into());
+                                }
+                            },
+                            None => {
+                                display::show_pending();
+                                ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+                                match display::show_hash(ctx) {
+                                    true => {
+                                        comm.append(ctx.hash.m_hash.value.as_ref());
+                                        crypto::sign_hash(ctx).unwrap();
+                                        display::show_status(true);
+                                        comm.append([0x41].as_slice());
+                                        comm.append(ctx.hash.r.as_ref());
+                                        comm.append(ctx.hash.s.as_ref());
+                                        comm.append([ctx.hash.v].as_slice());
+                                    }
+                                    false => {
+                                        display::show_status(false);
+                                        return Err(io::StatusWords::UserCancelled.into());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    return Err(io::StatusWords::BadP1P2.into());
+                }
+            }
+        }
+        Ins::SignTxV1 => {
+            let mut data = comm.get_data()?;
+            let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
+
+            match p1 {
+                0 => {
+                    ctx.reset();
+                    ctx.req_type = RequestType::SignTxV1;
+
+                    crypto::set_derivation_path(&mut data, ctx)?;
+                }
+                1 => transaction::set_tx_fields_v1(data, &mut ctx.tx),
+                2 => {
+                    let nb_calls: u8 = FieldElement::from(data).into();
+                    ctx.tx.calls = Vec::with_capacity(nb_calls as usize);
+                }
+                3 => {
                     if let Some(err) =
                         transaction::set_call(data, p2.into(), &mut ctx.tx.calls).err()
                     {

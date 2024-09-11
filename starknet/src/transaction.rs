@@ -6,6 +6,7 @@ use alloc::vec::Vec;
 const FIELD_ELEMENT_SIZE: usize = 32;
 
 pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
+    tx.version = FieldElement::from(3u8);
     let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
 
     tx.sender_address = iter.next().unwrap().into();
@@ -15,6 +16,16 @@ pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
     tx.chain_id = iter.next().unwrap().into();
     tx.nonce = iter.next().unwrap().into();
     tx.data_availability_mode = iter.next().unwrap().into();
+}
+
+pub fn set_tx_fields_v1(data: &[u8], tx: &mut Transaction) {
+    tx.version = FieldElement::from(1u8);
+    let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
+
+    tx.sender_address = iter.next().unwrap().into();
+    tx.max_fee = iter.next().unwrap().into();
+    tx.chain_id = iter.next().unwrap().into();
+    tx.nonce = iter.next().unwrap().into();
 }
 
 // For future use: currently paymaster_data is always empty.

@@ -15,12 +15,16 @@ struct Args {
     #[arg(short, long, default_value_t = 0x5A)]
     cla: u8,
 
-    /// APDU INS
-    #[arg(short, long, default_value_t = 0x03)]
+    /// APDU INS (3 for Tx v3, 4 for Tx v1)
+    #[arg(short, long)]
     ins: u8,
 }
 
-use apdu_generator::{apdu::Apdu, builder, types::Tx};
+use apdu_generator::{
+    apdu::Apdu,
+    builder,
+    types::{Tx, TxV1, TxV3},
+};
 
 // Derivation path
 const PATH: &str = "m/2645'/1195502025'/1148870696'/0'/0'/0";
@@ -36,8 +40,17 @@ fn main() {
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
-    let mut tx: Tx = serde_json::from_str(&data).unwrap();
-    tx.calls.reverse();
+    let tx = match args.ins {
+        3 => {
+            let t = serde_json::from_str::<TxV3>(&data).unwrap();
+            Tx::V3(t)
+        }
+        4 => {
+            let t = serde_json::from_str::<TxV1>(&data).unwrap();
+            Tx::V1(t)
+        }
+        _ => panic!("Invalid INS"),
+    };
 
     let mut apdus: Vec<Apdu> = Vec::new();
 
@@ -47,20 +60,40 @@ fn main() {
     let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
     apdus.push(tx_data_apdu.clone());
 
-    let tx_data_apdu = builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
-    apdus.push(tx_data_apdu.clone());
+    match tx {
+        Tx::V1(mut tx) => {
+            let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 2);
+            apdus.push(tx_data_apdu.clone());
+            tx.calls.reverse();
+            while tx.calls.len() > 0 {
+                let call = tx.calls.pop().unwrap();
+                let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 3);
+                apdus.append(&mut call_apdu);
+            }
+        }
+        Tx::V3(mut tx) => {
+            let tx_data_apdu =
+                builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
+            apdus.push(tx_data_apdu.clone());
 
-    let tx_data_apdu =
-        builder::accound_deployment_data(&tx.account_deployment_data, args.cla, args.ins.into(), 3);
-    apdus.push(tx_data_apdu.clone());
+            tx.calls.reverse();
+            let tx_data_apdu = builder::accound_deployment_data(
+                &tx.account_deployment_data,
+                args.cla,
+                args.ins.into(),
+                3,
+            );
+            apdus.push(tx_data_apdu.clone());
 
-    let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 4);
-    apdus.push(tx_data_apdu.clone());
+            let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 4);
+            apdus.push(tx_data_apdu.clone());
 
-    while tx.calls.len() > 0 {
-        let call = tx.calls.pop().unwrap();
-        let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
-        apdus.append(&mut call_apdu);
+            while tx.calls.len() > 0 {
+                let call = tx.calls.pop().unwrap();
+                let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
+                apdus.append(&mut call_apdu);
+            }
+        }
     }
 
     let out_name = path.file_name().unwrap().to_str().unwrap();

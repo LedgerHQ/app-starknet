@@ -81,33 +81,56 @@ pub fn tx_data(tx: &Tx, cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe: FieldElement = FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
-    let mut data: [u8; 32] = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+    match tx {
+        Tx::V1(tx) => {
+            let mut fe: FieldElement =
+                FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
+            let mut data: [u8; 32] = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.tip, 10).unwrap());
-    data = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+            fe = FieldElement(U256::from_str_radix(&tx.max_fee, 10).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.l1_gas_bounds, 16).unwrap());
-    data = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+            fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.l2_gas_bounds, 16).unwrap());
-    data = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+            fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
+        }
+        Tx::V3(tx) => {
+            let mut fe: FieldElement =
+                FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
+            let mut data: [u8; 32] = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
-    data = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+            fe = FieldElement(U256::from_str_radix(&tx.tip, 10).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
-    data = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+            fe = FieldElement(U256::from_str_radix(&tx.l1_gas_bounds, 16).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.data_availability_mode, 10).unwrap());
-    data = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+            fe = FieldElement(U256::from_str_radix(&tx.l2_gas_bounds, 16).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
+
+            fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
+
+            fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
+
+            fe = FieldElement(U256::from_str_radix(&tx.data_availability_mode, 10).unwrap());
+            data = fe.try_into().unwrap();
+            apdu.append(data.as_slice()).unwrap();
+        }
+    }
 
     apdu
 }
@@ -184,7 +207,7 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
 
             let mut apdu_header = ApduHeader {
                 cla,
-                ins: Ins::SignTx.into(),
+                ins: ins.into(),
                 p1,
                 p2: 0x00,
             };
@@ -202,7 +225,7 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
                     Some(felts) => {
                         apdu_header = ApduHeader {
                             cla,
-                            ins: Ins::SignTx.into(),
+                            ins: ins.into(),
                             p1,
                             p2: 0x01,
                         };
