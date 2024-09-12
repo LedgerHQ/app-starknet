@@ -4,5 +4,5 @@ pub fn fix(hash: &mut String) {
         hash.insert(0, '0');
     }
     assert!(hash.len() == 63);
-    hash.push('0');
+    hash.insert(0, '0');
 }

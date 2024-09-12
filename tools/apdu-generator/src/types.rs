@@ -137,6 +137,11 @@ pub struct Data {
     pub felts: Vec<String>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Hash {
+    pub hash: String,
+}
+
 pub fn get_selector_from_name(func_name: &str) -> FieldElement {
     if func_name == DEFAULT_ENTRY_POINT_NAME || func_name == DEFAULT_L1_ENTRY_POINT_NAME {
         FieldElement(U256::from(0u8))

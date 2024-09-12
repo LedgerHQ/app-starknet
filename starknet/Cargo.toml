@@ -12,7 +12,7 @@ hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
 [features]
-default = []
+default = ["signhash"]
 poseidon = []
 signhash = []
 

@@ -7,7 +7,7 @@ use std::{fs::File, path::Path};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Tx in JSON format
+    /// JSON input file: Hash or Tx in JSON format
     #[arg(short, long)]
     json: String,
 
@@ -15,7 +15,7 @@ struct Args {
     #[arg(short, long, default_value_t = 0x5A)]
     cla: u8,
 
-    /// APDU INS (3 for Tx v3, 4 for Tx v1)
+    /// APDU INS (2 for signHash(), 3 for signTx(), 4 for signTxV1())
     #[arg(short, long)]
     ins: u8,
 }
@@ -23,13 +23,11 @@ struct Args {
 use apdu_generator::{
     apdu::Apdu,
     builder,
-    types::{Tx, TxV1, TxV3},
+    types::{Hash, Tx, TxV1, TxV3},
 };
 
 // Derivation path
 const PATH: &str = "m/2645'/1195502025'/1148870696'/0'/0'/0";
-// Hash
-// const HASH: &str = "0x55b8f28706a5008d3103bcb2bfa6356e56b95c34fed265c955846670a6bb4ef";
 
 fn main() {
     let args: Args = Args::parse();
@@ -40,60 +38,74 @@ fn main() {
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
-    let tx = match args.ins {
-        3 => {
-            let t = serde_json::from_str::<TxV3>(&data).unwrap();
-            Tx::V3(t)
-        }
-        4 => {
-            let t = serde_json::from_str::<TxV1>(&data).unwrap();
-            Tx::V1(t)
-        }
-        _ => panic!("Invalid INS"),
-    };
-
     let mut apdus: Vec<Apdu> = Vec::new();
 
-    let dpath_apdu = builder::derivation_path(PATH, args.cla, args.ins.into(), 0);
-    apdus.push(dpath_apdu.clone());
+    match args.ins {
+        2 => {
+            let hash = serde_json::from_str::<Hash>(&data).unwrap();
 
-    let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
-    apdus.push(tx_data_apdu.clone());
+            let dpath_apdu = builder::derivation_path(PATH, args.cla, args.ins.into(), 0);
+            apdus.push(dpath_apdu.clone());
 
-    match tx {
-        Tx::V1(mut tx) => {
-            let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 2);
+            let apdu = builder::hash_to_apdu(&hash.hash, args.cla, args.ins.into(), 1, true);
+            apdus.push(apdu.clone());
+        }
+        3 | 4 => {
+            let tx = match args.ins {
+                3 => {
+                    let t = serde_json::from_str::<TxV3>(&data).unwrap();
+                    Tx::V3(t)
+                }
+                4 => {
+                    let t = serde_json::from_str::<TxV1>(&data).unwrap();
+                    Tx::V1(t)
+                }
+                _ => panic!("Invalid INS"),
+            };
+
+            let dpath_apdu = builder::derivation_path(PATH, args.cla, args.ins.into(), 0);
+            apdus.push(dpath_apdu.clone());
+
+            let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
             apdus.push(tx_data_apdu.clone());
-            tx.calls.reverse();
-            while tx.calls.len() > 0 {
-                let call = tx.calls.pop().unwrap();
-                let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 3);
-                apdus.append(&mut call_apdu);
+
+            match tx {
+                Tx::V1(mut tx) => {
+                    let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 2);
+                    apdus.push(tx_data_apdu.clone());
+                    tx.calls.reverse();
+                    while tx.calls.len() > 0 {
+                        let call = tx.calls.pop().unwrap();
+                        let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 3);
+                        apdus.append(&mut call_apdu);
+                    }
+                }
+                Tx::V3(mut tx) => {
+                    let tx_data_apdu =
+                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
+                    apdus.push(tx_data_apdu.clone());
+
+                    tx.calls.reverse();
+                    let tx_data_apdu = builder::accound_deployment_data(
+                        &tx.account_deployment_data,
+                        args.cla,
+                        args.ins.into(),
+                        3,
+                    );
+                    apdus.push(tx_data_apdu.clone());
+
+                    let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 4);
+                    apdus.push(tx_data_apdu.clone());
+
+                    while tx.calls.len() > 0 {
+                        let call = tx.calls.pop().unwrap();
+                        let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
+                        apdus.append(&mut call_apdu);
+                    }
+                }
             }
         }
-        Tx::V3(mut tx) => {
-            let tx_data_apdu =
-                builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
-            apdus.push(tx_data_apdu.clone());
-
-            tx.calls.reverse();
-            let tx_data_apdu = builder::accound_deployment_data(
-                &tx.account_deployment_data,
-                args.cla,
-                args.ins.into(),
-                3,
-            );
-            apdus.push(tx_data_apdu.clone());
-
-            let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 4);
-            apdus.push(tx_data_apdu.clone());
-
-            while tx.calls.len() > 0 {
-                let call = tx.calls.pop().unwrap();
-                let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
-                apdus.append(&mut call_apdu);
-            }
-        }
+        _ => panic!("Invalid INS"),
     }
 
     let out_name = path.file_name().unwrap().to_str().unwrap();

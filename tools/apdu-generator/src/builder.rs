@@ -2,9 +2,6 @@ use crate::apdu::{Apdu, ApduHeader};
 use crate::types::{Call, FieldElement, Ins, Tx};
 use ethereum_types::U256;
 
-mod builder_internal;
-use builder_internal::fix;
-
 pub enum ApduError {
     InternalError,
 }
@@ -25,7 +22,7 @@ pub fn data_to_apdu(data: Vec<FieldElement>, cla: u8, ins: u8, p1: u8, p2: u8) -
     apdu
 }
 
-pub fn pedersenhash_to_apdu(hash: &str, cla: u8, ins: Ins, sub_ins: u8, show_hash: bool) -> Apdu {
+pub fn hash_to_apdu(hash: &str, cla: u8, ins: Ins, sub_ins: u8, show_hash: bool) -> Apdu {
     let header: ApduHeader = ApduHeader {
         cla: cla,
         ins: ins.into(),
@@ -37,8 +34,7 @@ pub fn pedersenhash_to_apdu(hash: &str, cla: u8, ins: Ins, sub_ins: u8, show_has
     };
     let mut apdu = Apdu::new(header);
 
-    let mut fixed_hash = String::from(hash.trim_start_matches("0x"));
-    fix(&mut fixed_hash);
+    let fixed_hash = String::from(hash.trim_start_matches("0x"));
     let data: [u8; 32] = FieldElement(U256::from_str_radix(fixed_hash.as_str(), 16).unwrap())
         .try_into()
         .unwrap();
