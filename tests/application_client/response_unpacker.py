@@ -73,6 +73,21 @@ def unpack_sign_tx_response(response: bytes) -> Tuple[int, int, int, int]:
 
     return int.from_bytes(hash, byteorder='big'), int.from_bytes(r, byteorder='big'), int.from_bytes(s, byteorder='big'), int.from_bytes(v, byteorder='big')
 
+# Unpack from response:
+# response = sig_len (1)
+#            r (32)
+#            s (32)
+#            v (1)
+def unpack_sign_hash_response(response: bytes) -> Tuple[int, int, int]:
+    response, len = pop_sized_buf_from_buffer(response, 1)
+    response, r = pop_sized_buf_from_buffer(response, 32)
+    response, s = pop_sized_buf_from_buffer(response, 32)
+    response, v = pop_sized_buf_from_buffer(response, 1)
+
+    #assert len(response) == 0
+
+    return int.from_bytes(r, byteorder='big'), int.from_bytes(s, byteorder='big'), int.from_bytes(v, byteorder='big')
+
 class Errors(IntEnum):
     SW_DENY                    = 0x6E04
     SW_CLA_NOT_SUPPORTED       = 0x6E00
