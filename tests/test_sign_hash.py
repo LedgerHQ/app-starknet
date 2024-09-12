@@ -52,13 +52,11 @@ def test_sign_hash_63(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
             ]
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                            test_name,
@@ -119,13 +117,11 @@ def test_sign_hash_62(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
             ]
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                            test_name,
@@ -186,13 +182,11 @@ def test_sign_hash_61(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
             ]
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                            test_name,

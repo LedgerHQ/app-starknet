@@ -27,8 +27,10 @@ impl From<CryptoError> for Reply {
 }
 
 /// Helper function that signs with ECDSA in deterministic nonce
-pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
-    poseidon::poseidon_shift(&mut ctx.hash.m_hash);
+pub fn sign_hash(ctx: &mut Ctx, shift: bool) -> Result<(), CryptoError> {
+    if shift {
+        poseidon::poseidon_shift(&mut ctx.hash.m_hash);
+    }
 
     match Stark256::derive_from_path(ctx.bip32_path.as_ref())
         .deterministic_sign(ctx.hash.m_hash.value.as_ref())
