@@ -117,7 +117,7 @@ fn main() {
         .unwrap()
         .parent()
         .unwrap()
-        .join("apdu_samples")
+        .join("apdu")
         .join(out_name_with_ext_json.clone());
 
     let raw_out_name = path
@@ -125,7 +125,7 @@ fn main() {
         .unwrap()
         .parent()
         .unwrap()
-        .join("apdu_samples")
+        .join("apdu")
         .join(out_name_with_ext_apdu.clone());
 
     println!(

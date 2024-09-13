@@ -1,40 +1,74 @@
 use clap::Parser;
+use serde::Deserialize;
 use starknet::{
-    accounts::{Account, Call, ExecutionEncoding, SingleOwnerAccount},
-    core::{chain_id, crypto::Signature, utils::get_selector_from_name},
+    accounts::{Account, ExecutionEncoding, SingleOwnerAccount},
+    core::{chain_id, crypto::Signature, types::Call, utils::get_selector_from_name},
     providers::SequencerGatewayProvider,
     signers::{LocalWallet, Signer, SigningKey, VerifyingKey},
 };
 use starknet_types_core::felt::Felt;
+use std::io::prelude::*;
+use std::{fs::File, path::Path};
 use url::Url;
+//use ledger_lib::Transport;
 
-use ledger_lib::Transport;
+#[derive(Deserialize, Debug)]
+pub struct MyCall {
+    pub to: String,
+    pub entrypoint: String,
+    pub calldata: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TxV3 {
+    pub url: String,
+    pub version: u8,
+    pub sender_address: String,
+    pub tip: String,
+    pub l1_gas_bounds: String,
+    pub l2_gas_bounds: String,
+    pub paymaster_data: Vec<String>,
+    pub chain_id: String,
+    pub nonce: String,
+    pub data_availability_mode: String,
+    pub account_deployment_data: Vec<String>,
+    pub calls: Vec<MyCall>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TxV1 {
+    pub url: String,
+    pub version: u8,
+    pub sender_address: String,
+    pub max_fee: String,
+    pub chain_id: String,
+    pub nonce: String,
+    pub calls: Vec<MyCall>,
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// public key in hexadecimal format (32 bytes)
+    /// JSON input file: Tx in JSON format
     #[arg(short, long)]
-    pkey: String,
-
-    /// Tx hash in hexadecimal format (32 bytes)
-    #[arg(short, long)]
-    txhash: String,
-
-    /// Signature r value in hexadecimal format (32 bytes)
-    #[arg(short, long)]
-    r: String,
-
-    /// Signature s value in hexadecimal format (32 bytes)
-    #[arg(short, long)]
-    s: String,
+    json: String,
 }
 
 #[tokio::main]
 async fn main() {
     let args: Args = Args::parse();
 
-    /*
+    let path = Path::new(args.json.as_str());
+
+    let mut file = File::open(path).unwrap();
+    let mut data = String::new();
+    file.read_to_string(&mut data).unwrap();
+
+    let tx = serde_json::from_str::<TxV1>(&data).unwrap();
+
+    // print chain id MAINET in hexadecimal
+    //println!("Chain ID: {:x}", chain_id::MAINNET);
+
     let provider = SequencerGatewayProvider::new(
         Url::parse("http://127.0.0.1:5050/gateway").unwrap(),
         Url::parse("http://127.0.0.1:5050/feeder_gateway").unwrap(),
@@ -43,39 +77,50 @@ async fn main() {
 
     let private_key =
         Felt::from_hex("0139fe4d6f02e666e86a6f58e65060f115cd3c185bd9e98bd829636931458f79").unwrap();
-
     let pkey = SigningKey::from_secret_scalar(private_key);
     let signer = LocalWallet::from_signing_key(pkey);
 
     let account = SingleOwnerAccount::new(
         provider,
         signer.clone(),
-        Felt::from_hex("07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a").unwrap(),
-        chain_id::MAINNET,
+        Felt::from_hex(&tx.sender_address).unwrap(),
+        Felt::from_hex(&tx.chain_id).unwrap(),
         ExecutionEncoding::New,
     );
 
-    let tst_token_address =
-        Felt::from_hex("049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7").unwrap();
+    // let execution = account
+    //     .execute_v3(vec![Call {
+    //         to: to_address,
+    //         selector: get_selector_from_name("transfer").unwrap(),
+    //         calldata: vec![account.address(), Felt::from_dec_str("1000").unwrap()],
+    //     }])
+    //     .gas(0)
+    //     .gas_price(0)
+    //     .nonce(Felt::ONE);
+
+    let calls = tx
+        .calls
+        .iter()
+        .map(|c| Call {
+            to: Felt::from_hex(&c.to).unwrap(),
+            selector: get_selector_from_name(&c.entrypoint).unwrap(),
+            calldata: c
+                .calldata
+                .iter()
+                .map(|d| Felt::from_hex(d).unwrap())
+                .collect(),
+        })
+        .collect();
 
     let execution = account
-        .execute_v3(vec![Call {
-            to: tst_token_address,
-            selector: get_selector_from_name("transfer").unwrap(),
-            calldata: vec![account.address(), Felt::from_dec_str("1000").unwrap()],
-        }])
-        .gas(0)
-        .gas_price(0)
-        .nonce(Felt::ONE);
+        .execute_v1(calls)
+        .max_fee(Felt::from_dec_str(&tx.max_fee).unwrap())
+        .nonce(Felt::from_dec_str(&tx.nonce).unwrap());
 
-    let prepared = execution.prepared().unwrap();
-
-    let hash = prepared.transaction_hash(false);
-
+    let hash = execution.prepared().unwrap().transaction_hash(false);
     println!("Transaction hash: {}", hash.to_biguint());
     println!("Transaction hash: {}", hash.to_hex_string());
     println!("Transaction hash: {}", hash.to_fixed_hex_string());
-    */
 
     /* Check signature (ref) */
     //let signature = signer.sign_hash(&hash).await.unwrap();
@@ -89,35 +134,35 @@ async fn main() {
     /* Check signature (device) */
 
     // Initialise provider
-    let mut p = ledger_lib::LedgerProvider::init().await;
+    //let mut p = ledger_lib::LedgerProvider::init().await;
 
     // Fetch list of available devices
-    let devices = p.list(ledger_lib::Filters::Hid).await.unwrap();
+    //let devices = p.list(ledger_lib::Filters::Hid).await.unwrap();
 
     // Connect to device
-    let d = &devices[0];
+    //let d = &devices[0];
 
     // Connect to the device using the index offset
-    let device_handle = match p.connect(d.clone()).await {
-        Ok(v) => v,
-        Err(e) => {
-            println!("Failed to connect to device {:?}: {:?}", d, e);
-            return;
-        }
-    };
-    let mut buff = [0u8; 256];
+    //let device_handle = match p.connect(d.clone()).await {
+    //    Ok(v) => v,
+    //    Err(e) => {
+    //        println!("Failed to connect to device {:?}: {:?}", d, e);
+    //        return;
+    //    }
+    //};
+    //let mut buff = [0u8; 256];
 
-    let device_public_key = VerifyingKey::from_scalar(Felt::from_hex_unchecked(args.pkey.as_str()));
+    //let device_public_key = VerifyingKey::from_scalar(Felt::from_hex_unchecked(args.pkey.as_str()));
 
-    let tx_hash = Felt::from_hex_unchecked(args.txhash.as_str());
+    //let tx_hash = Felt::from_hex_unchecked(args.txhash.as_str());
 
-    let device_signature = Signature {
-        r: Felt::from_hex_unchecked(args.r.as_str()),
-        s: Felt::from_hex_unchecked(args.s.as_str()),
-    };
+    //let device_signature = Signature {
+    //    r: Felt::from_hex_unchecked(args.r.as_str()),
+    //    s: Felt::from_hex_unchecked(args.s.as_str()),
+    //};
 
-    let device_verify = device_public_key
+    /*let device_verify = device_public_key
         .verify(&tx_hash, &device_signature)
         .unwrap();
-    println!("Verify: {}", device_verify);
+    println!("Verify: {}", device_verify);*/
 }

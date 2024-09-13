@@ -26,6 +26,20 @@ pub fn set_tx_fields_v1(data: &[u8], tx: &mut Transaction) {
     tx.max_fee = iter.next().unwrap().into();
     tx.chain_id = iter.next().unwrap().into();
     tx.nonce = iter.next().unwrap().into();
+
+    ledger_device_sdk::testing::debug_print("set_tx_fields_v1:\n");
+    ledger_device_sdk::testing::debug_print("sender_address: ");
+    ledger_device_sdk::testing::debug_print(&tx.sender_address.to_hex_string());
+    ledger_device_sdk::testing::debug_print("\n");
+    ledger_device_sdk::testing::debug_print("max_fee: ");
+    ledger_device_sdk::testing::debug_print(&tx.max_fee.to_dec_string(None));
+    ledger_device_sdk::testing::debug_print("\n");
+    ledger_device_sdk::testing::debug_print("chain_id: ");
+    ledger_device_sdk::testing::debug_print(&tx.chain_id.to_hex_string());
+    ledger_device_sdk::testing::debug_print("\n");
+    ledger_device_sdk::testing::debug_print("nonce: ");
+    ledger_device_sdk::testing::debug_print(&tx.nonce.to_dec_string(None));
+    ledger_device_sdk::testing::debug_print("\n");
 }
 
 // For future use: currently paymaster_data is always empty.

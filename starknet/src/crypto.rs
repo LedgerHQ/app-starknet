@@ -191,7 +191,8 @@ pub fn tx_hash(tx: &Transaction) -> FieldElement {
             hasher.update(FieldElement::ZERO);
             /* h(calldata) */
             let mut hasher_calldata = pedersen::PedersenHasher::new();
-            let mut calldata_len = 0u8;
+            hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
+            let mut calldata_len = 1u8;
             tx.calls.iter().for_each(|c| {
                 hasher_calldata.update(c.to);
                 hasher_calldata.update(c.selector);
@@ -203,7 +204,6 @@ pub fn tx_hash(tx: &Transaction) -> FieldElement {
                 });
             });
             hasher_calldata.update(FieldElement::from(calldata_len));
-
             let hash_calldata = hasher_calldata.finalize();
             hasher.update(hash_calldata);
             /* max fee */

@@ -89,7 +89,6 @@ impl From<&Call> for Vec<FieldElement> {
         let to = FieldElement(U256::from_str_radix(&c.to, 16).unwrap());
         v.push(to);
 
-        //let selector = FieldElement(U256::from_str_radix(&c.selector, 16).unwrap());
         let selector = get_selector_from_name(&c.entrypoint);
 
         v.push(selector);
@@ -104,6 +103,7 @@ impl From<&Call> for Vec<FieldElement> {
 
 #[derive(Deserialize, Debug)]
 pub struct TxV3 {
+    pub url: String,
     pub version: u8,
     pub sender_address: String,
     pub tip: String,
@@ -119,6 +119,7 @@ pub struct TxV3 {
 
 #[derive(Deserialize, Debug)]
 pub struct TxV1 {
+    pub url: String,
     pub version: u8,
     pub sender_address: String,
     pub max_fee: String,
