@@ -2,6 +2,7 @@ from pathlib import Path
 from hashlib import sha256
 
 import subprocess
+import os
 
 ROOT_SCREENSHOT_PATH = Path(__file__).parent.resolve()
 
@@ -12,6 +13,9 @@ def read_lines_from_file(file_path):
 
 def call_external_binary(binary_path, *args):
     try:
+
+        os.chmod(binary_path, 0o755)
+
         # Call the external binary with arguments
         result = subprocess.run([binary_path, *args], capture_output=True, text=True, check=True)
         
