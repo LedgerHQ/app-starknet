@@ -133,8 +133,12 @@ fn main() {
         json_out_name, raw_out_name
     );
 
-    let mut json_out = File::create(json_out_name).unwrap();
-    let mut raw_out = File::create(raw_out_name).unwrap();
+    if let Some(parent) = json_out_name.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+
+    let mut json_out = File::create_new(json_out_name).unwrap();
+    let mut raw_out = File::create_new(raw_out_name).unwrap();
     for a in apdus.iter() {
         println!("=> {}", a);
         writeln!(raw_out, "=> {}", a).unwrap();
