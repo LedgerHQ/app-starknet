@@ -115,6 +115,7 @@ pub struct TxV3 {
     pub data_availability_mode: String,
     pub account_deployment_data: Vec<String>,
     pub calls: Vec<Call>,
+    pub dpath: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -126,6 +127,7 @@ pub struct TxV1 {
     pub chain_id: String,
     pub nonce: String,
     pub calls: Vec<Call>,
+    pub dpath: String,
 }
 
 pub enum Tx {
@@ -140,7 +142,13 @@ pub struct Data {
 
 #[derive(Deserialize, Debug)]
 pub struct Hash {
+    pub dpath: String,
     pub hash: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Dpath {
+    pub dpath: String,
 }
 
 pub fn get_selector_from_name(func_name: &str) -> FieldElement {

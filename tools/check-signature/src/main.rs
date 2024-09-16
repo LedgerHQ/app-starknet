@@ -60,5 +60,5 @@ async fn main() {
     let device_verify = device_public_key
         .verify(&tx_hash, &device_signature)
         .unwrap();
-    println!("Verify: {}", device_verify);
+    println!("{}", device_verify);
 }

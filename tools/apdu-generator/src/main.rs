@@ -7,7 +7,7 @@ use std::{fs::File, path::Path};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// JSON input file: Hash or Tx in JSON format
+    /// JSON input file: Derivation path or Hash or Tx in JSON format
     #[arg(short, long)]
     json: String,
 
@@ -15,7 +15,7 @@ struct Args {
     #[arg(short, long, default_value_t = 0x5A)]
     cla: u8,
 
-    /// APDU INS (2 for signHash(), 3 for signTx(), 4 for signTxV1())
+    /// APDU INS (1 for getPubKey(), 2 for signHash(), 3 for signTx(), 4 for signTxV1())
     #[arg(short, long)]
     ins: u8,
 }
@@ -23,11 +23,8 @@ struct Args {
 use apdu_generator::{
     apdu::Apdu,
     builder,
-    types::{Hash, Tx, TxV1, TxV3},
+    types::{Dpath, Hash, Tx, TxV1, TxV3},
 };
-
-// Derivation path
-const PATH: &str = "m/2645'/1195502025'/1148870696'/0'/0'/0";
 
 fn main() {
     let args: Args = Args::parse();
@@ -41,10 +38,16 @@ fn main() {
     let mut apdus: Vec<Apdu> = Vec::new();
 
     match args.ins {
+        1 => {
+            let path = serde_json::from_str::<Dpath>(&data).unwrap();
+            println!("Derivation path: {:?}", path);
+            let dpath_apdu = builder::derivation_path(&path.dpath, args.cla, args.ins.into(), 0);
+            apdus.push(dpath_apdu.clone());
+        }
         2 => {
             let hash = serde_json::from_str::<Hash>(&data).unwrap();
 
-            let dpath_apdu = builder::derivation_path(PATH, args.cla, args.ins.into(), 0);
+            let dpath_apdu = builder::derivation_path(&hash.dpath, args.cla, args.ins.into(), 0);
             apdus.push(dpath_apdu.clone());
 
             let apdu = builder::hash_to_apdu(&hash.hash, args.cla, args.ins.into(), 1, true);
@@ -53,18 +56,31 @@ fn main() {
         3 | 4 => {
             let tx = match args.ins {
                 3 => {
-                    let t = serde_json::from_str::<TxV3>(&data).unwrap();
+                    let t = match serde_json::from_str::<TxV3>(&data) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            panic!("Invalid TxV3 format");
+                        }
+                    };
+                    let dpath_apdu =
+                        builder::derivation_path(&t.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
                     Tx::V3(t)
                 }
                 4 => {
-                    let t = serde_json::from_str::<TxV1>(&data).unwrap();
+                    let t = match serde_json::from_str::<TxV1>(&data) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            panic!("Invalid TxV1 format");
+                        }
+                    };
+                    let dpath_apdu =
+                        builder::derivation_path(&t.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
                     Tx::V1(t)
                 }
                 _ => panic!("Invalid INS"),
             };
-
-            let dpath_apdu = builder::derivation_path(PATH, args.cla, args.ins.into(), 0);
-            apdus.push(dpath_apdu.clone());
 
             let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
             apdus.push(tx_data_apdu.clone());

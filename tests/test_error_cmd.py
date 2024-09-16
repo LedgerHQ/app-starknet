@@ -11,6 +11,7 @@ class InsType(IntEnum):
     GET_PUBLIC_KEY = 0x01
     SIGN_HASH      = 0x02
     SIGN_TX        = 0x03
+    SIGN_TXv1      = 0x04
 
 # Ensure the app returns an error when a bad CLA is used
 def test_bad_cla(backend):

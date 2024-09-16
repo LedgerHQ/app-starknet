@@ -1,8 +1,30 @@
 from pathlib import Path
 from hashlib import sha256
 
+import subprocess
 
 ROOT_SCREENSHOT_PATH = Path(__file__).parent.resolve()
+
+def read_lines_from_file(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    return [line.strip('=> ').rstrip() for line in lines]
+
+def call_external_binary(binary_path, *args):
+    try:
+        # Call the external binary with arguments
+        result = subprocess.run([binary_path, *args], capture_output=True, text=True, check=True)
+        
+        # Get the standard output and standard error
+        stdout = result.stdout.strip()  # Use strip() to remove any leading/trailing whitespace
+        stderr = result.stderr
+        
+        # Return the output and error
+        return stdout, stderr
+    except subprocess.CalledProcessError as e:
+        # Handle errors in the called process
+        print(f"Error calling {binary_path}: {e}")
+        return None, e.stderr
 
 
 # Check if a signature of a given message is valid
