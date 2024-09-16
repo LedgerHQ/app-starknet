@@ -143,7 +143,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                     ctx.hash.m_hash = data.into();
                     match display::show_hash(ctx) {
                         true => {
-                            crypto::sign_hash(ctx, false).unwrap();
+                            crypto::sign_hash(ctx).unwrap();
                             comm.append([0x41].as_slice());
                             comm.append(ctx.hash.r.as_ref());
                             comm.append(ctx.hash.s.as_ref());
@@ -194,7 +194,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                     display::show_pending();
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     comm.append(ctx.hash.m_hash.value.as_ref());
-                                    crypto::sign_hash(ctx, true).unwrap();
+                                    crypto::sign_hash(ctx).unwrap();
                                     display::show_status(true);
                                     comm.append([0x41].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
@@ -212,7 +212,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 match display::show_hash(ctx) {
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
-                                        crypto::sign_hash(ctx, true).unwrap();
+                                        crypto::sign_hash(ctx).unwrap();
                                         display::show_status(true);
                                         comm.append([0x41].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
@@ -265,7 +265,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                     display::show_pending();
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     comm.append(ctx.hash.m_hash.value.as_ref());
-                                    crypto::sign_hash(ctx, true).unwrap();
+                                    crypto::sign_hash(ctx).unwrap();
                                     display::show_status(true);
                                     comm.append([0x41].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
@@ -283,7 +283,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                 match display::show_hash(ctx) {
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
-                                        crypto::sign_hash(ctx, true).unwrap();
+                                        crypto::sign_hash(ctx).unwrap();
                                         display::show_status(true);
                                         comm.append([0x41].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
