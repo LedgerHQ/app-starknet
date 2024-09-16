@@ -183,27 +183,25 @@ fn double_accum_ec_mul(
             );
             cx_ecpoint_destroy(&mut r as *mut cx_ecpoint_t);
         }
-    } else {
-        if !allzero1 {
-            pad1[32 - len1..].copy_from_slice(&buf1[..len1]);
-            unsafe {
-                cx_ecpoint_rnd_scalarmul(&mut p as *mut cx_ecpoint_t, pad1.as_ptr(), 32);
-                cx_ecpoint_add(
-                    h as *mut cx_ecpoint_t,
-                    h as *const cx_ecpoint_t,
-                    &p as *const cx_ecpoint_t,
-                );
-            }
-        } else if !allzero2 {
-            pad2[32 - len2..].copy_from_slice(&buf2[..len2]);
-            unsafe {
-                cx_ecpoint_rnd_scalarmul(&mut q as *mut cx_ecpoint_t, pad2.as_ptr(), 32);
-                cx_ecpoint_add(
-                    h as *mut cx_ecpoint_t,
-                    h as *const cx_ecpoint_t,
-                    &q as *const cx_ecpoint_t,
-                );
-            }
+    } else if !allzero1 {
+        pad1[32 - len1..].copy_from_slice(&buf1[..len1]);
+        unsafe {
+            cx_ecpoint_rnd_scalarmul(&mut p as *mut cx_ecpoint_t, pad1.as_ptr(), 32);
+            cx_ecpoint_add(
+                h as *mut cx_ecpoint_t,
+                h as *const cx_ecpoint_t,
+                &p as *const cx_ecpoint_t,
+            );
+        }
+    } else if !allzero2 {
+        pad2[32 - len2..].copy_from_slice(&buf2[..len2]);
+        unsafe {
+            cx_ecpoint_rnd_scalarmul(&mut q as *mut cx_ecpoint_t, pad2.as_ptr(), 32);
+            cx_ecpoint_add(
+                h as *mut cx_ecpoint_t,
+                h as *const cx_ecpoint_t,
+                &q as *const cx_ecpoint_t,
+            );
         }
     }
     unsafe {

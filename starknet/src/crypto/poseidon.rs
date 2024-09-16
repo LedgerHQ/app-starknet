@@ -494,7 +494,6 @@ pub fn poseidon_shift(hash: &mut FieldElement) {
             cx_bn_export(hash256, hash.value[..].as_mut_ptr(), 32);
             cx_bn_destroy(&mut hash256);
             cx_bn_unlock();
-            return;
         }
     }
 }
