@@ -126,58 +126,67 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     }
 }
 
-pub fn show_hash(ctx: &mut Ctx) -> bool {
+pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
     let mut hash = ctx.hash.m_hash.to_hex_string();
     hash.make_ascii_uppercase();
 
     let my_field = [Field {
-        name: "Transaction Hash",
+        name: match is_tx_hash {
+            true => "Transaction Hash",
+            false => "Hash",
+        },
         value: hash.as_str(),
     }];
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let page_0 = Page::new(
-            PageStyle::PictureNormal,
-            ["This transaction ", "cannot be trusted"],
-            Some(&WARNING),
-        );
-        let page_1 = Page::new(
-            PageStyle::PictureNormal,
-            ["Your Ledger cannot ", "decode this transaction."],
-            Some(&WARNING),
-        );
-        let page_2 = Page::new(
-            PageStyle::PictureNormal,
-            ["If you sign it, you", "could be authorizing"],
-            Some(&WARNING),
-        );
-        let page_3 = Page::new(
-            PageStyle::PictureNormal,
-            ["malicious actions that", "can drain your wallet."],
-            Some(&WARNING),
-        );
+        let accept = if is_tx_hash {
+            let page_0 = Page::new(
+                PageStyle::PictureNormal,
+                ["This transaction ", "cannot be trusted"],
+                Some(&WARNING),
+            );
+            let page_1 = Page::new(
+                PageStyle::PictureNormal,
+                ["Your Ledger cannot ", "decode this transaction."],
+                Some(&WARNING),
+            );
+            let page_2 = Page::new(
+                PageStyle::PictureNormal,
+                ["If you sign it, you", "could be authorizing"],
+                Some(&WARNING),
+            );
+            let page_3 = Page::new(
+                PageStyle::PictureNormal,
+                ["malicious actions that", "can drain your wallet."],
+                Some(&WARNING),
+            );
 
-        clear_screen();
-        page_0.place_and_wait();
-        clear_screen();
-        page_1.place_and_wait();
-        clear_screen();
-        page_2.place_and_wait();
-        clear_screen();
-        page_3.place_and_wait();
+            clear_screen();
+            page_0.place_and_wait();
+            clear_screen();
+            page_1.place_and_wait();
+            clear_screen();
+            page_2.place_and_wait();
+            clear_screen();
+            page_3.place_and_wait();
 
-        let warning_accept = MultiFieldReview::new(
-            &[],
-            &["I understand the risk"],
-            Some(&EYE),
-            "Accept",
-            Some(&VALIDATE_14),
-            "Reject",
-            Some(&CROSSMARK),
-        );
+            let warning_accept = MultiFieldReview::new(
+                &[],
+                &["I understand the risk"],
+                Some(&EYE),
+                "Accept",
+                Some(&VALIDATE_14),
+                "Reject",
+                Some(&CROSSMARK),
+            );
 
-        match warning_accept.show() {
+            warning_accept.show()
+        } else {
+            true
+        };
+
+        match accept {
             false => false,
             true => {
                 let my_review = MultiFieldReview::new(
@@ -200,10 +209,15 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-        let mut review = NbglReview::new()
-            .titles("Review", "Transaction", "Sign Transaction")
-            .glyph(&APP_ICON)
-            .blind();
+        let mut review = NbglReview::new().glyph(&APP_ICON);
+
+        if is_tx_hash {
+            review = review
+                .titles("Review", "Transaction", "Sign Transaction")
+                .blind();
+        } else {
+            review = review.titles("Review", "Hash", "Sign Hash").blind();
+        }
 
         review.show(&my_field)
     }

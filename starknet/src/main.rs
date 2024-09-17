@@ -141,7 +141,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                 }
                 _ => {
                     ctx.hash.m_hash = data.into();
-                    match display::show_hash(ctx) {
+                    match display::show_hash(ctx, false) {
                         true => {
                             crypto::sign_hash(ctx).unwrap();
                             comm.append([0x41].as_slice());
@@ -209,7 +209,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             None => {
                                 display::show_pending();
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                match display::show_hash(ctx) {
+                                match display::show_hash(ctx, true) {
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
@@ -280,7 +280,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                             None => {
                                 display::show_pending();
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                match display::show_hash(ctx) {
+                                match display::show_hash(ctx, true) {
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
