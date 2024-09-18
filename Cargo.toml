@@ -15,8 +15,3 @@ panic = "abort"
 panic = "abort"
 opt-level = 'z' 
 lto = true
-
-[patch.crates-io]
-ledger_device_sdk = {path = "../ledger-device-rust-sdk/ledger_device_sdk", version = "1.15.5"}
-ledger_secure_sdk_sys = {path = "../ledger-device-rust-sdk/ledger_secure_sdk_sys"}
-include_gif = {path = "../ledger-device-rust-sdk/include_gif"}
