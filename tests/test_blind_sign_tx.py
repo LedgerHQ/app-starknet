@@ -47,7 +47,6 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
             instructions = [
                 NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -118,7 +117,6 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
             instructions = [
                 NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -189,7 +187,6 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
             instructions = [
                 NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -260,7 +257,6 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
             instructions = [
                 NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -331,7 +327,6 @@ def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
             instructions = [
                 NavInsID.USE_CASE_STATUS_DISMISS,
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,

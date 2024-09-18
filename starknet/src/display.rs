@@ -23,7 +23,7 @@ use ledger_device_sdk::ui::{
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
-    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TuneIndex,
+    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TransactionType, TuneIndex,
 };
 
 use crate::Ins;
@@ -113,6 +113,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                     NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
                 let mut review = NbglReview::new()
+                    .tx_type(TransactionType::Transaction)
                     .titles("Review", "Transaction", "Sign Transaction")
                     .glyph(&APP_ICON);
 
@@ -213,10 +214,14 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
         if is_tx_hash {
             review = review
+                .tx_type(TransactionType::Transaction)
                 .titles("Review", "Transaction", "Sign Transaction")
                 .blind();
         } else {
-            review = review.titles("Review", "Hash", "Sign Hash").blind();
+            review = review
+                .tx_type(TransactionType::Message)
+                .titles("Review", "Hash", "Sign Hash")
+                .blind();
         }
 
         review.show(&my_field)

@@ -43,7 +43,6 @@ def test_sign_hash_0(firmware, backend, navigator, test_name):
         else:
             instructions = [
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -110,7 +109,6 @@ def test_sign_hash_1(firmware, backend, navigator, test_name):
         else:
             instructions = [
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -177,7 +175,6 @@ def test_sign_hash_2(firmware, backend, navigator, test_name):
         else:
             instructions = [
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -244,7 +241,6 @@ def test_sign_hash_3(firmware, backend, navigator, test_name):
         else:
             instructions = [
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
@@ -311,7 +307,6 @@ def test_sign_hash_4(firmware, backend, navigator, test_name):
         else:
             instructions = [
                 NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.USE_CASE_CHOICE_CONFIRM,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.USE_CASE_REVIEW_CONFIRM,
