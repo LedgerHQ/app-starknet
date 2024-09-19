@@ -32,14 +32,15 @@ extern "C" fn sample_main() {
 
     let mut ctx: Ctx = Ctx::new();
 
+    display::main_ui(&mut comm);
+
     loop {
-        // Wait for either a specific button push to exit the app
-        // or an APDU command
-        if let io::Event::Command(ins) = display::main_ui(&mut comm) {
-            match handle_apdu(&mut comm, ins, &mut ctx) {
-                Ok(()) => comm.reply_ok(),
-                Err(sw) => comm.reply(sw),
-            }
+        // Wait for an APDU command
+        let ins = comm.next_command();
+        ledger_device_sdk::testing::debug_print("APDU received\n");
+        match handle_apdu(&mut comm, ins, &mut ctx) {
+            Ok(()) => comm.reply_ok(),
+            Err(sw) => comm.reply(sw),
         }
     }
 }

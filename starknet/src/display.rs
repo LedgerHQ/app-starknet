@@ -22,9 +22,11 @@ use ledger_device_sdk::ui::{
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
-    Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
-    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TransactionType, TuneIndex,
+    Field, NbglGenericReview, NbglGlyph, NbglPageContent, NbglReview, NbglReviewStatus, NbglStatus,
+    TagValueConfirm, TagValueList, TransactionType, TuneIndex,
 };
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+use ledger_device_sdk::nbgl2::Nbgl2HomeAndSettings;
 
 use crate::Ins;
 
@@ -352,12 +354,13 @@ pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
 }
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-pub fn main_ui(_comm: &mut Comm) -> Event<Ins> {
+pub fn main_ui(_comm: &mut Comm) {
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
-    const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+    const APP_ICON: ledger_device_sdk::nbgl2::NbglGlyph =
+        ledger_device_sdk::nbgl2::NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
     // Display the home screen.
-    NbglHomeAndSettings::new()
+    Nbgl2HomeAndSettings::new()
         .glyph(&APP_ICON)
         .infos(
             "Starknet",
