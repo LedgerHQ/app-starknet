@@ -25,26 +25,44 @@ extern "C" fn sample_main() {
     // Init comm and set the expected CLA byte for the application
     let mut comm = io::Comm::new().set_expected_cla(0x5A);
 
-    // Initialize reference to Comm instance for NBGL
-    // API calls.
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
-    init_comm(&mut comm);
-
     let mut ctx: Ctx = Ctx::new();
 
-    display::main_ui(&mut comm);
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        loop {
+            // Wait for either a specific button push to exit the app
+            // or an APDU command
+            if let io::Event::Command(ins) = display::main_ui(&mut comm) {
+                match handle_apdu(&mut comm, &ins, &mut ctx) {
+                    Ok(()) => comm.reply_ok(),
+                    Err(sw) => comm.reply(sw),
+                }
+            }
+        }
+    }
 
-    loop {
-        // Wait for an APDU command
-        let ins = comm.next_command();
-        ledger_device_sdk::testing::debug_print("APDU received\n");
-        match handle_apdu(&mut comm, ins, &mut ctx) {
-            Ok(()) => comm.reply_ok(),
-            Err(sw) => comm.reply(sw),
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        // Initialize reference to Comm instance for NBGL
+        // API calls.
+        init_comm(&mut comm);
+
+        ctx.home = display::main_ui_nbgl(&mut comm);
+
+        ctx.home.show();
+        loop {
+            // Wait for an APDU command
+            let ins: Ins = comm.next_command();
+            ledger_device_sdk::testing::debug_print("APDU received\n");
+            match handle_apdu(&mut comm, &ins, &mut ctx) {
+                Ok(()) => comm.reply_ok(),
+                Err(sw) => comm.reply(sw),
+            }
         }
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 enum Ins {
     GetVersion,
@@ -82,7 +100,7 @@ impl TryFrom<io::ApduHeader> for Ins {
 
 use ledger_device_sdk::io::Reply;
 
-fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply> {
+fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     if comm.rx == 0 {
         return Err(io::StatusWords::NothingReceived.into());
     }
@@ -116,7 +134,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                         Ok(key) => {
                             let ret = match display {
                                 false => true,
-                                true => display::pkey_ui(key.as_ref()),
+                                true => display::pkey_ui(key.as_ref(), ctx),
                             };
                             if ret {
                                 comm.append(key.as_ref());
@@ -196,14 +214,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     comm.append(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    display::show_status(true);
+                                    display::show_status(true, ctx);
                                     comm.append([0x41].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
                                     comm.append(ctx.hash.s.as_ref());
                                     comm.append([ctx.hash.v].as_slice());
                                 }
                                 false => {
-                                    display::show_status(false);
+                                    display::show_status(false, ctx);
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             },
@@ -214,14 +232,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        display::show_status(true);
+                                        display::show_status(true, ctx);
                                         comm.append([0x41].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
                                         comm.append(ctx.hash.s.as_ref());
                                         comm.append([ctx.hash.v].as_slice());
                                     }
                                     false => {
-                                        display::show_status(false);
+                                        display::show_status(false, ctx);
                                         return Err(io::StatusWords::UserCancelled.into());
                                     }
                                 }
@@ -267,14 +285,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     comm.append(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    display::show_status(true);
+                                    display::show_status(true, ctx);
                                     comm.append([0x41].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
                                     comm.append(ctx.hash.s.as_ref());
                                     comm.append([ctx.hash.v].as_slice());
                                 }
                                 false => {
-                                    display::show_status(false);
+                                    display::show_status(false, ctx);
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             },
@@ -285,14 +303,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: Ins, ctx: &mut Ctx) -> Result<(), Reply
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        display::show_status(true);
+                                        display::show_status(true, ctx);
                                         comm.append([0x41].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
                                         comm.append(ctx.hash.s.as_ref());
                                         comm.append([ctx.hash.v].as_slice());
                                     }
                                     false => {
-                                        display::show_status(false);
+                                        display::show_status(false, ctx);
                                         return Err(io::StatusWords::UserCancelled.into());
                                     }
                                 }

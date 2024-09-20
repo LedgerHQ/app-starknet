@@ -5,10 +5,7 @@ use crate::{
 };
 use alloc::format;
 use include_gif::include_gif;
-use ledger_device_sdk::{
-    io::{Comm, Event},
-    testing,
-};
+use ledger_device_sdk::{io::Comm, testing};
 
 use crate::context::{Ctx, Transaction};
 
@@ -22,13 +19,9 @@ use ledger_device_sdk::ui::{
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
-    Field, NbglGenericReview, NbglGlyph, NbglPageContent, NbglReview, NbglReviewStatus, NbglStatus,
-    TagValueConfirm, TagValueList, TransactionType, TuneIndex,
+    Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
+    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TransactionType, TuneIndex,
 };
-#[cfg(any(target_os = "stax", target_os = "flex"))]
-use ledger_device_sdk::nbgl2::Nbgl2HomeAndSettings;
-
-use crate::Ins;
 
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     match support_clear_sign(&ctx.tx) {
@@ -226,7 +219,9 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
                 .blind();
         }
 
-        review.show(&my_field)
+        let res = review.show(&my_field);
+        ctx.home.show();
+        res
     }
 }
 
@@ -248,7 +243,8 @@ pub fn show_pending() {
     }
 }
 
-pub fn show_status(flag: bool) {
+#[allow(unused_variables)]
+pub fn show_status(flag: bool, ctx: &mut Ctx) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
         let content = match flag {
@@ -263,10 +259,12 @@ pub fn show_status(flag: bool) {
     {
         let mut status = NbglReviewStatus::new();
         status.show(flag);
+        ctx.home.show();
     }
 }
 
-pub fn pkey_ui(key: &[u8]) -> bool {
+#[allow(unused_variables)]
+pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
     let mut pk_hex = [0u8; 64];
     hex::encode_to_slice(&key[1..33], &mut pk_hex[0..]).unwrap();
     let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
@@ -303,11 +301,13 @@ pub fn pkey_ui(key: &[u8]) -> bool {
             true => {
                 let status = NbglStatus::new();
                 status.text("Public Key Confirmed").show(true);
+                ctx.home.show();
                 true
             }
             false => {
                 let status = NbglStatus::new();
                 status.text("Public Key Rejected").show(false);
+                ctx.home.show();
                 false
             }
         }
@@ -315,8 +315,12 @@ pub fn pkey_ui(key: &[u8]) -> bool {
 }
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use crate::Ins;
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use ledger_device_sdk::io::Event;
+
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 fn about_ui(comm: &mut Comm) -> Event<Ins> {
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
         let pages = [
             &Page::from((["Starknet", "(c) 2024 Ledger"], true)),
@@ -354,20 +358,17 @@ pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
 }
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-pub fn main_ui(_comm: &mut Comm) {
+pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
-    const APP_ICON: ledger_device_sdk::nbgl2::NbglGlyph =
-        ledger_device_sdk::nbgl2::NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+    const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
     // Display the home screen.
-    Nbgl2HomeAndSettings::new()
-        .glyph(&APP_ICON)
-        .infos(
-            "Starknet",
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_AUTHORS"),
-        )
-        .show()
+    let home = NbglHomeAndSettings::new().glyph(&APP_ICON).infos(
+        "Starknet",
+        env!("CARGO_PKG_VERSION"),
+        env!("CARGO_PKG_AUTHORS"),
+    );
+    home
 }
 
 fn support_clear_sign(tx: &Transaction) -> Option<usize> {

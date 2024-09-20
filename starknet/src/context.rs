@@ -89,11 +89,16 @@ impl Hash {
     }
 }
 
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+use ledger_device_sdk::nbgl::NbglHomeAndSettings;
+
 pub struct Ctx {
     pub req_type: RequestType,
     pub tx: Transaction,
     pub hash: Hash,
     pub bip32_path: [u32; 6],
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    pub home: NbglHomeAndSettings,
 }
 
 impl Ctx {
@@ -103,6 +108,8 @@ impl Ctx {
             hash: Hash::default(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            home: NbglHomeAndSettings::new(),
         }
     }
 
