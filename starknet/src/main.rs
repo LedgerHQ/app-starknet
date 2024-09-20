@@ -49,7 +49,7 @@ extern "C" fn sample_main() {
 
         ctx.home = display::main_ui_nbgl(&mut comm);
 
-        ctx.home.show();
+        ctx.home.display();
         loop {
             // Wait for an APDU command
             let ins: Ins = comm.next_command();
