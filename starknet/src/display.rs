@@ -220,7 +220,7 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
         }
 
         let res = review.show(&my_field);
-        ctx.home.display();
+        ctx.home.show_and_return();
         res
     }
 }
@@ -259,7 +259,7 @@ pub fn show_status(flag: bool, ctx: &mut Ctx) {
     {
         let mut status = NbglReviewStatus::new();
         status.show(flag);
-        ctx.home.display();
+        ctx.home.show_and_return();
     }
 }
 
@@ -301,13 +301,13 @@ pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
             true => {
                 let status = NbglStatus::new();
                 status.text("Public Key Confirmed").show(true);
-                ctx.home.display();
+                ctx.home.show_and_return();
                 true
             }
             false => {
                 let status = NbglStatus::new();
                 status.text("Public Key Rejected").show(false);
-                ctx.home.display();
+                ctx.home.show_and_return();
                 false
             }
         }

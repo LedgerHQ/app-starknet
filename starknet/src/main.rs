@@ -49,11 +49,10 @@ extern "C" fn sample_main() {
 
         ctx.home = display::main_ui_nbgl(&mut comm);
 
-        ctx.home.display();
+        ctx.home.show_and_return();
         loop {
             // Wait for an APDU command
             let ins: Ins = comm.next_command();
-            ledger_device_sdk::testing::debug_print("APDU received\n");
             match handle_apdu(&mut comm, &ins, &mut ctx) {
                 Ok(()) => comm.reply_ok(),
                 Err(sw) => comm.reply(sw),
