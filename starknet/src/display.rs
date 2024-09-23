@@ -363,12 +363,11 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
     // Display the home screen.
-    let home = NbglHomeAndSettings::new().glyph(&APP_ICON).infos(
+    NbglHomeAndSettings::new().glyph(&APP_ICON).infos(
         "Starknet",
         env!("CARGO_PKG_VERSION"),
         env!("CARGO_PKG_AUTHORS"),
-    );
-    home
+    )
 }
 
 fn support_clear_sign(tx: &Transaction) -> Option<usize> {
