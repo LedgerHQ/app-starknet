@@ -99,6 +99,8 @@ impl TryFrom<io::ApduHeader> for Ins {
 
 use ledger_device_sdk::io::Reply;
 
+const SIG_LENGTH: u8 = 0x41;
+
 fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Reply> {
     if comm.rx == 0 {
         return Err(io::StatusWords::NothingReceived.into());
@@ -214,7 +216,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Repl
                                     comm.append(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
                                     display::show_status(true, ctx);
-                                    comm.append([0x41].as_slice());
+                                    comm.append([SIG_LENGTH].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
                                     comm.append(ctx.hash.s.as_ref());
                                     comm.append([ctx.hash.v].as_slice());
@@ -232,7 +234,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Repl
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
                                         display::show_status(true, ctx);
-                                        comm.append([0x41].as_slice());
+                                        comm.append([SIG_LENGTH].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
                                         comm.append(ctx.hash.s.as_ref());
                                         comm.append([ctx.hash.v].as_slice());

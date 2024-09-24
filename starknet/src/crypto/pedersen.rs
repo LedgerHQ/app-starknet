@@ -1,4 +1,4 @@
-use crate::types::FieldElement;
+use crate::types::{FieldElement, P};
 use ledger_secure_sdk_sys::*;
 
 /* EC points */
@@ -77,6 +77,14 @@ const PEDERSEN_POINTS: [ECPoint; 4] = [
 ];
 
 pub fn pedersen_hash(a: &mut FieldElement, b: &FieldElement) {
+    if !(*a >= FieldElement::ZERO && *a < P) {
+        panic!("a is not in the field");
+    }
+
+    if !(*b >= FieldElement::ZERO && *b < P) {
+        panic!("b is not in the field");
+    }
+
     unsafe {
         cx_bn_lock(32, 0);
     }
