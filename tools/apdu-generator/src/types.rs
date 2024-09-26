@@ -45,6 +45,7 @@ pub enum Ins {
     GetPubkey,
     SignHash,
     SignTx,
+    SignTxV1,
     Unknown,
 }
 
@@ -55,6 +56,7 @@ impl From<Ins> for u8 {
             Ins::GetPubkey => 1u8,
             Ins::SignHash => 2u8,
             Ins::SignTx => 3u8,
+            Ins::SignTxV1 => 4u8,
             Ins::Unknown => 0xff,
         }
     }
@@ -67,7 +69,8 @@ impl From<u8> for Ins {
             1 => Ins::GetPubkey,
             2 => Ins::SignHash,
             3 => Ins::SignTx,
-            4.. => Ins::Unknown,
+            4 => Ins::SignTxV1,
+            5.. => Ins::Unknown,
         }
     }
 }
@@ -86,7 +89,6 @@ impl From<&Call> for Vec<FieldElement> {
         let to = FieldElement(U256::from_str_radix(&c.to, 16).unwrap());
         v.push(to);
 
-        //let selector = FieldElement(U256::from_str_radix(&c.selector, 16).unwrap());
         let selector = get_selector_from_name(&c.entrypoint);
 
         v.push(selector);
@@ -100,7 +102,9 @@ impl From<&Call> for Vec<FieldElement> {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Tx {
+pub struct TxV3 {
+    pub url: String,
+    pub version: u8,
     pub sender_address: String,
     pub tip: String,
     pub l1_gas_bounds: String,
@@ -111,11 +115,40 @@ pub struct Tx {
     pub data_availability_mode: String,
     pub account_deployment_data: Vec<String>,
     pub calls: Vec<Call>,
+    pub dpath: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TxV1 {
+    pub url: String,
+    pub version: u8,
+    pub sender_address: String,
+    pub max_fee: String,
+    pub chain_id: String,
+    pub nonce: String,
+    pub calls: Vec<Call>,
+    pub dpath: String,
+}
+
+pub enum Tx {
+    V1(TxV1),
+    V3(TxV3),
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Data {
     pub felts: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Hash {
+    pub dpath: String,
+    pub hash: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Dpath {
+    pub dpath: String,
 }
 
 pub fn get_selector_from_name(func_name: &str) -> FieldElement {

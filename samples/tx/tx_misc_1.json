@@ -1,0 +1,35 @@
+{
+    "url": "https://starkscan.co/tx/0x06a0fc78bb29f80941733e076ffb0c53067d933196cc11582e918c1eb36f923b",
+    "version": 1,
+    "sender_address": "0x00aeef18dc33c7d6a4b5fce98703beda1c8a78f16c2055694b976bce7c45005b",
+    "max_fee": "1053217278897",
+    "nonce": "2823",
+    "chain_id": "0x534e5f4d41494e",
+    "calls": [
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "approve",
+            "selector": "0x0219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
+            "calldata": [
+                "0x1114c7103e12c2b2ecbd3a2472ba9c48ddcbf702b1c242dd570057e26212111",
+                "0x2386f26fc10000",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x01114c7103e12c2b2ecbd3a2472ba9c48ddcbf702b1c242dd570057e26212111",
+            "entrypoint": "swap",
+            "selector": "0x015543c3708653cda9d418b4ccd3be11368e40636c10c44b18cfe756b6d88b29",
+            "calldata": [
+                "0x71273c5c5780b4be42d9e6567b1b1a6934f43ab8abaf975c0c3da219fc4d040",
+                "0x1",
+                "0x2386f26fc10000",
+                "0x0",
+                "0x1",
+                "0x330054e958d20f2d04e7b",
+                "0x0"
+            ]
+        }
+    ],
+    "dpath": "m/2645'/1195502025'/1148870696'/0'/0'/0"
+}

@@ -1,0 +1,24 @@
+{
+    "url": "",
+    "version": 3,
+    "sender_address": "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+    "tip": "0",
+    "l1_gas_bounds": "0x00004C315F474153000000000000000000000000000000000000000000000000",
+    "l2_gas_bounds": "0x00004C325F474153000000000000000000000000000000000000000000000000",
+    "paymaster_data": [],
+    "chain_id": "0x534e5f4d41494e",
+    "nonce": "1",
+    "data_availability_mode": "0",
+    "account_deployment_data": [], 
+    "calls": [
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "mint",
+            "calldata": [
+                "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+                "0x00000000000000000000000000000000000000000000000000000000000003e8"
+            ]
+        }
+    ],
+    "dpath": "m/2645'/1195502025'/1148870696'/0'/0'/0"
+}

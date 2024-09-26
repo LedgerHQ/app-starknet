@@ -22,8 +22,10 @@ impl Call {
 
 #[derive(Default, Debug)]
 pub struct Transaction {
+    pub version: FieldElement,
     pub sender_address: FieldElement,
     pub tip: FieldElement,
+    pub max_fee: FieldElement,
     pub l1_gas_bounds: FieldElement,
     pub l2_gas_bounds: FieldElement,
     pub paymaster_data: Vec<FieldElement>,
@@ -36,8 +38,10 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn reset(&mut self) {
+        self.version.clear();
         self.sender_address.clear();
         self.tip.clear();
+        self.max_fee.clear();
         self.l1_gas_bounds.clear();
         self.l2_gas_bounds.clear();
         self.chain_id.clear();
@@ -61,6 +65,7 @@ pub enum RequestType {
     #[cfg(feature = "signhash")]
     SignHash,
     SignTx,
+    SignTxV1,
 }
 
 #[derive(Default, Debug)]
@@ -84,11 +89,16 @@ impl Hash {
     }
 }
 
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+use ledger_device_sdk::nbgl::NbglHomeAndSettings;
+
 pub struct Ctx {
     pub req_type: RequestType,
     pub tx: Transaction,
     pub hash: Hash,
     pub bip32_path: [u32; 6],
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    pub home: NbglHomeAndSettings,
 }
 
 impl Ctx {
@@ -98,6 +108,8 @@ impl Ctx {
             hash: Hash::default(),
             req_type: RequestType::Unknown,
             bip32_path: [0u32; 6],
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            home: NbglHomeAndSettings::new(),
         }
     }
 

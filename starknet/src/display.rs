@@ -5,10 +5,7 @@ use crate::{
 };
 use alloc::format;
 use include_gif::include_gif;
-use ledger_device_sdk::{
-    io::{Comm, Event},
-    testing,
-};
+use ledger_device_sdk::{io::Comm, testing};
 
 use crate::context::{Ctx, Transaction};
 
@@ -23,10 +20,8 @@ use ledger_device_sdk::ui::{
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
-    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TuneIndex,
+    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TransactionType, TuneIndex,
 };
-
-use crate::Ins;
 
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     match support_clear_sign(&ctx.tx) {
@@ -42,11 +37,26 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
             testing::debug_print("Compute fees \n");
 
-            let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
-            let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
-            let max_fees = max_amount * max_price_per_unit;
-            let mut max_fees_str = max_fees.to_dec_string(None);
-            max_fees_str.push_str(" fri");
+            let max_fees_str = match tx.version {
+                FieldElement::ONE => {
+                    let mut max_fees_str = tx.max_fee.to_dec_string(None);
+                    max_fees_str.push_str(" wei");
+                    max_fees_str
+                }
+                FieldElement::THREE => {
+                    let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
+                    let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
+                    let max_fees = max_amount * max_price_per_unit;
+                    let mut max_fees_str = max_fees.to_dec_string(None);
+                    max_fees_str.push_str(" fri");
+                    max_fees_str
+                }
+                _ => {
+                    let mut max_fees_str = FieldElement::ZERO.to_dec_string(None);
+                    max_fees_str.push_str(" wei");
+                    max_fees_str
+                }
+            };
 
             testing::debug_print("Compute fees OK \n");
 
@@ -98,6 +108,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                     NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
                 let mut review = NbglReview::new()
+                    .tx_type(TransactionType::Transaction)
                     .titles("Review", "Transaction", "Sign Transaction")
                     .glyph(&APP_ICON);
 
@@ -111,58 +122,67 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     }
 }
 
-pub fn show_hash(ctx: &mut Ctx) -> bool {
+pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
     let mut hash = ctx.hash.m_hash.to_hex_string();
     hash.make_ascii_uppercase();
 
     let my_field = [Field {
-        name: "Transaction Hash",
+        name: match is_tx_hash {
+            true => "Transaction Hash",
+            false => "Hash",
+        },
         value: hash.as_str(),
     }];
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let page_0 = Page::new(
-            PageStyle::PictureNormal,
-            ["This transaction ", "cannot be trusted"],
-            Some(&WARNING),
-        );
-        let page_1 = Page::new(
-            PageStyle::PictureNormal,
-            ["Your Ledger cannot ", "decode this transaction."],
-            Some(&WARNING),
-        );
-        let page_2 = Page::new(
-            PageStyle::PictureNormal,
-            ["If you sign it, you", "could be authorizing"],
-            Some(&WARNING),
-        );
-        let page_3 = Page::new(
-            PageStyle::PictureNormal,
-            ["malicious actions that", "can drain your wallet."],
-            Some(&WARNING),
-        );
+        let accept = if is_tx_hash {
+            let page_0 = Page::new(
+                PageStyle::PictureNormal,
+                ["This transaction ", "cannot be trusted"],
+                Some(&WARNING),
+            );
+            let page_1 = Page::new(
+                PageStyle::PictureNormal,
+                ["Your Ledger cannot ", "decode this transaction."],
+                Some(&WARNING),
+            );
+            let page_2 = Page::new(
+                PageStyle::PictureNormal,
+                ["If you sign it, you", "could be authorizing"],
+                Some(&WARNING),
+            );
+            let page_3 = Page::new(
+                PageStyle::PictureNormal,
+                ["malicious actions that", "can drain your wallet."],
+                Some(&WARNING),
+            );
 
-        clear_screen();
-        page_0.place_and_wait();
-        clear_screen();
-        page_1.place_and_wait();
-        clear_screen();
-        page_2.place_and_wait();
-        clear_screen();
-        page_3.place_and_wait();
+            clear_screen();
+            page_0.place_and_wait();
+            clear_screen();
+            page_1.place_and_wait();
+            clear_screen();
+            page_2.place_and_wait();
+            clear_screen();
+            page_3.place_and_wait();
 
-        let warning_accept = MultiFieldReview::new(
-            &[],
-            &["I understand the risk"],
-            Some(&EYE),
-            "Accept",
-            Some(&VALIDATE_14),
-            "Reject",
-            Some(&CROSSMARK),
-        );
+            let warning_accept = MultiFieldReview::new(
+                &[],
+                &["I understand the risk"],
+                Some(&EYE),
+                "Accept",
+                Some(&VALIDATE_14),
+                "Reject",
+                Some(&CROSSMARK),
+            );
 
-        match warning_accept.show() {
+            warning_accept.show()
+        } else {
+            true
+        };
+
+        match accept {
             false => false,
             true => {
                 let my_review = MultiFieldReview::new(
@@ -185,12 +205,23 @@ pub fn show_hash(ctx: &mut Ctx) -> bool {
         const APP_ICON: NbglGlyph =
             NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-        let mut review = NbglReview::new()
-            .titles("Review", "Transaction", "Sign Transaction")
-            .glyph(&APP_ICON)
-            .blind();
+        let mut review = NbglReview::new().glyph(&APP_ICON);
 
-        review.show(&my_field)
+        if is_tx_hash {
+            review = review
+                .tx_type(TransactionType::Transaction)
+                .titles("Review", "Transaction", "Sign Transaction")
+                .blind();
+        } else {
+            review = review
+                .tx_type(TransactionType::Message)
+                .titles("Review", "Hash", "Sign Hash")
+                .blind();
+        }
+
+        let res = review.show(&my_field);
+        ctx.home.show_and_return();
+        res
     }
 }
 
@@ -212,7 +243,8 @@ pub fn show_pending() {
     }
 }
 
-pub fn show_status(flag: bool) {
+#[allow(unused_variables)]
+pub fn show_status(flag: bool, ctx: &mut Ctx) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
         let content = match flag {
@@ -225,12 +257,14 @@ pub fn show_status(flag: bool) {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let status = NbglReviewStatus::new();
+        let mut status = NbglReviewStatus::new();
         status.show(flag);
+        ctx.home.show_and_return();
     }
 }
 
-pub fn pkey_ui(key: &[u8]) -> bool {
+#[allow(unused_variables)]
+pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
     let mut pk_hex = [0u8; 64];
     hex::encode_to_slice(&key[1..33], &mut pk_hex[0..]).unwrap();
     let m = core::str::from_utf8_mut(&mut pk_hex).unwrap();
@@ -267,11 +301,13 @@ pub fn pkey_ui(key: &[u8]) -> bool {
             true => {
                 let status = NbglStatus::new();
                 status.text("Public Key Confirmed").show(true);
+                ctx.home.show_and_return();
                 true
             }
             false => {
                 let status = NbglStatus::new();
                 status.text("Public Key Rejected").show(false);
+                ctx.home.show_and_return();
                 false
             }
         }
@@ -279,8 +315,12 @@ pub fn pkey_ui(key: &[u8]) -> bool {
 }
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use crate::Ins;
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use ledger_device_sdk::io::Event;
+
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 fn about_ui(comm: &mut Comm) -> Event<Ins> {
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
         let pages = [
             &Page::from((["Starknet", "(c) 2024 Ledger"], true)),
@@ -318,19 +358,16 @@ pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
 }
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-pub fn main_ui(_comm: &mut Comm) -> Event<Ins> {
+pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
     // Display the home screen.
-    NbglHomeAndSettings::new()
-        .glyph(&APP_ICON)
-        .infos(
-            "Starknet",
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_AUTHORS"),
-        )
-        .show()
+    NbglHomeAndSettings::new().glyph(&APP_ICON).infos(
+        "Starknet",
+        env!("CARGO_PKG_VERSION"),
+        env!("CARGO_PKG_AUTHORS"),
+    )
 }
 
 fn support_clear_sign(tx: &Transaction) -> Option<usize> {

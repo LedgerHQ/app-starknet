@@ -7,7 +7,7 @@ use std::{fs::File, path::Path};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// Tx in JSON format
+    /// JSON input file: Derivation path or Hash or Tx in JSON format
     #[arg(short, long)]
     json: String,
 
@@ -15,17 +15,16 @@ struct Args {
     #[arg(short, long, default_value_t = 0x5A)]
     cla: u8,
 
-    /// APDU INS
-    #[arg(short, long, default_value_t = 0x03)]
+    /// APDU INS (1 for getPubKey(), 2 for signHash(), 3 for signTx(), 4 for signTxV1())
+    #[arg(short, long)]
     ins: u8,
 }
 
-use apdu_generator::{apdu::Apdu, builder, types::Tx};
-
-// Derivation path
-const PATH: &str = "m/2645'/1195502025'/1148870696'/0'/0'/0";
-// Hash
-// const HASH: &str = "0x55b8f28706a5008d3103bcb2bfa6356e56b95c34fed265c955846670a6bb4ef";
+use apdu_generator::{
+    apdu::Apdu,
+    builder,
+    types::{Dpath, Hash, Tx, TxV1, TxV3},
+};
 
 fn main() {
     let args: Args = Args::parse();
@@ -36,31 +35,93 @@ fn main() {
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
-    let mut tx: Tx = serde_json::from_str(&data).unwrap();
-    tx.calls.reverse();
-
     let mut apdus: Vec<Apdu> = Vec::new();
 
-    let dpath_apdu = builder::derivation_path(PATH, args.cla, args.ins.into(), 0);
-    apdus.push(dpath_apdu.clone());
+    match args.ins {
+        1 => {
+            let path = serde_json::from_str::<Dpath>(&data).unwrap();
+            println!("Derivation path: {:?}", path);
+            let dpath_apdu = builder::derivation_path(&path.dpath, args.cla, args.ins.into(), 0);
+            apdus.push(dpath_apdu.clone());
+        }
+        2 => {
+            let hash = serde_json::from_str::<Hash>(&data).unwrap();
 
-    let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
-    apdus.push(tx_data_apdu.clone());
+            let dpath_apdu = builder::derivation_path(&hash.dpath, args.cla, args.ins.into(), 0);
+            apdus.push(dpath_apdu.clone());
 
-    let tx_data_apdu = builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
-    apdus.push(tx_data_apdu.clone());
+            let apdu = builder::hash_to_apdu(&hash.hash, args.cla, args.ins.into(), 1, true);
+            apdus.push(apdu.clone());
+        }
+        3 | 4 => {
+            let tx = match args.ins {
+                3 => {
+                    let t = match serde_json::from_str::<TxV3>(&data) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            panic!("Invalid TxV3 format");
+                        }
+                    };
+                    let dpath_apdu =
+                        builder::derivation_path(&t.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+                    Tx::V3(t)
+                }
+                4 => {
+                    let t = match serde_json::from_str::<TxV1>(&data) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            panic!("Invalid TxV1 format");
+                        }
+                    };
+                    let dpath_apdu =
+                        builder::derivation_path(&t.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+                    Tx::V1(t)
+                }
+                _ => panic!("Invalid INS"),
+            };
 
-    let tx_data_apdu =
-        builder::accound_deployment_data(&tx.account_deployment_data, args.cla, args.ins.into(), 3);
-    apdus.push(tx_data_apdu.clone());
+            let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
+            apdus.push(tx_data_apdu.clone());
 
-    let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 4);
-    apdus.push(tx_data_apdu.clone());
+            match tx {
+                Tx::V1(mut tx) => {
+                    let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 2);
+                    apdus.push(tx_data_apdu.clone());
+                    tx.calls.reverse();
+                    while tx.calls.len() > 0 {
+                        let call = tx.calls.pop().unwrap();
+                        let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 3);
+                        apdus.append(&mut call_apdu);
+                    }
+                }
+                Tx::V3(mut tx) => {
+                    let tx_data_apdu =
+                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
+                    apdus.push(tx_data_apdu.clone());
 
-    while tx.calls.len() > 0 {
-        let call = tx.calls.pop().unwrap();
-        let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
-        apdus.append(&mut call_apdu);
+                    tx.calls.reverse();
+                    let tx_data_apdu = builder::accound_deployment_data(
+                        &tx.account_deployment_data,
+                        args.cla,
+                        args.ins.into(),
+                        3,
+                    );
+                    apdus.push(tx_data_apdu.clone());
+
+                    let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 4);
+                    apdus.push(tx_data_apdu.clone());
+
+                    while tx.calls.len() > 0 {
+                        let call = tx.calls.pop().unwrap();
+                        let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
+                        apdus.append(&mut call_apdu);
+                    }
+                }
+            }
+        }
+        _ => panic!("Invalid INS"),
     }
 
     let out_name = path.file_name().unwrap().to_str().unwrap();
@@ -72,7 +133,7 @@ fn main() {
         .unwrap()
         .parent()
         .unwrap()
-        .join("apdu_samples")
+        .join("apdu")
         .join(out_name_with_ext_json.clone());
 
     let raw_out_name = path
@@ -80,7 +141,7 @@ fn main() {
         .unwrap()
         .parent()
         .unwrap()
-        .join("apdu_samples")
+        .join("apdu")
         .join(out_name_with_ext_apdu.clone());
 
     println!(
@@ -88,8 +149,12 @@ fn main() {
         json_out_name, raw_out_name
     );
 
-    let mut json_out = File::create(json_out_name).unwrap();
-    let mut raw_out = File::create(raw_out_name).unwrap();
+    if let Some(parent) = json_out_name.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+
+    let mut json_out = File::create_new(json_out_name).unwrap();
+    let mut raw_out = File::create_new(raw_out_name).unwrap();
     for a in apdus.iter() {
         println!("=> {}", a);
         writeln!(raw_out, "=> {}", a).unwrap();

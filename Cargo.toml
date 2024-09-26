@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "tools/apdu-generator", 
+    "tools/apdu-generator",
+    "tools/tx-hash", 
     "tools/check-signature", 
     "starknet"
 ]

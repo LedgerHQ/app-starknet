@@ -487,14 +487,13 @@ pub fn poseidon_shift(hash: &mut FieldElement) {
             }
         }
 
-        if bits_count < 248 {
+        if bits_count > 252 {
             cx_bn_unlock();
-        } else if bits_count >= 248 && bits_count % 8 >= 1 && bits_count % 8 <= 4 {
+        } else {
             cx_bn_shl(hash256, 4);
             cx_bn_export(hash256, hash.value[..].as_mut_ptr(), 32);
             cx_bn_destroy(&mut hash256);
             cx_bn_unlock();
-            return;
         }
     }
 }
