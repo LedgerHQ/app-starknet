@@ -107,7 +107,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                 const APP_ICON: NbglGlyph =
                     NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-                let mut review = NbglReview::new()
+                let review = NbglReview::new()
                     .tx_type(TransactionType::Transaction)
                     .titles("Review", "Transaction", "Sign Transaction")
                     .glyph(&APP_ICON);
@@ -257,7 +257,7 @@ pub fn show_status(flag: bool, ctx: &mut Ctx) {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let mut status = NbglReviewStatus::new();
+        let status = NbglReviewStatus::new();
         status.show(flag);
         ctx.home.show_and_return();
     }
