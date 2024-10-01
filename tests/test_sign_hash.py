@@ -38,7 +38,6 @@ def test_sign_hash_0(firmware, backend, navigator, test_name):
                                              [NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
@@ -102,7 +101,6 @@ def test_sign_hash_1(firmware, backend, navigator, test_name):
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                              test_name,
                                              [NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.BOTH_CLICK])
@@ -170,7 +168,6 @@ def test_sign_hash_2(firmware, backend, navigator, test_name):
                                              [NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
@@ -236,7 +233,6 @@ def test_sign_hash_3(firmware, backend, navigator, test_name):
                                              [NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
@@ -300,7 +296,6 @@ def test_sign_hash_4(firmware, backend, navigator, test_name):
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                              test_name,
                                              [NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.RIGHT_CLICK,
                                               NavInsID.BOTH_CLICK])
