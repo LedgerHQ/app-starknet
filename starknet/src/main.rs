@@ -101,7 +101,7 @@ use ledger_device_sdk::io::Reply;
 
 const SIG_LENGTH: u8 = 0x41;
 
-fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Reply> {
+fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>, Reply> {
     if comm.rx == 0 {
         return Err(io::StatusWords::NothingReceived.into());
     }
@@ -215,11 +215,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Repl
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     comm.append(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    display::show_status(true, ctx);
                                     comm.append([SIG_LENGTH].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
                                     comm.append(ctx.hash.s.as_ref());
                                     comm.append([ctx.hash.v].as_slice());
+                                    display::show_status(true, ctx);
                                 }
                                 false => {
                                     display::show_status(false, ctx);
@@ -233,11 +233,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Repl
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        display::show_status(true, ctx);
                                         comm.append([SIG_LENGTH].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
                                         comm.append(ctx.hash.s.as_ref());
                                         comm.append([ctx.hash.v].as_slice());
+                                        display::show_status(true, ctx);
                                     }
                                     false => {
                                         display::show_status(false, ctx);
@@ -286,11 +286,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Repl
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     comm.append(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    display::show_status(true, ctx);
                                     comm.append([0x41].as_slice());
                                     comm.append(ctx.hash.r.as_ref());
                                     comm.append(ctx.hash.s.as_ref());
                                     comm.append([ctx.hash.v].as_slice());
+                                    display::show_status(true, ctx);
                                 }
                                 false => {
                                     display::show_status(false, ctx);
@@ -304,11 +304,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<(), Repl
                                     true => {
                                         comm.append(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        display::show_status(true, ctx);
                                         comm.append([0x41].as_slice());
                                         comm.append(ctx.hash.r.as_ref());
                                         comm.append(ctx.hash.s.as_ref());
                                         comm.append([ctx.hash.v].as_slice());
+                                        display::show_status(true, ctx);
                                     }
                                     false => {
                                         display::show_status(false, ctx);
