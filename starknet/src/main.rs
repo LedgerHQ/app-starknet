@@ -34,7 +34,10 @@ extern "C" fn sample_main() {
             // or an APDU command
             if let io::Event::Command(ins) = display::main_ui(&mut comm) {
                 match handle_apdu(&mut comm, &ins, &mut ctx) {
-                    Ok(()) => comm.reply_ok(),
+                    Ok(data) => {
+                        comm.append(data.as_slice());
+                        comm.reply_ok()
+                    }
                     Err(sw) => comm.reply(sw),
                 }
             }
@@ -54,7 +57,10 @@ extern "C" fn sample_main() {
             // Wait for an APDU command
             let ins: Ins = comm.next_command();
             match handle_apdu(&mut comm, &ins, &mut ctx) {
-                Ok(()) => comm.reply_ok(),
+                Ok(data) => {
+                    comm.append(data.as_slice());
+                    comm.reply_ok()
+                }
                 Err(sw) => comm.reply(sw),
             }
         }
@@ -108,12 +114,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
 
     let apdu_header = comm.get_apdu_metadata();
 
+    let mut rdata: Vec<u8> = Vec::new();
+
     match ins {
         Ins::GetVersion => {
             let version_major = env!("CARGO_PKG_VERSION_MAJOR").parse::<u8>().unwrap();
             let version_minor = env!("CARGO_PKG_VERSION_MINOR").parse::<u8>().unwrap();
             let version_patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
-            comm.append([version_major, version_minor, version_patch].as_slice());
+
+            rdata.extend_from_slice([version_major, version_minor, version_patch].as_slice());
+            //comm.append([version_major, version_minor, version_patch].as_slice());
         }
         Ins::GetPubkey { display } => {
             ctx.reset();
@@ -138,7 +148,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 true => display::pkey_ui(key.as_ref(), ctx),
                             };
                             if ret {
-                                comm.append(key.as_ref());
+                                //comm.append(key.as_ref());
+                                rdata.extend_from_slice(key.as_ref());
                             } else {
                                 return Err(io::StatusWords::UserCancelled.into());
                             }
@@ -164,10 +175,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     match display::show_hash(ctx, false) {
                         true => {
                             crypto::sign_hash(ctx).unwrap();
-                            comm.append([0x41].as_slice());
-                            comm.append(ctx.hash.r.as_ref());
-                            comm.append(ctx.hash.s.as_ref());
-                            comm.append([ctx.hash.v].as_slice());
+                            rdata.extend_from_slice([0x41].as_slice());
+                            rdata.extend_from_slice(ctx.hash.r.as_ref());
+                            rdata.extend_from_slice(ctx.hash.s.as_ref());
+                            rdata.extend_from_slice([ctx.hash.v].as_slice());
                         }
                         false => {
                             return Err(io::StatusWords::UserCancelled.into());
@@ -213,12 +224,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 true => {
                                     display::show_pending();
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    comm.append(ctx.hash.m_hash.value.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    comm.append([SIG_LENGTH].as_slice());
-                                    comm.append(ctx.hash.r.as_ref());
-                                    comm.append(ctx.hash.s.as_ref());
-                                    comm.append([ctx.hash.v].as_slice());
+                                    rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
+                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
                                     display::show_status(true, ctx);
                                 }
                                 false => {
@@ -231,12 +242,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                 match display::show_hash(ctx, true) {
                                     true => {
-                                        comm.append(ctx.hash.m_hash.value.as_ref());
+                                        rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        comm.append([SIG_LENGTH].as_slice());
-                                        comm.append(ctx.hash.r.as_ref());
-                                        comm.append(ctx.hash.s.as_ref());
-                                        comm.append([ctx.hash.v].as_slice());
+                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                        rdata.extend_from_slice(ctx.hash.r.as_ref());
+                                        rdata.extend_from_slice(ctx.hash.s.as_ref());
+                                        rdata.extend_from_slice([ctx.hash.v].as_slice());
                                         display::show_status(true, ctx);
                                     }
                                     false => {
@@ -284,12 +295,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 true => {
                                     display::show_pending();
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    comm.append(ctx.hash.m_hash.value.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    comm.append([0x41].as_slice());
-                                    comm.append(ctx.hash.r.as_ref());
-                                    comm.append(ctx.hash.s.as_ref());
-                                    comm.append([ctx.hash.v].as_slice());
+                                    rdata.extend_from_slice([0x41].as_slice());
+                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
+                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
                                     display::show_status(true, ctx);
                                 }
                                 false => {
@@ -302,12 +313,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                 match display::show_hash(ctx, true) {
                                     true => {
-                                        comm.append(ctx.hash.m_hash.value.as_ref());
+                                        rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        comm.append([0x41].as_slice());
-                                        comm.append(ctx.hash.r.as_ref());
-                                        comm.append(ctx.hash.s.as_ref());
-                                        comm.append([ctx.hash.v].as_slice());
+                                        rdata.extend_from_slice([0x41].as_slice());
+                                        rdata.extend_from_slice(ctx.hash.r.as_ref());
+                                        rdata.extend_from_slice(ctx.hash.s.as_ref());
+                                        rdata.extend_from_slice([ctx.hash.v].as_slice());
                                         display::show_status(true, ctx);
                                     }
                                     false => {
@@ -375,5 +386,5 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
             }
         }
     }
-    Ok(())
+    Ok(rdata)
 }

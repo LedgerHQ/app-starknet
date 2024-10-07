@@ -258,7 +258,7 @@ pub fn show_status(flag: bool, ctx: &mut Ctx) {
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
         let status = NbglReviewStatus::new();
-        status.show_and_return(flag);
+        status.show(flag);
         ctx.home.show_and_return();
     }
 }
