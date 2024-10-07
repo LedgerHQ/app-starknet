@@ -123,7 +123,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
             let version_patch = env!("CARGO_PKG_VERSION_PATCH").parse::<u8>().unwrap();
 
             rdata.extend_from_slice([version_major, version_minor, version_patch].as_slice());
-            //comm.append([version_major, version_minor, version_patch].as_slice());
         }
         Ins::GetPubkey { display } => {
             ctx.reset();
@@ -148,7 +147,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 true => display::pkey_ui(key.as_ref(), ctx),
                             };
                             if ret {
-                                //comm.append(key.as_ref());
                                 rdata.extend_from_slice(key.as_ref());
                             } else {
                                 return Err(io::StatusWords::UserCancelled.into());
