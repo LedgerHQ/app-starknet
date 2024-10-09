@@ -28,13 +28,7 @@ impl From<CryptoError> for Reply {
 
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
-    // ledger_device_sdk::testing::debug_print("Before shift: ");
-    // ledger_device_sdk::testing::debug_print(&ctx.hash.m_hash.to_hex_string());
-    // ledger_device_sdk::testing::debug_print("\n");
     poseidon::poseidon_shift(&mut ctx.hash.m_hash);
-    // ledger_device_sdk::testing::debug_print("After shift:  ");
-    // ledger_device_sdk::testing::debug_print(&ctx.hash.m_hash.to_hex_string());
-    // ledger_device_sdk::testing::debug_print("\n");
 
     match Stark256::derive_from_path(ctx.bip32_path.as_ref())
         .deterministic_sign(ctx.hash.m_hash.value.as_ref())
