@@ -3,9 +3,8 @@ use crate::{
     erc20::{ERC20_TOKENS, TRANSFER},
     types::FieldElement,
 };
-use alloc::format;
 use include_gif::include_gif;
-use ledger_device_sdk::{io::Comm, testing};
+use ledger_device_sdk::io::Comm;
 
 use crate::context::{Ctx, Transaction};
 
@@ -26,7 +25,6 @@ use ledger_device_sdk::nbgl::{
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     match support_clear_sign(&ctx.tx) {
         Some(t) => {
-            testing::debug_print("Clear sign supported !!! \n");
             let tx = &ctx.tx;
             let call = &tx.calls[0];
 
@@ -34,8 +32,6 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
             let token = ERC20_TOKENS[t].ticker;
             let to = call.calldata[0].to_hex_string();
             let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[t].decimals));
-
-            testing::debug_print("Compute fees \n");
 
             let max_fees_str = match tx.version {
                 FieldElement::ONE => {
@@ -57,8 +53,6 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                     max_fees_str
                 }
             };
-
-            testing::debug_print("Compute fees OK \n");
 
             let my_fields = [
                 Field {
@@ -82,11 +76,6 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                     value: max_fees_str.as_str(),
                 },
             ];
-
-            testing::debug_print(&format!(
-                "Token: {}\nTo: {}\nAmount: {}\n",
-                token, to, amount
-            ));
 
             #[cfg(not(any(target_os = "stax", target_os = "flex")))]
             {
@@ -115,10 +104,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                 Some(review.show(&my_fields))
             }
         }
-        None => {
-            testing::debug_print("Clear sign not supported !!! \n");
-            None
-        }
+        None => None,
     }
 }
 
