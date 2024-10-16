@@ -28,28 +28,30 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
             let tx = &ctx.tx;
             let call = &tx.calls[0];
 
-            let sender = tx.sender_address.to_hex_string();
+            let mut sender = tx.sender_address.to_hex_string();
+            sender.insert_str(0, "0x");
             let token = ERC20_TOKENS[t].ticker;
-            let to = call.calldata[0].to_hex_string();
+            let mut to = call.calldata[0].to_hex_string();
+            to.insert_str(0, "0x");
             let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[t].decimals));
 
             let max_fees_str = match tx.version {
                 FieldElement::ONE => {
-                    let mut max_fees_str = tx.max_fee.to_dec_string(None);
-                    max_fees_str.push_str(" wei");
+                    let mut max_fees_str = tx.max_fee.to_dec_string(Some(18));
+                    max_fees_str.push_str(" ETH");
                     max_fees_str
                 }
                 FieldElement::THREE => {
                     let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
                     let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
                     let max_fees = max_amount * max_price_per_unit;
-                    let mut max_fees_str = max_fees.to_dec_string(None);
-                    max_fees_str.push_str(" fri");
+                    let mut max_fees_str = max_fees.to_dec_string(Some(18));
+                    max_fees_str.push_str(" STRK");
                     max_fees_str
                 }
                 _ => {
-                    let mut max_fees_str = FieldElement::ZERO.to_dec_string(None);
-                    max_fees_str.push_str(" wei");
+                    let mut max_fees_str = FieldElement::ZERO.to_dec_string(Some(18));
+                    max_fees_str.push_str(" ETH");
                     max_fees_str
                 }
             };
