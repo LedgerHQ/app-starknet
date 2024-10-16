@@ -9,7 +9,7 @@ mod transaction;
 mod types;
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 
 use context::{Ctx, RequestType};
 use ledger_device_sdk::io;
@@ -21,7 +21,19 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 use ledger_device_sdk::nbgl::init_comm;
 
 #[no_mangle]
-extern "C" fn sample_main() {
+extern "C" fn sample_main(arg0: u32) {
+    let s = format!("Hello, world {}!\n", arg0);
+    ledger_device_sdk::testing::debug_print(&s);
+
+    if arg0 != 0 {
+        ledger_device_sdk::testing::debug_print("call starknet as a lib\n");
+        unsafe {
+            ledger_secure_sdk_sys::os_lib_end();
+        }
+    }
+
+    ledger_device_sdk::testing::debug_print("call starknet as an app\n");
+
     // Init comm and set the expected CLA byte for the application
     let mut comm = io::Comm::new().set_expected_cla(0x5A);
 
