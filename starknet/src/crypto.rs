@@ -4,7 +4,7 @@ use ledger_device_sdk::io::{Reply, SyscallError};
 pub mod pedersen;
 pub mod poseidon;
 
-use crate::context::{Ctx, Transaction};
+use crate::context::{Ctx, InvokeTransaction, Transaction};
 use crate::types::FieldElement;
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
@@ -176,6 +176,14 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 }
 
 pub fn tx_hash(tx: &Transaction) -> FieldElement {
+    match tx {
+        Transaction::Invoke(tx) => invoke_tx_hash(tx),
+        Transaction::DeployAccount(_) => FieldElement::ZERO,
+        Transaction::None => FieldElement::ZERO,
+    }
+}
+
+fn invoke_tx_hash(tx: &InvokeTransaction) -> FieldElement {
     match tx.version.into() {
         1u8 => {
             let mut hasher = pedersen::PedersenHasher::new();

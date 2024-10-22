@@ -11,7 +11,7 @@ mod types;
 extern crate alloc;
 use alloc::vec::Vec;
 
-use context::{Ctx, RequestType};
+use context::{Ctx, DeployAccountTransaction, InvokeTransaction, RequestType, Transaction};
 use ledger_device_sdk::io;
 use types::FieldElement;
 
@@ -78,6 +78,8 @@ enum Ins {
     SignHash,
     SignTx,
     SignTxV1,
+    SignDeployAccount,
+    SignDeployAccountV1,
     #[cfg(feature = "poseidon")]
     Poseidon,
 }
@@ -96,8 +98,10 @@ impl TryFrom<io::ApduHeader> for Ins {
             (2, _, _) => Ok(Ins::SignHash),
             (3, _, _) => Ok(Ins::SignTx),
             (4, _, _) => Ok(Ins::SignTxV1),
+            (5, _, _) => Ok(Ins::SignDeployAccount),
+            (6, _, _) => Ok(Ins::SignDeployAccountV1),
             #[cfg(feature = "poseidon")]
-            (5, _, _) => Ok(Ins::Poseidon),
+            (7, _, _) => Ok(Ins::Poseidon),
             (_, _, _) => Err(io::StatusWords::BadIns),
         }
     }
@@ -194,30 +198,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                 0 => {
                     ctx.reset();
                     ctx.req_type = RequestType::SignTx;
+                    ctx.tx = Transaction::Invoke(InvokeTransaction::default());
 
                     crypto::set_derivation_path(&mut data, ctx)?;
                 }
-                1 => transaction::set_tx_fields(data, &mut ctx.tx),
-                2 => transaction::set_paymaster_data(data, p2, &mut ctx.tx.paymaster_data),
-                3 => transaction::set_account_deployment_data(
-                    data,
-                    p2,
-                    &mut ctx.tx.account_deployment_data,
-                ),
+                1 => transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3),
+                2 => transaction::set_paymaster_data(data, p2, &mut ctx.tx),
+                3 => transaction::set_account_deployment_data(data, p2, &mut ctx.tx),
                 4 => {
                     let nb_calls: u8 = FieldElement::from(data).into();
-                    ctx.tx.calls = Vec::with_capacity(nb_calls as usize);
+                    transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 }
                 5 => {
-                    if let Some(err) =
-                        transaction::set_call(data, p2.into(), &mut ctx.tx.calls).err()
+                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
                     {
                         return Err(Reply(err as u16));
                     }
                     if p2 == transaction::SetCallStep::End.into()
-                        && ctx.tx.calls.len() == ctx.tx.calls.capacity()
+                        && transaction::tx_complete(&ctx.tx)
                     {
-                        match display::show_tx(ctx) {
+                        match display::show_tx(&mut ctx.tx) {
                             Some(approved) => match approved {
                                 true => {
                                     display::show_pending();
@@ -271,24 +271,24 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                 0 => {
                     ctx.reset();
                     ctx.req_type = RequestType::SignTxV1;
+                    ctx.tx = Transaction::Invoke(InvokeTransaction::default());
 
                     crypto::set_derivation_path(&mut data, ctx)?;
                 }
-                1 => transaction::set_tx_fields_v1(data, &mut ctx.tx),
+                1 => transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1),
                 2 => {
                     let nb_calls: u8 = FieldElement::from(data).into();
-                    ctx.tx.calls = Vec::with_capacity(nb_calls as usize);
+                    transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 }
                 3 => {
-                    if let Some(err) =
-                        transaction::set_call(data, p2.into(), &mut ctx.tx.calls).err()
+                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
                     {
                         return Err(Reply(err as u16));
                     }
                     if p2 == transaction::SetCallStep::End.into()
-                        && ctx.tx.calls.len() == ctx.tx.calls.capacity()
+                        && transaction::tx_complete(&ctx.tx)
                     {
-                        match display::show_tx(ctx) {
+                        match display::show_tx(&mut ctx.tx) {
                             Some(approved) => match approved {
                                 true => {
                                     display::show_pending();
@@ -327,6 +327,69 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                             }
                         }
                     }
+                }
+                _ => {
+                    return Err(io::StatusWords::BadP1P2.into());
+                }
+            }
+        }
+        Ins::SignDeployAccount => {
+            let mut data = comm.get_data()?;
+            let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
+
+            match p1 {
+                0 => {
+                    ctx.reset();
+                    ctx.req_type = RequestType::SignDeployAccount;
+                    ctx.tx = Transaction::DeployAccount(DeployAccountTransaction::default());
+                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3);
+                }
+                1 => transaction::set_tx_fees(data, &mut ctx.tx),
+                2 => transaction::set_paymaster_data(data, p2, &mut ctx.tx),
+                3 => {
+                    let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                    transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
+                }
+                4 => {
+                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
+                    {
+                        return Err(Reply(err as u16));
+                    }
+                    if p2 == transaction::SetCallStep::End.into()
+                        && transaction::tx_complete(&ctx.tx)
+                    {}
+                }
+                _ => {
+                    return Err(io::StatusWords::BadP1P2.into());
+                }
+            }
+        }
+        Ins::SignDeployAccountV1 => {
+            let mut data = comm.get_data()?;
+            let p1 = apdu_header.p1;
+            let p2 = apdu_header.p2;
+
+            match p1 {
+                0 => {
+                    ctx.reset();
+                    ctx.req_type = RequestType::SignDeployAccountV1;
+                    ctx.tx = Transaction::DeployAccount(DeployAccountTransaction::default());
+                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1);
+                }
+                1 => transaction::set_tx_fees(data, &mut ctx.tx),
+                2 => {
+                    let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                    transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
+                }
+                3 => {
+                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
+                    {
+                        return Err(Reply(err as u16));
+                    }
+                    if p2 == transaction::SetCallStep::End.into()
+                        && transaction::tx_complete(&ctx.tx)
+                    {}
                 }
                 _ => {
                     return Err(io::StatusWords::BadP1P2.into());

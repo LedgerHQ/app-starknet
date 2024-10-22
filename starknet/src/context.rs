@@ -21,7 +21,7 @@ impl Call {
 }
 
 #[derive(Default, Debug)]
-pub struct Transaction {
+pub struct InvokeTransaction {
     pub version: FieldElement,
     pub sender_address: FieldElement,
     pub tip: FieldElement,
@@ -36,7 +36,7 @@ pub struct Transaction {
     pub calls: Vec<Call>,
 }
 
-impl Transaction {
+impl InvokeTransaction {
     pub fn reset(&mut self) {
         self.version.clear();
         self.sender_address.clear();
@@ -59,6 +59,63 @@ impl Transaction {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct DeployAccountTransaction {
+    pub version: FieldElement,
+    pub contract_address: FieldElement,
+    pub tip: FieldElement,
+    pub max_fee: FieldElement,
+    pub l1_gas_bounds: FieldElement,
+    pub l2_gas_bounds: FieldElement,
+    pub paymaster_data: Vec<FieldElement>,
+    pub chain_id: FieldElement,
+    pub nonce: FieldElement,
+    pub data_availability_mode: FieldElement,
+    pub class_hash: FieldElement,
+    pub contract_address_salt: FieldElement,
+    pub constructor_calldata: Vec<FieldElement>,
+}
+
+impl DeployAccountTransaction {
+    pub fn reset(&mut self) {
+        self.version.clear();
+        self.contract_address.clear();
+        self.tip.clear();
+        self.max_fee.clear();
+        self.l1_gas_bounds.clear();
+        self.l2_gas_bounds.clear();
+        self.chain_id.clear();
+        self.nonce.clear();
+        self.data_availability_mode.clear();
+        self.class_hash.clear();
+        self.contract_address_salt.clear();
+        for c in self.paymaster_data.iter_mut() {
+            c.clear();
+        }
+        for c in self.constructor_calldata.iter_mut() {
+            c.clear();
+        }
+    }
+}
+
+#[derive(Default, Debug)]
+pub enum Transaction {
+    #[default]
+    None,
+    Invoke(InvokeTransaction),
+    DeployAccount(DeployAccountTransaction),
+}
+
+impl Transaction {
+    pub fn reset(&mut self) {
+        match self {
+            Transaction::Invoke(tx) => tx.reset(),
+            Transaction::DeployAccount(tx) => tx.reset(),
+            _ => {}
+        }
+    }
+}
+
 pub enum RequestType {
     Unknown,
     GetPubkey,
@@ -66,6 +123,8 @@ pub enum RequestType {
     SignHash,
     SignTx,
     SignTxV1,
+    SignDeployAccount,
+    SignDeployAccountV1,
 }
 
 #[derive(Default, Debug)]
@@ -116,7 +175,7 @@ impl Ctx {
     pub fn reset(&mut self) {
         self.req_type = RequestType::Unknown;
         self.bip32_path.fill(0);
-        self.tx.reset();
+        self.tx = Transaction::default();
         self.hash.reset();
     }
 }
