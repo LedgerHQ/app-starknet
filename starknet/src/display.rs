@@ -3,10 +3,11 @@ use crate::{
     erc20::{ERC20_TOKENS, TRANSFER},
     types::FieldElement,
 };
+use alloc::string::String;
 use include_gif::include_gif;
 use ledger_device_sdk::io::Comm;
 
-use crate::context::{Ctx, DeployAccountTransaction, InvokeTransaction, Transaction};
+use crate::context::{Ctx, InvokeTransaction, Transaction};
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::ui::{
@@ -25,7 +26,73 @@ use ledger_device_sdk::nbgl::{
 pub fn show_tx(tx: &mut Transaction) -> Option<bool> {
     match tx {
         Transaction::None => None,
-        Transaction::DeployAccount(_) => None,
+        Transaction::DeployAccount(t) => {
+            // display contract_address, fees and class_hash
+            let mut contract_address = t.contract_address.to_hex_string();
+            contract_address.insert_str(0, "0x");
+
+            let mut class_hash = t.class_hash.to_hex_string();
+            class_hash.insert_str(0, "0x");
+
+            let fees = match t.version {
+                FieldElement::ONE => {
+                    let mut fees = t.max_fee.to_dec_string(Some(18));
+                    fees.push_str(" ETH");
+                    fees
+                }
+                FieldElement::THREE => {
+                    let max_amount = FieldElement::from(&t.l1_gas_bounds.value[8..16]);
+                    let max_price_per_unit = FieldElement::from(&t.l1_gas_bounds.value[16..32]);
+                    let max_fees = max_amount * max_price_per_unit;
+                    let mut fees = max_fees.to_dec_string(Some(18));
+                    fees.push_str(" STRK");
+                    fees
+                }
+                _ => String::from(""), // should not happen
+            };
+
+            let my_fields = [
+                Field {
+                    name: "Deployed account",
+                    value: contract_address.as_str(),
+                },
+                Field {
+                    name: "Max Fees",
+                    value: fees.as_str(),
+                },
+                Field {
+                    name: "Class Hash",
+                    value: class_hash.as_str(),
+                },
+            ];
+
+            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            {
+                let my_review = MultiFieldReview::new(
+                    &my_fields,
+                    &["Confirm Tx to sign"],
+                    Some(&EYE),
+                    "Approve",
+                    Some(&VALIDATE_14),
+                    "Reject",
+                    Some(&CROSSMARK),
+                );
+                Some(my_review.show())
+            }
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            {
+                // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+
+                let review = NbglReview::new()
+                    .tx_type(TransactionType::Transaction)
+                    .titles("Review", "Transaction", "Sign Transaction")
+                    .glyph(&APP_ICON);
+
+                Some(review.show(&my_fields))
+            }
+        }
         Transaction::Invoke(t) => {
             match support_clear_sign(t) {
                 Some(idx) => {
@@ -53,11 +120,7 @@ pub fn show_tx(tx: &mut Transaction) -> Option<bool> {
                             max_fees_str.push_str(" STRK");
                             max_fees_str
                         }
-                        _ => {
-                            let mut max_fees_str = FieldElement::ZERO.to_dec_string(Some(18));
-                            max_fees_str.push_str(" ETH");
-                            max_fees_str
-                        }
+                        _ => String::from(""), // should not happen
                     };
 
                     let my_fields = [

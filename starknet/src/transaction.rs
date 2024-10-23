@@ -32,7 +32,9 @@ impl From<FieldElement> for TxVersion {
 pub fn tx_complete(tx: &Transaction) -> bool {
     match tx {
         Transaction::Invoke(tx) => tx.calls.len() == tx.calls.capacity(),
-        Transaction::DeployAccount(tx) => false,
+        Transaction::DeployAccount(tx) => {
+            tx.constructor_calldata.len() == tx.constructor_calldata.capacity()
+        }
         Transaction::None => true,
     }
 }
@@ -42,12 +44,10 @@ pub fn set_tx_fields(data: &[u8], tx: &mut Transaction, version: TxVersion) {
         Transaction::Invoke(tx) => match version {
             TxVersion::V1 => set_invoke_fields_v1(data, tx),
             TxVersion::V3 => set_invoke_fields_v3(data, tx),
-            _ => panic!("Invalid transaction version"),
         },
         Transaction::DeployAccount(tx) => match version {
             TxVersion::V1 => set_deploy_account_fields_v1(data, tx),
             TxVersion::V3 => set_deploy_account_fields_v3(data, tx),
-            _ => panic!("Invalid transaction version"),
         },
         Transaction::None => panic!("Invalid transaction type"),
     }
@@ -66,7 +66,6 @@ pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
                 tx.l1_gas_bounds = iter.next().unwrap().into();
                 tx.l2_gas_bounds = iter.next().unwrap().into();
             }
-            _ => panic!("Invalid transaction version"),
         },
         Transaction::Invoke(_) | Transaction::None => panic!("Invalid transaction type"),
     }

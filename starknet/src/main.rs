@@ -313,7 +313,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                     true => {
                                         rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                         crypto::sign_hash(ctx).unwrap();
-                                        rdata.extend_from_slice([0x41].as_slice());
+                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
                                         rdata.extend_from_slice(ctx.hash.r.as_ref());
                                         rdata.extend_from_slice(ctx.hash.s.as_ref());
                                         rdata.extend_from_slice([ctx.hash.v].as_slice());
@@ -334,7 +334,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
             }
         }
         Ins::SignDeployAccount => {
-            let mut data = comm.get_data()?;
+            let data = comm.get_data()?;
             let p1 = apdu_header.p1;
             let p2 = apdu_header.p2;
 
@@ -356,9 +356,30 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     {
                         return Err(Reply(err as u16));
                     }
-                    if p2 == transaction::SetCallStep::End.into()
-                        && transaction::tx_complete(&ctx.tx)
-                    {}
+                    if transaction::tx_complete(&ctx.tx) {
+                        match display::show_tx(&mut ctx.tx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    display::show_pending();
+                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    rdata.extend_from_slice([0x41].as_slice());
+                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
+                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
+                                    display::show_status(true, ctx);
+                                }
+                                false => {
+                                    display::show_status(false, ctx);
+                                    return Err(io::StatusWords::UserCancelled.into());
+                                }
+                            },
+                            None => {
+                                return Err(io::StatusWords::UserCancelled.into());
+                            }
+                        }
+                    }
                 }
                 _ => {
                     return Err(io::StatusWords::BadP1P2.into());
@@ -366,7 +387,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
             }
         }
         Ins::SignDeployAccountV1 => {
-            let mut data = comm.get_data()?;
+            let data = comm.get_data()?;
             let p1 = apdu_header.p1;
             let p2 = apdu_header.p2;
 
@@ -387,9 +408,30 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     {
                         return Err(Reply(err as u16));
                     }
-                    if p2 == transaction::SetCallStep::End.into()
-                        && transaction::tx_complete(&ctx.tx)
-                    {}
+                    if transaction::tx_complete(&ctx.tx) {
+                        match display::show_tx(&mut ctx.tx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    display::show_pending();
+                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
+                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    rdata.extend_from_slice([0x41].as_slice());
+                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
+                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
+                                    display::show_status(true, ctx);
+                                }
+                                false => {
+                                    display::show_status(false, ctx);
+                                    return Err(io::StatusWords::UserCancelled.into());
+                                }
+                            },
+                            None => {
+                                return Err(io::StatusWords::UserCancelled.into());
+                            }
+                        }
+                    }
                 }
                 _ => {
                     return Err(io::StatusWords::BadP1P2.into());

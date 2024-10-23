@@ -10,16 +10,6 @@ pub struct Call {
     pub calldata: Vec<FieldElement>,
 }
 
-impl Call {
-    pub fn reset(&mut self) {
-        self.to.clear();
-        self.selector.clear();
-        for c in self.calldata.iter_mut() {
-            c.clear();
-        }
-    }
-}
-
 #[derive(Default, Debug)]
 pub struct InvokeTransaction {
     pub version: FieldElement,
@@ -34,29 +24,6 @@ pub struct InvokeTransaction {
     pub data_availability_mode: FieldElement,
     pub account_deployment_data: Vec<FieldElement>,
     pub calls: Vec<Call>,
-}
-
-impl InvokeTransaction {
-    pub fn reset(&mut self) {
-        self.version.clear();
-        self.sender_address.clear();
-        self.tip.clear();
-        self.max_fee.clear();
-        self.l1_gas_bounds.clear();
-        self.l2_gas_bounds.clear();
-        self.chain_id.clear();
-        self.nonce.clear();
-        self.data_availability_mode.clear();
-        for c in self.paymaster_data.iter_mut() {
-            c.clear();
-        }
-        for c in self.account_deployment_data.iter_mut() {
-            c.clear();
-        }
-        for c in self.calls.iter_mut() {
-            c.reset();
-        }
-    }
 }
 
 #[derive(Default, Debug)]
@@ -76,44 +43,12 @@ pub struct DeployAccountTransaction {
     pub constructor_calldata: Vec<FieldElement>,
 }
 
-impl DeployAccountTransaction {
-    pub fn reset(&mut self) {
-        self.version.clear();
-        self.contract_address.clear();
-        self.tip.clear();
-        self.max_fee.clear();
-        self.l1_gas_bounds.clear();
-        self.l2_gas_bounds.clear();
-        self.chain_id.clear();
-        self.nonce.clear();
-        self.data_availability_mode.clear();
-        self.class_hash.clear();
-        self.contract_address_salt.clear();
-        for c in self.paymaster_data.iter_mut() {
-            c.clear();
-        }
-        for c in self.constructor_calldata.iter_mut() {
-            c.clear();
-        }
-    }
-}
-
 #[derive(Default, Debug)]
 pub enum Transaction {
     #[default]
     None,
     Invoke(InvokeTransaction),
     DeployAccount(DeployAccountTransaction),
-}
-
-impl Transaction {
-    pub fn reset(&mut self) {
-        match self {
-            Transaction::Invoke(tx) => tx.reset(),
-            Transaction::DeployAccount(tx) => tx.reset(),
-            _ => {}
-        }
-    }
 }
 
 pub enum RequestType {

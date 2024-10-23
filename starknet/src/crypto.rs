@@ -4,7 +4,7 @@ use ledger_device_sdk::io::{Reply, SyscallError};
 pub mod pedersen;
 pub mod poseidon;
 
-use crate::context::{Ctx, InvokeTransaction, Transaction};
+use crate::context::{Ctx, DeployAccountTransaction, InvokeTransaction, Transaction};
 use crate::types::FieldElement;
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
@@ -178,7 +178,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 pub fn tx_hash(tx: &Transaction) -> FieldElement {
     match tx {
         Transaction::Invoke(tx) => invoke_tx_hash(tx),
-        Transaction::DeployAccount(_) => FieldElement::ZERO,
+        Transaction::DeployAccount(tx) => deploy_account_tx_hash(tx),
         Transaction::None => FieldElement::ZERO,
     }
 }
@@ -263,6 +263,78 @@ fn invoke_tx_hash(tx: &InvokeTransaction) -> FieldElement {
             let hash_calldata = hasher_calldata.finalize();
 
             hasher.update(hash_calldata);
+
+            hasher.finalize()
+        }
+        _ => panic!("Invalid version"),
+    }
+}
+
+fn deploy_account_tx_hash(tx: &DeployAccountTransaction) -> FieldElement {
+    match tx.version.into() {
+        1u8 => {
+            let mut hasher = pedersen::PedersenHasher::new();
+            /* "deploy_account" */
+            hasher.update(FieldElement::DEPLOY_ACCOUNT);
+            /* version */
+            hasher.update(tx.version);
+            /* contract_address */
+            hasher.update(tx.contract_address);
+            /* 0 */
+            hasher.update(FieldElement::ZERO);
+            /* h(class_hash, contract_address_salt, constructor_calldata) */
+            let mut hasher_temp = pedersen::PedersenHasher::new();
+            hasher_temp.update(tx.class_hash);
+            hasher_temp.update(tx.contract_address_salt);
+            for d in &tx.constructor_calldata {
+                hasher_temp.update(*d);
+            }
+            hasher_temp.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
+            let hash_temp = hasher_temp.finalize();
+            hasher.update(hash_temp);
+            /* max fee */
+            hasher.update(tx.max_fee);
+            /* chain_id */
+            hasher.update(tx.chain_id);
+            /* nonce */
+            hasher.update(tx.nonce);
+
+            hasher.update(FieldElement::from(8u8));
+
+            hasher.finalize()
+        }
+        3u8 => {
+            let mut hasher = poseidon::PoseidonHasher::new();
+            /* "deploy_account" */
+            hasher.update(FieldElement::DEPLOY_ACCOUNT);
+            /* version */
+            hasher.update(tx.version);
+            /* contract_address */
+            hasher.update(tx.contract_address);
+            /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+            let fee_hash = poseidon::PoseidonStark252::hash_many(&[
+                tx.tip,
+                tx.l1_gas_bounds,
+                tx.l2_gas_bounds,
+            ]);
+            hasher.update(fee_hash);
+            /* h(paymaster_data) */
+            let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
+            hasher.update(paymaster_hash);
+            /* chain_id */
+            hasher.update(tx.chain_id);
+            /* nonce */
+            hasher.update(tx.nonce);
+            /* data_availability_modes */
+            hasher.update(tx.data_availability_mode);
+            /* h(constructor_calldata) */
+            let constructor_calldata_hash =
+                poseidon::PoseidonStark252::hash_many(&tx.constructor_calldata);
+            hasher.update(constructor_calldata_hash);
+            /* class_hash */
+            hasher.update(tx.class_hash);
+            /* contract_address_salt */
+            hasher.update(tx.contract_address_salt);
 
             hasher.finalize()
         }
