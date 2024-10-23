@@ -2,6 +2,7 @@ use ethereum_types::U256;
 use serde::Deserialize;
 use starknet::core::utils::starknet_keccak;
 use std::fmt;
+use std::vec::Vec;
 
 const DEFAULT_ENTRY_POINT_NAME: &str = "__default__";
 const DEFAULT_L1_ENTRY_POINT_NAME: &str = "__l1_default__";
@@ -46,6 +47,8 @@ pub enum Ins {
     SignHash,
     SignTx,
     SignTxV1,
+    SignDeployAccount,
+    SignDeployAccountV1,
     Unknown,
 }
 
@@ -57,6 +60,8 @@ impl From<Ins> for u8 {
             Ins::SignHash => 2u8,
             Ins::SignTx => 3u8,
             Ins::SignTxV1 => 4u8,
+            Ins::SignDeployAccount => 5u8,
+            Ins::SignDeployAccountV1 => 6u8,
             Ins::Unknown => 0xff,
         }
     }
@@ -70,7 +75,9 @@ impl From<u8> for Ins {
             2 => Ins::SignHash,
             3 => Ins::SignTx,
             4 => Ins::SignTxV1,
-            5.. => Ins::Unknown,
+            5 => Ins::SignDeployAccount,
+            6 => Ins::SignDeployAccountV1,
+            7.. => Ins::Unknown,
         }
     }
 }
@@ -102,7 +109,7 @@ impl From<&Call> for Vec<FieldElement> {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct TxV3 {
+pub struct InvokeV3 {
     pub url: String,
     pub version: u8,
     pub sender_address: String,
@@ -119,7 +126,7 @@ pub struct TxV3 {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct TxV1 {
+pub struct InvokeV1 {
     pub url: String,
     pub version: u8,
     pub sender_address: String,
@@ -131,8 +138,40 @@ pub struct TxV1 {
 }
 
 pub enum Tx {
-    V1(TxV1),
-    V3(TxV3),
+    V1(InvokeV1),
+    V3(InvokeV3),
+    DeployV1(DeployAccountV1),
+    DeployV3(DeployAccountV3),
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DeployAccountV3 {
+    pub url: String,
+    pub version: u8,
+    pub contract_address: String,
+    pub tip: String,
+    pub l1_gas_bounds: String,
+    pub l2_gas_bounds: String,
+    pub paymaster_data: Vec<String>,
+    pub chain_id: String,
+    pub nonce: String,
+    pub data_availability_mode: String,
+    pub class_hash: String,
+    pub contract_address_salt: String,
+    pub constructor_calldata: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DeployAccountV1 {
+    pub url: String,
+    pub version: u8,
+    pub contract_address: String,
+    pub max_fee: String,
+    pub chain_id: String,
+    pub nonce: String,
+    pub class_hash: String,
+    pub contract_address_salt: String,
+    pub constructor_calldata: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
