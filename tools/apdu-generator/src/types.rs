@@ -159,6 +159,7 @@ pub struct DeployAccountV3 {
     pub class_hash: String,
     pub contract_address_salt: String,
     pub constructor_calldata: Vec<String>,
+    pub dpath: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -172,6 +173,7 @@ pub struct DeployAccountV1 {
     pub class_hash: String,
     pub contract_address_salt: String,
     pub constructor_calldata: Vec<String>,
+    pub dpath: String,
 }
 
 #[derive(Deserialize, Debug)]

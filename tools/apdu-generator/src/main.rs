@@ -146,8 +146,12 @@ fn main() {
                     }
                 }
                 Tx::DeployV3(tx) => {
+                    let dpath_apdu =
+                        builder::derivation_path(&tx.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+
                     let tx_data_apdu =
-                        builder::tx_fields_deploy_v3(&tx, args.cla, args.ins.into(), 0);
+                        builder::tx_fields_deploy_v3(&tx, args.cla, args.ins.into(), 1);
                     apdus.push(tx_data_apdu.clone());
 
                     let tip: FieldElement = FieldElement::try_from(tx.tip.as_str()).unwrap();
@@ -158,11 +162,11 @@ fn main() {
 
                     let fees: Vec<FieldElement> = vec![tip, l1_gas_bounds, l2_gas_bounds];
 
-                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 1);
+                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 2);
                     apdus.push(fees_apdu.clone());
 
                     let paymaster_apdu =
-                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
+                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 3);
                     apdus.push(paymaster_apdu.clone());
 
                     let mut constructor_calldata: Vec<FieldElement> = Default::default();
@@ -175,19 +179,23 @@ fn main() {
                         &constructor_calldata,
                         args.cla,
                         args.ins.into(),
-                        3,
+                        4,
                     );
                     apdus.append(&mut constructor_calldata_apdus);
                 }
                 Tx::DeployV1(tx) => {
+                    let dpath_apdu =
+                        builder::derivation_path(&tx.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+
                     let tx_data_apdu =
-                        builder::tx_fields_deploy_v1(&tx, args.cla, args.ins.into(), 0);
+                        builder::tx_fields_deploy_v1(&tx, args.cla, args.ins.into(), 1);
                     apdus.push(tx_data_apdu.clone());
 
                     let max_fee: FieldElement =
                         FieldElement::try_from(tx.max_fee.as_str()).unwrap();
                     let fees: Vec<FieldElement> = vec![max_fee];
-                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 1);
+                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 2);
                     apdus.push(fees_apdu.clone());
 
                     let mut constructor_calldata: Vec<FieldElement> = Default::default();
@@ -200,7 +208,7 @@ fn main() {
                         &constructor_calldata,
                         args.cla,
                         args.ins.into(),
-                        2,
+                        3,
                     );
                     apdus.append(&mut constructor_calldata_apdus);
                 }

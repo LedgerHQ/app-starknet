@@ -334,7 +334,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
             }
         }
         Ins::SignDeployAccount => {
-            let data = comm.get_data()?;
+            let mut data = comm.get_data()?;
             let p1 = apdu_header.p1;
             let p2 = apdu_header.p2;
 
@@ -343,15 +343,17 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     ctx.reset();
                     ctx.req_type = RequestType::SignDeployAccount;
                     ctx.tx = Transaction::DeployAccount(DeployAccountTransaction::default());
-                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3);
+
+                    crypto::set_derivation_path(&mut data, ctx)?;
                 }
-                1 => transaction::set_tx_fees(data, &mut ctx.tx),
-                2 => transaction::set_paymaster_data(data, p2, &mut ctx.tx),
-                3 => {
+                1 => transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3),
+                2 => transaction::set_tx_fees(data, &mut ctx.tx),
+                3 => transaction::set_paymaster_data(data, p2, &mut ctx.tx),
+                4 => {
                     let constructor_calldata_length: u8 = FieldElement::from(data).into();
                     transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 }
-                4 => {
+                5 => {
                     if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
                     {
                         return Err(Reply(err as u16));
@@ -387,7 +389,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
             }
         }
         Ins::SignDeployAccountV1 => {
-            let data = comm.get_data()?;
+            let mut data = comm.get_data()?;
             let p1 = apdu_header.p1;
             let p2 = apdu_header.p2;
 
@@ -396,14 +398,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     ctx.reset();
                     ctx.req_type = RequestType::SignDeployAccountV1;
                     ctx.tx = Transaction::DeployAccount(DeployAccountTransaction::default());
-                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1);
+
+                    crypto::set_derivation_path(&mut data, ctx)?;
                 }
-                1 => transaction::set_tx_fees(data, &mut ctx.tx),
-                2 => {
+                1 => transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1),
+                2 => transaction::set_tx_fees(data, &mut ctx.tx),
+                3 => {
                     let constructor_calldata_length: u8 = FieldElement::from(data).into();
                     transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 }
-                3 => {
+                4 => {
                     if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
                     {
                         return Err(Reply(err as u16));
