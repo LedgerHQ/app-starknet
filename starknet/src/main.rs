@@ -5,6 +5,7 @@ mod context;
 mod crypto;
 mod display;
 mod erc20;
+mod settings;
 mod transaction;
 mod types;
 
@@ -14,6 +15,9 @@ use alloc::vec::Vec;
 use context::{Ctx, DeployAccountTransaction, InvokeTransaction, RequestType, Transaction};
 use ledger_device_sdk::io;
 use types::FieldElement;
+
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+use settings::Settings;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -217,7 +221,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     if p2 == transaction::SetCallStep::End.into()
                         && transaction::tx_complete(&ctx.tx)
                     {
-                        match display::show_tx(&mut ctx.tx) {
+                        match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
                                     display::show_pending();
@@ -236,6 +240,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 }
                             },
                             None => {
+                                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                {
+                                    let settings: Settings = Default::default();
+                                    if settings.get_element(0) == 0 {
+                                        display::blind_signing_enable_ui(ctx);
+                                        return Err(io::StatusWords::UserCancelled.into());
+                                    }
+                                }
                                 display::show_pending();
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                 match display::show_hash(ctx, true) {
@@ -288,7 +300,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                     if p2 == transaction::SetCallStep::End.into()
                         && transaction::tx_complete(&ctx.tx)
                     {
-                        match display::show_tx(&mut ctx.tx) {
+                        match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
                                     display::show_pending();
@@ -307,6 +319,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 }
                             },
                             None => {
+                                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                {
+                                    let settings: Settings = Default::default();
+                                    if settings.get_element(0) == 0 {
+                                        display::blind_signing_enable_ui(ctx);
+                                        return Err(io::StatusWords::UserCancelled.into());
+                                    }
+                                }
                                 display::show_pending();
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                 match display::show_hash(ctx, true) {
@@ -359,7 +379,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                         return Err(Reply(err as u16));
                     }
                     if transaction::tx_complete(&ctx.tx) {
-                        match display::show_tx(&mut ctx.tx) {
+                        match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
                                     display::show_pending();
@@ -413,7 +433,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                         return Err(Reply(err as u16));
                     }
                     if transaction::tx_complete(&ctx.tx) {
-                        match display::show_tx(&mut ctx.tx) {
+                        match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
                                     display::show_pending();

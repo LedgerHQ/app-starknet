@@ -18,12 +18,17 @@ use ledger_device_sdk::ui::{
 };
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
+use crate::settings::Settings;
+#[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
-    Field, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent, NbglReview,
-    NbglReviewStatus, NbglStatus, TagValueConfirm, TagValueList, TransactionType, TuneIndex,
+    Field, NbglChoice, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent,
+    NbglReview, NbglReviewStatus, NbglStatus, PageIndex, TagValueConfirm, TagValueList,
+    TransactionType, TuneIndex,
 };
 
-pub fn show_tx(tx: &mut Transaction) -> Option<bool> {
+pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
+    let tx = &mut ctx.tx;
+
     match tx {
         Transaction::None => None,
         Transaction::DeployAccount(t) => {
@@ -419,12 +424,35 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
+    let settings_strings = [["Enable Blind signing", "Allow blind signing"]];
+    let mut settings: Settings = Default::default();
+
     // Display the home screen.
-    NbglHomeAndSettings::new().glyph(&APP_ICON).infos(
-        "Starknet",
-        env!("CARGO_PKG_VERSION"),
-        env!("CARGO_PKG_AUTHORS"),
-    )
+    NbglHomeAndSettings::new()
+        .glyph(&APP_ICON)
+        .infos(
+            "Starknet",
+            env!("CARGO_PKG_VERSION"),
+            env!("CARGO_PKG_AUTHORS"),
+        )
+        .settings(settings.get_mut(), &settings_strings)
+}
+
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
+    let choice = NbglChoice::new().show(
+        "This transaction cannot be clear-signed",
+        "Enable blind-signing in the settings to sign this transaction",
+        "Go to settings",
+        "Reject transaction",
+    );
+    if choice {
+        ctx.home.set_start_page(PageIndex::Settings(0));
+        ctx.home.show_and_return();
+        ctx.home.set_start_page(PageIndex::Home);
+    } else {
+        ctx.home.show_and_return();
+    }
 }
 
 fn support_clear_sign(tx: &InvokeTransaction) -> Option<usize> {
