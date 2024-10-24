@@ -1,5 +1,5 @@
 use crate::apdu::{Apdu, ApduHeader};
-use crate::types::{Call, FieldElement, Ins, Tx};
+use crate::types::{Call, DeployAccountV1, DeployAccountV3, FieldElement, Ins, InvokeV1, InvokeV3};
 use ethereum_types::U256;
 
 pub enum ApduError {
@@ -68,7 +68,7 @@ pub fn derivation_path(path: &str, cla: u8, ins: Ins, p1: u8) -> Apdu {
     apdu
 }
 
-pub fn tx_data(tx: &Tx, cla: u8, ins: Ins, p1: u8) -> Apdu {
+pub fn tx_fields_invoke_v1(tx: &InvokeV1, cla: u8, ins: Ins, p1: u8) -> Apdu {
     let apdu_header = ApduHeader {
         cla: cla,
         ins: ins.into(),
@@ -77,57 +77,146 @@ pub fn tx_data(tx: &Tx, cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    match tx {
-        Tx::V1(tx) => {
-            let mut fe: FieldElement =
-                FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
-            let mut data: [u8; 32] = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    let mut fe: FieldElement = FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
+    let mut data: [u8; 32] = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.max_fee, 10).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    fe = FieldElement(U256::from_str_radix(&tx.max_fee, 10).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
-        }
-        Tx::V3(tx) => {
-            let mut fe: FieldElement =
-                FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
-            let mut data: [u8; 32] = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.tip, 10).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    apdu
+}
 
-            fe = FieldElement(U256::from_str_radix(&tx.l1_gas_bounds, 16).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+pub fn tx_fields_invoke_v3(tx: &InvokeV3, cla: u8, ins: Ins, p1: u8) -> Apdu {
+    let apdu_header = ApduHeader {
+        cla: cla,
+        ins: ins.into(),
+        p1,
+        p2: 0x00,
+    };
+    let mut apdu = Apdu::new(apdu_header);
 
-            fe = FieldElement(U256::from_str_radix(&tx.l2_gas_bounds, 16).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    let mut fe: FieldElement = FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
+    let mut data: [u8; 32] = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    fe = FieldElement(U256::from_str_radix(&tx.tip, 10).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
+    fe = FieldElement(U256::from_str_radix(&tx.l1_gas_bounds, 16).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
 
-            fe = FieldElement(U256::from_str_radix(&tx.data_availability_mode, 10).unwrap());
-            data = fe.try_into().unwrap();
-            apdu.append(data.as_slice()).unwrap();
-        }
+    fe = FieldElement(U256::from_str_radix(&tx.l2_gas_bounds, 16).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement(U256::from_str_radix(&tx.data_availability_mode, 10).unwrap());
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    apdu
+}
+
+pub fn tx_fields_deploy_v3(tx: &DeployAccountV3, cla: u8, ins: Ins, p1: u8) -> Apdu {
+    let apdu_header = ApduHeader {
+        cla: cla,
+        ins: ins.into(),
+        p1,
+        p2: 0x00,
+    };
+    let mut apdu = Apdu::new(apdu_header);
+
+    let mut fe: FieldElement = FieldElement::try_from(tx.contract_address.as_str()).unwrap();
+    let mut data: [u8; 32] = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.chain_id.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.nonce.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.data_availability_mode.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.class_hash.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.contract_address_salt.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    apdu
+}
+
+pub fn tx_fields_deploy_v1(tx: &DeployAccountV1, cla: u8, ins: Ins, p1: u8) -> Apdu {
+    let apdu_header = ApduHeader {
+        cla: cla,
+        ins: ins.into(),
+        p1,
+        p2: 0x00,
+    };
+    let mut apdu = Apdu::new(apdu_header);
+
+    let mut fe: FieldElement = FieldElement::try_from(tx.contract_address.as_str()).unwrap();
+    let mut data: [u8; 32] = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.class_hash.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.contract_address_salt.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.chain_id.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = FieldElement::try_from(tx.nonce.as_str()).unwrap();
+    data = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+
+    apdu
+}
+
+pub fn tx_fees(fees: &[FieldElement], cla: u8, ins: Ins, p1: u8) -> Apdu {
+    let apdu_header = ApduHeader {
+        cla: cla,
+        ins: ins.into(),
+        p1,
+        p2: 0x00,
+    };
+    let mut apdu = Apdu::new(apdu_header);
+
+    for f in fees {
+        let data: [u8; 32] = (*f).try_into().unwrap();
+        apdu.append(data.as_slice()).unwrap();
     }
-
     apdu
 }
 
@@ -244,6 +333,50 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
             }
         }
         _ => (),
+    }
+    apdu_list
+}
+
+pub fn constructor_calldata(calldata: &[FieldElement], cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
+    let mut apdu_list: Vec<Apdu> = Vec::new();
+    let mut p1 = p1;
+
+    // calldata length apdu
+    let apdu_header = ApduHeader {
+        cla,
+        ins: ins.into(),
+        p1,
+        p2: 0x00,
+    };
+    let mut apdu = Apdu::new(apdu_header);
+    let fe = FieldElement(U256::from(calldata.len()));
+    let data: [u8; 32] = fe.try_into().unwrap();
+    apdu.append(data.as_slice()).unwrap();
+    p1 += 1;
+    apdu_list.push(apdu);
+
+    // calldata apdu
+    let mut iter = calldata.chunks(7);
+
+    loop {
+        let next = iter.next();
+        match next {
+            Some(s) => {
+                let apdu_header = ApduHeader {
+                    cla,
+                    ins: ins.into(),
+                    p1,
+                    p2: 0x00,
+                };
+                let mut apdu = Apdu::new(apdu_header);
+                for d in s {
+                    let data: [u8; 32] = (*d).try_into().unwrap();
+                    apdu.append(data.as_slice()).unwrap();
+                }
+                apdu_list.push(apdu);
+            }
+            None => break,
+        }
     }
     apdu_list
 }
