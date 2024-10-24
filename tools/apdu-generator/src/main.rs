@@ -158,11 +158,11 @@ fn main() {
 
                     let fees: Vec<FieldElement> = vec![tip, l1_gas_bounds, l2_gas_bounds];
 
-                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 2);
+                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 1);
                     apdus.push(fees_apdu.clone());
 
                     let paymaster_apdu =
-                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 3);
+                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
                     apdus.push(paymaster_apdu.clone());
 
                     let mut constructor_calldata: Vec<FieldElement> = Default::default();
@@ -175,7 +175,7 @@ fn main() {
                         &constructor_calldata,
                         args.cla,
                         args.ins.into(),
-                        4,
+                        3,
                     );
                     apdus.append(&mut constructor_calldata_apdus);
                 }
@@ -187,7 +187,7 @@ fn main() {
                     let max_fee: FieldElement =
                         FieldElement::try_from(tx.max_fee.as_str()).unwrap();
                     let fees: Vec<FieldElement> = vec![max_fee];
-                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 2);
+                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 1);
                     apdus.push(fees_apdu.clone());
 
                     let mut constructor_calldata: Vec<FieldElement> = Default::default();
@@ -200,7 +200,7 @@ fn main() {
                         &constructor_calldata,
                         args.cla,
                         args.ins.into(),
-                        3,
+                        2,
                     );
                     apdus.append(&mut constructor_calldata_apdus);
                 }
