@@ -1,3 +1,4 @@
+use apdu_generator::types::FieldElement;
 use clap::Parser;
 use std::io::prelude::*;
 use std::{fs::File, path::Path};
@@ -23,7 +24,7 @@ struct Args {
 use apdu_generator::{
     apdu::Apdu,
     builder,
-    types::{Dpath, Hash, Tx, TxV1, TxV3},
+    types::{DeployAccountV1, DeployAccountV3, Dpath, Hash, InvokeV1, InvokeV3, Tx},
 };
 
 fn main() {
@@ -53,40 +54,57 @@ fn main() {
             let apdu = builder::hash_to_apdu(&hash.hash, args.cla, args.ins.into(), 1, true);
             apdus.push(apdu.clone());
         }
-        3 | 4 => {
+        3 | 4 | 5 | 6 => {
             let tx = match args.ins {
                 3 => {
-                    let t = match serde_json::from_str::<TxV3>(&data) {
+                    let t = match serde_json::from_str::<InvokeV3>(&data) {
                         Ok(t) => t,
                         Err(_) => {
                             panic!("Invalid TxV3 format");
                         }
                     };
-                    let dpath_apdu =
-                        builder::derivation_path(&t.dpath, args.cla, args.ins.into(), 0);
-                    apdus.push(dpath_apdu.clone());
                     Tx::V3(t)
                 }
                 4 => {
-                    let t = match serde_json::from_str::<TxV1>(&data) {
+                    let t = match serde_json::from_str::<InvokeV1>(&data) {
                         Ok(t) => t,
                         Err(_) => {
                             panic!("Invalid TxV1 format");
                         }
                     };
-                    let dpath_apdu =
-                        builder::derivation_path(&t.dpath, args.cla, args.ins.into(), 0);
-                    apdus.push(dpath_apdu.clone());
                     Tx::V1(t)
+                }
+                5 => {
+                    let t = match serde_json::from_str::<DeployAccountV3>(&data) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            panic!("Invalid DeployAccountV3 format");
+                        }
+                    };
+                    Tx::DeployV3(t)
+                }
+                6 => {
+                    let t = match serde_json::from_str::<DeployAccountV1>(&data) {
+                        Ok(t) => t,
+                        Err(_) => {
+                            panic!("Invalid TxV1 format");
+                        }
+                    };
+                    Tx::DeployV1(t)
                 }
                 _ => panic!("Invalid INS"),
             };
 
-            let tx_data_apdu = builder::tx_data(&tx, args.cla, args.ins.into(), 1);
-            apdus.push(tx_data_apdu.clone());
-
             match tx {
                 Tx::V1(mut tx) => {
+                    let dpath_apdu =
+                        builder::derivation_path(&tx.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+
+                    let tx_data_apdu =
+                        builder::tx_fields_invoke_v1(&tx, args.cla, args.ins.into(), 1);
+                    apdus.push(tx_data_apdu.clone());
+
                     let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, args.ins.into(), 2);
                     apdus.push(tx_data_apdu.clone());
                     tx.calls.reverse();
@@ -97,6 +115,14 @@ fn main() {
                     }
                 }
                 Tx::V3(mut tx) => {
+                    let dpath_apdu =
+                        builder::derivation_path(&tx.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+
+                    let tx_data_apdu =
+                        builder::tx_fields_invoke_v3(&tx, args.cla, args.ins.into(), 1);
+                    apdus.push(tx_data_apdu.clone());
+
                     let tx_data_apdu =
                         builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 2);
                     apdus.push(tx_data_apdu.clone());
@@ -118,6 +144,73 @@ fn main() {
                         let mut call_apdu = builder::call(&call, args.cla, args.ins.into(), 5);
                         apdus.append(&mut call_apdu);
                     }
+                }
+                Tx::DeployV3(tx) => {
+                    let dpath_apdu =
+                        builder::derivation_path(&tx.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+
+                    let tx_data_apdu =
+                        builder::tx_fields_deploy_v3(&tx, args.cla, args.ins.into(), 1);
+                    apdus.push(tx_data_apdu.clone());
+
+                    let tip: FieldElement = FieldElement::try_from(tx.tip.as_str()).unwrap();
+                    let l1_gas_bounds: FieldElement =
+                        FieldElement::try_from(tx.l1_gas_bounds.as_str()).unwrap();
+                    let l2_gas_bounds: FieldElement =
+                        FieldElement::try_from(tx.l2_gas_bounds.as_str()).unwrap();
+
+                    let fees: Vec<FieldElement> = vec![tip, l1_gas_bounds, l2_gas_bounds];
+
+                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 2);
+                    apdus.push(fees_apdu.clone());
+
+                    let paymaster_apdu =
+                        builder::paymaster_data(&tx.paymaster_data, args.cla, args.ins.into(), 3);
+                    apdus.push(paymaster_apdu.clone());
+
+                    let mut constructor_calldata: Vec<FieldElement> = Default::default();
+                    for c in tx.constructor_calldata.iter() {
+                        let fe: FieldElement = FieldElement::try_from(c.as_str()).unwrap();
+                        constructor_calldata.push(fe);
+                    }
+
+                    let mut constructor_calldata_apdus = builder::constructor_calldata(
+                        &constructor_calldata,
+                        args.cla,
+                        args.ins.into(),
+                        4,
+                    );
+                    apdus.append(&mut constructor_calldata_apdus);
+                }
+                Tx::DeployV1(tx) => {
+                    let dpath_apdu =
+                        builder::derivation_path(&tx.dpath, args.cla, args.ins.into(), 0);
+                    apdus.push(dpath_apdu.clone());
+
+                    let tx_data_apdu =
+                        builder::tx_fields_deploy_v1(&tx, args.cla, args.ins.into(), 1);
+                    apdus.push(tx_data_apdu.clone());
+
+                    let max_fee: FieldElement =
+                        FieldElement::try_from(tx.max_fee.as_str()).unwrap();
+                    let fees: Vec<FieldElement> = vec![max_fee];
+                    let fees_apdu = builder::tx_fees(&fees, args.cla, args.ins.into(), 2);
+                    apdus.push(fees_apdu.clone());
+
+                    let mut constructor_calldata: Vec<FieldElement> = Default::default();
+                    for c in tx.constructor_calldata.iter() {
+                        let fe: FieldElement = FieldElement::try_from(c.as_str()).unwrap();
+                        constructor_calldata.push(fe);
+                    }
+
+                    let mut constructor_calldata_apdus = builder::constructor_calldata(
+                        &constructor_calldata,
+                        args.cla,
+                        args.ins.into(),
+                        3,
+                    );
+                    apdus.append(&mut constructor_calldata_apdus);
                 }
             }
         }
