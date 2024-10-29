@@ -21,8 +21,8 @@ use crate::settings::Settings;
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglChoice, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent,
-    NbglReview, NbglReviewStatus, NbglStatus, PageIndex, TagValueConfirm, TagValueList,
-    TransactionType, TuneIndex,
+    NbglReview, NbglReviewStatus, NbglSpinner, NbglStatus, PageIndex, StatusType, TagValueConfirm,
+    TagValueList, TransactionType, TuneIndex,
 };
 
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
@@ -233,7 +233,6 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
         }
 
         let res = review.show(&my_field);
-        ctx.home.show_and_return();
         res
     }
 }
@@ -241,28 +240,28 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 pub fn show_pending() {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let page_0 = Page::new(
-            PageStyle::BoldNormal,
-            ["Processing ", "Transaction..."],
-            None,
-        );
+        let page_0 = Page::new(PageStyle::BoldNormal, ["Computing ", "Tx Hash..."], None);
         clear_screen();
         page_0.place();
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let spinner = NbglStatus::new();
-        spinner.text("Processing Transaction...").show(true);
+        let spinner = NbglSpinner::new();
+        spinner.text("Computing Tx Hash...").show();
     }
 }
 
 #[allow(unused_variables)]
-pub fn show_status(flag: bool, ctx: &mut Ctx) {
+pub fn show_status(flag: bool, is_tx: bool, ctx: &mut Ctx) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
+        let msg = match is_tx {
+            true => "Transaction ",
+            false => "Message ",
+        };
         let content = match flag {
-            true => ["Transaction ", "signed"],
-            false => ["Transaction ", "rejected"],
+            true => [msg, "signed"],
+            false => [msg, "rejected"],
         };
         let page_0 = Page::new(PageStyle::BoldNormal, content, None);
         clear_screen();
@@ -270,7 +269,10 @@ pub fn show_status(flag: bool, ctx: &mut Ctx) {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let status = NbglReviewStatus::new();
+        let status = match is_tx {
+            true => NbglReviewStatus::new().status_type(StatusType::Transaction),
+            false => NbglReviewStatus::new().status_type(StatusType::Message),
+        };
         status.show(flag);
         ctx.home.show_and_return();
     }

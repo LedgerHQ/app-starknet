@@ -184,8 +184,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                             rdata.extend_from_slice(ctx.hash.r.as_ref());
                             rdata.extend_from_slice(ctx.hash.s.as_ref());
                             rdata.extend_from_slice([ctx.hash.v].as_slice());
+                            display::show_status(true, false, ctx);
                         }
                         false => {
+                            display::show_status(false, false, ctx);
                             return Err(io::StatusWords::UserCancelled.into());
                         }
                     }
@@ -231,10 +233,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    display::show_status(true, ctx);
+                                    display::show_status(true, true, ctx);
                                 }
                                 false => {
-                                    display::show_status(false, ctx);
+                                    display::show_status(false, true, ctx);
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             },
@@ -254,10 +256,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                         rdata.extend_from_slice(ctx.hash.r.as_ref());
                                         rdata.extend_from_slice(ctx.hash.s.as_ref());
                                         rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                        display::show_status(true, ctx);
+                                        display::show_status(true, true, ctx);
                                     }
                                     false => {
-                                        display::show_status(false, ctx);
+                                        display::show_status(false, true, ctx);
                                         return Err(io::StatusWords::UserCancelled.into());
                                     }
                                 }
@@ -307,10 +309,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    display::show_status(true, ctx);
+                                    display::show_status(true, true, ctx);
                                 }
                                 false => {
-                                    display::show_status(false, ctx);
+                                    display::show_status(false, true, ctx);
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             },
@@ -330,10 +332,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                         rdata.extend_from_slice(ctx.hash.r.as_ref());
                                         rdata.extend_from_slice(ctx.hash.s.as_ref());
                                         rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                        display::show_status(true, ctx);
+                                        display::show_status(true, true, ctx);
                                     }
                                     false => {
-                                        display::show_status(false, ctx);
+                                        display::show_status(false, true, ctx);
                                         return Err(io::StatusWords::UserCancelled.into());
                                     }
                                 }
@@ -383,10 +385,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    display::show_status(true, ctx);
+                                    display::show_status(true, true, ctx);
                                 }
                                 false => {
-                                    display::show_status(false, ctx);
+                                    display::show_status(false, true, ctx);
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             },
@@ -437,10 +439,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    display::show_status(true, ctx);
+                                    display::show_status(true, true, ctx);
                                 }
                                 false => {
-                                    display::show_status(false, ctx);
+                                    display::show_status(false, true, ctx);
                                     return Err(io::StatusWords::UserCancelled.into());
                                 }
                             },
