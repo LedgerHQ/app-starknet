@@ -89,11 +89,15 @@ impl FieldElement {
     #[allow(clippy::wrong_self_convention)]
     pub fn to_dec_string(&self, decimals: Option<usize>) -> String {
         let bn = BigUint::from_bytes_be(self.value.as_ref());
+        if bn == BigUint::ZERO {
+            return "0".to_string();
+        }
         match decimals {
             Some(d) => {
-                let bn_str = bn.to_string();
+                let mut bn_str = bn.to_string();
                 let len = bn_str.len();
                 if len <= d {
+                    bn_str = bn_str.trim_end_matches('0').to_string();
                     let mut s = String::from("0.");
                     s.push_str(&"0".repeat(d - len));
                     s.push_str(&bn_str);
@@ -102,6 +106,7 @@ impl FieldElement {
                     let (int_part, dec_part) = bn_str.split_at(len - d);
                     let mut s = String::from(int_part);
                     s.push('.');
+                    let dec_part = dec_part.trim_end_matches('0');
                     s.push_str(dec_part);
                     s
                 }

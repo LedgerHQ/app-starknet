@@ -91,7 +91,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
                 let review = NbglReview::new()
                     .tx_type(TransactionType::Transaction)
-                    .titles("Review", "Transaction", "Sign Transaction")
+                    .titles("Review transaction", "", "Sign Transaction ?")
                     .glyph(&APP_ICON);
 
                 Some(review.show(&my_fields))
@@ -171,7 +171,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
                         let review = NbglReview::new()
                             .tx_type(TransactionType::Transaction)
-                            .titles("Review", "Transaction", "Sign Transaction")
+                            .titles("Review transaction", "", "Sign Transaction ?")
                             .glyph(&APP_ICON);
 
                         Some(review.show(&my_fields))
@@ -413,7 +413,7 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-    let settings_strings = [["Enable Blind signing", "Allow blind signing"]];
+    let settings_strings = [["Blind signing", "Enable transaction blind signing"]];
     let mut settings: Settings = Default::default();
 
     // Display the home screen.
@@ -427,6 +427,7 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
         .settings(settings.get_mut(), &settings_strings)
 }
 
+#[allow(unused_variables)]
 pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {

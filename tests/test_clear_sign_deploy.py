@@ -37,13 +37,21 @@ def test_clear_sign_deploy_v3(firmware, backend, navigator, test_name):
                                                     ROOT_SCREENSHOT_PATH,
                                                     test_name)
         else:
-            instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
+            if firmware.device == "stax":
+                instructions = [
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ]
+            else:
+                instructions = [
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ]
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                            test_name,
                                            instructions)
@@ -97,13 +105,21 @@ def test_clear_sign_deploy_v1(firmware, backend, navigator, test_name):
                                                     ROOT_SCREENSHOT_PATH,
                                                     test_name)
         else:
-            instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
+            if firmware.device == "stax":
+                instructions = [
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ]
+            else:
+                instructions = [
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ]
             navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                            test_name,
                                            instructions)
