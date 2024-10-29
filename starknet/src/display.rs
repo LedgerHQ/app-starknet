@@ -197,68 +197,20 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let accept = if is_tx_hash {
-            let page_0 = Page::new(
-                PageStyle::PictureNormal,
-                ["This transaction ", "cannot be trusted"],
-                Some(&WARNING),
-            );
-            let page_1 = Page::new(
-                PageStyle::PictureNormal,
-                ["Your Ledger cannot ", "decode this transaction."],
-                Some(&WARNING),
-            );
-            let page_2 = Page::new(
-                PageStyle::PictureNormal,
-                ["If you sign it, you", "could be authorizing"],
-                Some(&WARNING),
-            );
-            let page_3 = Page::new(
-                PageStyle::PictureNormal,
-                ["malicious actions that", "can drain your wallet."],
-                Some(&WARNING),
-            );
+        let page = Page::new(PageStyle::PictureBold, ["Blind", "Signing"], Some(&WARNING));
+        clear_screen();
+        page.place_and_wait();
 
-            clear_screen();
-            page_0.place_and_wait();
-            clear_screen();
-            page_1.place_and_wait();
-            clear_screen();
-            page_2.place_and_wait();
-            clear_screen();
-            page_3.place_and_wait();
-
-            let warning_accept = MultiFieldReview::new(
-                &[],
-                &["I understand the risk"],
-                Some(&EYE),
-                "Accept",
-                Some(&VALIDATE_14),
-                "Reject",
-                Some(&CROSSMARK),
-            );
-
-            warning_accept.show()
-        } else {
-            true
-        };
-
-        match accept {
-            false => false,
-            true => {
-                let my_review = MultiFieldReview::new(
-                    &my_field,
-                    &["Confirm Hash to sign"],
-                    Some(&EYE),
-                    "Approve",
-                    Some(&VALIDATE_14),
-                    "Reject",
-                    Some(&CROSSMARK),
-                );
-
-                my_review.show()
-            }
-        }
+        let my_review = MultiFieldReview::new(
+            &my_field,
+            &["Confirm Hash to sign"],
+            Some(&EYE),
+            "Approve",
+            Some(&VALIDATE_14),
+            "Reject",
+            Some(&CROSSMARK),
+        );
+        my_review.show()
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
