@@ -105,9 +105,8 @@ const SIG_LENGTH: u8 = 0x41;
 fn send_data(comm: &mut io::Comm, data: Result<Option<Vec<u8>>, Reply>) {
     match data {
         Ok(data) => {
-            match data {
-                Some(data) => comm.append(data.as_slice()),
-                None => (),
+            if let Some(data) = data {
+                comm.append(data.as_slice())
             }
             comm.reply_ok();
         }
