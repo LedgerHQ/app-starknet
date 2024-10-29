@@ -102,10 +102,13 @@ use ledger_device_sdk::io::Reply;
 
 const SIG_LENGTH: u8 = 0x41;
 
-fn send_data(comm: &mut io::Comm, data: Result<Vec<u8>, Reply>) {
+fn send_data(comm: &mut io::Comm, data: Result<Option<Vec<u8>>, Reply>) {
     match data {
         Ok(data) => {
-            comm.append(data.as_slice());
+            match data {
+                Some(data) => comm.append(data.as_slice()),
+                None => (),
+            }
             comm.reply_ok();
         }
         Err(sw) => comm.reply(sw),
@@ -129,7 +132,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
             rdata.extend_from_slice([version_major, version_minor, version_patch].as_slice());
 
-            send_data(comm, Ok(rdata));
+            send_data(comm, Ok(Some(rdata)));
         }
         Ins::GetPubkey { display } => {
             ctx.reset();
@@ -161,7 +164,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                             };
                             if ret {
                                 rdata.extend_from_slice(key.as_ref());
-                                send_data(comm, Ok(rdata));
+                                send_data(comm, Ok(Some(rdata)));
                             } else {
                                 send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                             }
@@ -188,7 +191,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
                     match crypto::set_derivation_path(&mut data, ctx) {
                         Ok(()) => {
-                            send_data(comm, Ok(Vec::new()));
+                            send_data(comm, Ok(None));
                         }
                         Err(e) => {
                             send_data(comm, Err(e.into()));
@@ -209,7 +212,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                 rdata.extend_from_slice(ctx.hash.r.as_ref());
                                 rdata.extend_from_slice(ctx.hash.s.as_ref());
                                 rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                send_data(comm, Ok(rdata));
+                                send_data(comm, Ok(Some(rdata)));
                                 display::show_status(true, false, ctx);
                             }
                             false => {
@@ -240,7 +243,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
                     match crypto::set_derivation_path(&mut data, ctx) {
                         Ok(()) => {
-                            send_data(comm, Ok(Vec::new()));
+                            send_data(comm, Ok(None));
                         }
                         Err(e) => {
                             send_data(comm, Err(e.into()));
@@ -249,20 +252,20 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
                 1 => {
                     transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 2 => {
                     transaction::set_paymaster_data(data, p2, &mut ctx.tx);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 3 => {
                     transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 4 => {
                     let nb_calls: u8 = FieldElement::from(data).into();
                     transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 5 => {
                     if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
@@ -283,7 +286,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(rdata));
+                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
                                 }
                                 false => {
@@ -307,7 +310,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                             rdata.extend_from_slice(ctx.hash.r.as_ref());
                                             rdata.extend_from_slice(ctx.hash.s.as_ref());
                                             rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                            send_data(comm, Ok(rdata));
+                                            send_data(comm, Ok(Some(rdata)));
                                             display::show_status(true, true, ctx);
                                         }
                                         false => {
@@ -322,7 +325,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                             }
                         }
                     } else {
-                        send_data(comm, Ok(Vec::new()));
+                        send_data(comm, Ok(None));
                     }
                 }
                 _ => {
@@ -349,7 +352,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
                     match crypto::set_derivation_path(&mut data, ctx) {
                         Ok(()) => {
-                            send_data(comm, Ok(Vec::new()));
+                            send_data(comm, Ok(None));
                         }
                         Err(e) => {
                             send_data(comm, Err(e.into()));
@@ -358,12 +361,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
                 1 => {
                     transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 2 => {
                     let nb_calls: u8 = FieldElement::from(data).into();
                     transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 3 => {
                     if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
@@ -384,7 +387,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(rdata));
+                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
                                 }
                                 false => {
@@ -408,7 +411,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                             rdata.extend_from_slice(ctx.hash.r.as_ref());
                                             rdata.extend_from_slice(ctx.hash.s.as_ref());
                                             rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                            send_data(comm, Ok(rdata));
+                                            send_data(comm, Ok(Some(rdata)));
                                             display::show_status(true, true, ctx);
                                         }
                                         false => {
@@ -423,7 +426,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                             }
                         }
                     } else {
-                        send_data(comm, Ok(Vec::new()));
+                        send_data(comm, Ok(None));
                     }
                 }
                 _ => {
@@ -450,7 +453,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
                     match crypto::set_derivation_path(&mut data, ctx) {
                         Ok(()) => {
-                            send_data(comm, Ok(Vec::new()));
+                            send_data(comm, Ok(None));
                         }
                         Err(e) => {
                             send_data(comm, Err(e.into()));
@@ -459,20 +462,20 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
                 1 => {
                     transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 2 => {
                     transaction::set_tx_fees(data, &mut ctx.tx);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 3 => {
                     transaction::set_paymaster_data(data, p2, &mut ctx.tx);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 4 => {
                     let constructor_calldata_length: u8 = FieldElement::from(data).into();
                     transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 5 => {
                     if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
@@ -491,7 +494,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(rdata));
+                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
                                 }
                                 false => {
@@ -504,7 +507,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                             }
                         }
                     } else {
-                        send_data(comm, Ok(Vec::new()));
+                        send_data(comm, Ok(None));
                     }
                 }
                 _ => {
@@ -531,7 +534,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
                     match crypto::set_derivation_path(&mut data, ctx) {
                         Ok(()) => {
-                            send_data(comm, Ok(Vec::new()));
+                            send_data(comm, Ok(None));
                         }
                         Err(e) => {
                             send_data(comm, Err(e.into()));
@@ -540,16 +543,16 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
                 1 => {
                     transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 2 => {
                     transaction::set_tx_fees(data, &mut ctx.tx);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 3 => {
                     let constructor_calldata_length: u8 = FieldElement::from(data).into();
                     transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
-                    send_data(comm, Ok(Vec::new()));
+                    send_data(comm, Ok(None));
                 }
                 4 => {
                     if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
@@ -568,7 +571,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(rdata));
+                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
                                 }
                                 false => {
@@ -581,7 +584,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                             }
                         }
                     } else {
-                        send_data(comm, Ok(Vec::new()));
+                        send_data(comm, Ok(None));
                     }
                 }
                 _ => {
