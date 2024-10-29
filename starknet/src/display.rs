@@ -57,7 +57,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
             let my_fields = [
                 Field {
-                    name: "Deployed account",
+                    name: "Deploy account",
                     value: contract_address.as_str(),
                 },
                 Field {
