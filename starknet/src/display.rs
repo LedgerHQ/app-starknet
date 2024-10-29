@@ -17,7 +17,6 @@ use ledger_device_sdk::ui::{
     },
 };
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 use crate::settings::Settings;
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
@@ -399,6 +398,40 @@ fn about_ui(comm: &mut Comm) -> Event<Ins> {
 }
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+fn settings_ui(comm: &mut Comm) -> Event<Ins> {
+    {
+        let settings: Settings = Default::default();
+        let mut bs_enabled: bool = settings.get_element(0) != 0;
+        let mut bs_status = if bs_enabled { "Enabled" } else { "Disabled" };
+
+        loop {
+            let pages = [
+                &Page::from((["Blind Signing", bs_status], true)),
+                &Page::from(("Back", &BACK)),
+            ];
+            match MultiPageMenu::new(comm, &pages).show() {
+                EventOrPageIndex::Event(e) => return e,
+                EventOrPageIndex::Index(0) => {
+                    bs_enabled = !bs_enabled;
+                    match bs_enabled {
+                        true => {
+                            settings.set_element(0, 1);
+                            bs_status = "Enabled";
+                        }
+                        false => {
+                            settings.set_element(0, 0);
+                            bs_status = "Disabled";
+                        }
+                    }
+                }
+                EventOrPageIndex::Index(1) => return main_ui(comm),
+                EventOrPageIndex::Index(_) => (),
+            }
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
     const APP_ICON: Glyph = Glyph::from_include(include_gif!("starknet_small.gif"));
     let pages = [
@@ -406,14 +439,16 @@ pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
         // without having to use the new() function.
         &Page::from((["Starknet", "is ready"], &APP_ICON)),
         &Page::from((["Version", env!("CARGO_PKG_VERSION")], true)),
+        &Page::from(("Settings", &EYE)),
         &Page::from(("About", &CERTIFICATE)),
         &Page::from(("Quit", &DASHBOARD_X)),
     ];
     loop {
         match MultiPageMenu::new(comm, &pages).show() {
             EventOrPageIndex::Event(e) => return e,
-            EventOrPageIndex::Index(2) => return about_ui(comm),
-            EventOrPageIndex::Index(3) => ledger_device_sdk::exit_app(0),
+            EventOrPageIndex::Index(2) => return settings_ui(comm),
+            EventOrPageIndex::Index(3) => return about_ui(comm),
+            EventOrPageIndex::Index(4) => ledger_device_sdk::exit_app(0),
             EventOrPageIndex::Index(_) => (),
         }
     }
@@ -438,20 +473,33 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
         .settings(settings.get_mut(), &settings_strings)
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
-    let choice = NbglChoice::new().show(
-        "This transaction cannot be clear-signed",
-        "Enable blind-signing in the settings to sign this transaction",
-        "Go to settings",
-        "Reject transaction",
-    );
-    if choice {
-        ctx.home.set_start_page(PageIndex::Settings(0));
-        ctx.home.show_and_return();
-        ctx.home.set_start_page(PageIndex::Home);
-    } else {
-        ctx.home.show_and_return();
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        let page = Page::new(
+            PageStyle::PictureNormal,
+            ["Blind signing must ", "be enabled in Settings"],
+            Some(&CROSSMARK),
+        );
+
+        clear_screen();
+        page.place_and_wait();
+    }
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        let choice = NbglChoice::new().show(
+            "This transaction cannot be clear-signed",
+            "Enable blind-signing in the settings to sign this transaction",
+            "Go to settings",
+            "Reject transaction",
+        );
+        if choice {
+            ctx.home.set_start_page(PageIndex::Settings(0));
+            ctx.home.show_and_return();
+            ctx.home.set_start_page(PageIndex::Home);
+        } else {
+            ctx.home.show_and_return();
+        }
     }
 }
 

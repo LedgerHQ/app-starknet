@@ -30,7 +30,16 @@ def get_setting_position(firmware: Firmware, setting_idx: int, per_page: int) ->
 def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
 
     # Enable blind siging in settings
-    if not firmware.device.startswith("nano"):
+    if firmware.device.startswith("nano"):
+
+        instructions = [
+            NavInsID.RIGHT_CLICK,
+            NavInsID.RIGHT_CLICK,
+            NavInsID.BOTH_CLICK,
+            NavInsID.BOTH_CLICK
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    else:
         settings_per_page = 3 if firmware == Firmware.STAX else 2
         instructions = [
             NavInsID.USE_CASE_HOME_SETTINGS,
@@ -106,8 +115,17 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
 
 def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
 
-    # Enable blind siging in settings
-    if not firmware.device.startswith("nano"):
+     # Enable blind siging in settings
+    if firmware.device.startswith("nano"):
+
+        instructions = [
+            NavInsID.RIGHT_CLICK,
+            NavInsID.RIGHT_CLICK,
+            NavInsID.BOTH_CLICK,
+            NavInsID.BOTH_CLICK
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    else:
         settings_per_page = 3 if firmware == Firmware.STAX else 2
         instructions = [
             NavInsID.USE_CASE_HOME_SETTINGS,
@@ -183,8 +201,17 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
 
 def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
 
-    # Enable blind siging in settings
-    if not firmware.device.startswith("nano"):
+     # Enable blind siging in settings
+    if firmware.device.startswith("nano"):
+
+        instructions = [
+            NavInsID.RIGHT_CLICK,
+            NavInsID.RIGHT_CLICK,
+            NavInsID.BOTH_CLICK,
+            NavInsID.BOTH_CLICK
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    else:
         settings_per_page = 3 if firmware == Firmware.STAX else 2
         instructions = [
             NavInsID.USE_CASE_HOME_SETTINGS,
@@ -260,8 +287,17 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
 
 def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
 
-    # Enable blind siging in settings
-    if not firmware.device.startswith("nano"):
+     # Enable blind siging in settings
+    if firmware.device.startswith("nano"):
+
+        instructions = [
+            NavInsID.RIGHT_CLICK,
+            NavInsID.RIGHT_CLICK,
+            NavInsID.BOTH_CLICK,
+            NavInsID.BOTH_CLICK
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    else:
         settings_per_page = 3 if firmware == Firmware.STAX else 2
         instructions = [
             NavInsID.USE_CASE_HOME_SETTINGS,
@@ -337,8 +373,17 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
 
 def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
 
-    # Enable blind siging in settings
-    if not firmware.device.startswith("nano"):
+     # Enable blind siging in settings
+    if firmware.device.startswith("nano"):
+
+        instructions = [
+            NavInsID.RIGHT_CLICK,
+            NavInsID.RIGHT_CLICK,
+            NavInsID.BOTH_CLICK,
+            NavInsID.BOTH_CLICK
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    else:
         settings_per_page = 3 if firmware == Firmware.STAX else 2
         instructions = [
             NavInsID.USE_CASE_HOME_SETTINGS,

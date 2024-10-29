@@ -16,7 +16,6 @@ use context::{Ctx, DeployAccountTransaction, InvokeTransaction, RequestType, Tra
 use ledger_device_sdk::io;
 use types::FieldElement;
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 use settings::Settings;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
@@ -240,13 +239,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 }
                             },
                             None => {
-                                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                                {
-                                    let settings: Settings = Default::default();
-                                    if settings.get_element(0) == 0 {
-                                        display::blind_signing_enable_ui(ctx);
-                                        return Err(io::StatusWords::UserCancelled.into());
-                                    }
+                                let settings: Settings = Default::default();
+                                if settings.get_element(0) == 0 {
+                                    display::blind_signing_enable_ui(ctx);
+                                    return Err(io::StatusWords::UserCancelled.into());
                                 }
                                 display::show_pending();
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
@@ -319,13 +315,10 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) -> Result<Vec<u8>,
                                 }
                             },
                             None => {
-                                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                                {
-                                    let settings: Settings = Default::default();
-                                    if settings.get_element(0) == 0 {
-                                        display::blind_signing_enable_ui(ctx);
-                                        return Err(io::StatusWords::UserCancelled.into());
-                                    }
+                                let settings: Settings = Default::default();
+                                if settings.get_element(0) == 0 {
+                                    display::blind_signing_enable_ui(ctx);
+                                    return Err(io::StatusWords::UserCancelled.into());
                                 }
                                 display::show_pending();
                                 ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
