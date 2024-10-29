@@ -223,17 +223,16 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
         if is_tx_hash {
             review = review
                 .tx_type(TransactionType::Transaction)
-                .titles("Review", "Transaction", "Sign Transaction")
+                .titles("Review transaction", "", "Sign Transaction ?")
                 .blind();
         } else {
             review = review
                 .tx_type(TransactionType::Message)
-                .titles("Review", "Hash", "Sign Hash")
+                .titles("Review hash", "", "Sign Hash ?")
                 .blind();
         }
 
-        let res = review.show(&my_field);
-        res
+        review.show(&my_field)
     }
 }
 
