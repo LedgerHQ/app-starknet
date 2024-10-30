@@ -17,13 +17,12 @@ use ledger_device_sdk::ui::{
     },
 };
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 use crate::settings::Settings;
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglChoice, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent,
-    NbglReview, NbglReviewStatus, NbglStatus, PageIndex, TagValueConfirm, TagValueList,
-    TransactionType, TuneIndex,
+    NbglReview, NbglReviewStatus, NbglSpinner, NbglStatus, PageIndex, StatusType, TagValueConfirm,
+    TagValueList, TransactionType, TuneIndex,
 };
 
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
@@ -58,7 +57,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
             let my_fields = [
                 Field {
-                    name: "Deployed account",
+                    name: "Deploy account",
                     value: contract_address.as_str(),
                 },
                 Field {
@@ -92,7 +91,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
                 let review = NbglReview::new()
                     .tx_type(TransactionType::Transaction)
-                    .titles("Review", "Transaction", "Sign Transaction")
+                    .titles("Review transaction", "", "Sign Transaction ?")
                     .glyph(&APP_ICON);
 
                 Some(review.show(&my_fields))
@@ -172,7 +171,7 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 
                         let review = NbglReview::new()
                             .tx_type(TransactionType::Transaction)
-                            .titles("Review", "Transaction", "Sign Transaction")
+                            .titles("Review transaction", "", "Sign Transaction ?")
                             .glyph(&APP_ICON);
 
                         Some(review.show(&my_fields))
@@ -198,68 +197,20 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let accept = if is_tx_hash {
-            let page_0 = Page::new(
-                PageStyle::PictureNormal,
-                ["This transaction ", "cannot be trusted"],
-                Some(&WARNING),
-            );
-            let page_1 = Page::new(
-                PageStyle::PictureNormal,
-                ["Your Ledger cannot ", "decode this transaction."],
-                Some(&WARNING),
-            );
-            let page_2 = Page::new(
-                PageStyle::PictureNormal,
-                ["If you sign it, you", "could be authorizing"],
-                Some(&WARNING),
-            );
-            let page_3 = Page::new(
-                PageStyle::PictureNormal,
-                ["malicious actions that", "can drain your wallet."],
-                Some(&WARNING),
-            );
+        let page = Page::new(PageStyle::PictureBold, ["Blind", "Signing"], Some(&WARNING));
+        clear_screen();
+        page.place_and_wait();
 
-            clear_screen();
-            page_0.place_and_wait();
-            clear_screen();
-            page_1.place_and_wait();
-            clear_screen();
-            page_2.place_and_wait();
-            clear_screen();
-            page_3.place_and_wait();
-
-            let warning_accept = MultiFieldReview::new(
-                &[],
-                &["I understand the risk"],
-                Some(&EYE),
-                "Accept",
-                Some(&VALIDATE_14),
-                "Reject",
-                Some(&CROSSMARK),
-            );
-
-            warning_accept.show()
-        } else {
-            true
-        };
-
-        match accept {
-            false => false,
-            true => {
-                let my_review = MultiFieldReview::new(
-                    &my_field,
-                    &["Confirm Hash to sign"],
-                    Some(&EYE),
-                    "Approve",
-                    Some(&VALIDATE_14),
-                    "Reject",
-                    Some(&CROSSMARK),
-                );
-
-                my_review.show()
-            }
-        }
+        let my_review = MultiFieldReview::new(
+            &my_field,
+            &["Confirm Hash to sign"],
+            Some(&EYE),
+            "Approve",
+            Some(&VALIDATE_14),
+            "Reject",
+            Some(&CROSSMARK),
+        );
+        my_review.show()
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
@@ -272,46 +223,44 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
         if is_tx_hash {
             review = review
                 .tx_type(TransactionType::Transaction)
-                .titles("Review", "Transaction", "Sign Transaction")
+                .titles("Review transaction", "", "Sign Transaction ?")
                 .blind();
         } else {
             review = review
                 .tx_type(TransactionType::Message)
-                .titles("Review", "Hash", "Sign Hash")
+                .titles("Review hash", "", "Sign Hash ?")
                 .blind();
         }
 
-        let res = review.show(&my_field);
-        ctx.home.show_and_return();
-        res
+        review.show(&my_field)
     }
 }
 
 pub fn show_pending() {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let page_0 = Page::new(
-            PageStyle::BoldNormal,
-            ["Processing ", "Transaction..."],
-            None,
-        );
+        let page_0 = Page::new(PageStyle::BoldNormal, ["Computing ", "Tx Hash..."], None);
         clear_screen();
         page_0.place();
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let spinner = NbglStatus::new();
-        spinner.text("Processing Transaction...").show(true);
+        let spinner = NbglSpinner::new();
+        spinner.text("Computing Tx Hash...").show();
     }
 }
 
 #[allow(unused_variables)]
-pub fn show_status(flag: bool, ctx: &mut Ctx) {
+pub fn show_status(flag: bool, is_tx: bool, ctx: &mut Ctx) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
+        let msg = match is_tx {
+            true => "Transaction ",
+            false => "Message ",
+        };
         let content = match flag {
-            true => ["Transaction ", "signed"],
-            false => ["Transaction ", "rejected"],
+            true => [msg, "signed"],
+            false => [msg, "rejected"],
         };
         let page_0 = Page::new(PageStyle::BoldNormal, content, None);
         clear_screen();
@@ -319,7 +268,10 @@ pub fn show_status(flag: bool, ctx: &mut Ctx) {
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let status = NbglReviewStatus::new();
+        let status = match is_tx {
+            true => NbglReviewStatus::new().status_type(StatusType::Transaction),
+            false => NbglReviewStatus::new().status_type(StatusType::Message),
+        };
         status.show(flag);
         ctx.home.show_and_return();
     }
@@ -399,6 +351,40 @@ fn about_ui(comm: &mut Comm) -> Event<Ins> {
 }
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+fn settings_ui(comm: &mut Comm) -> Event<Ins> {
+    {
+        let settings: Settings = Default::default();
+        let mut bs_enabled: bool = settings.get_element(0) != 0;
+        let mut bs_status = if bs_enabled { "Enabled" } else { "Disabled" };
+
+        loop {
+            let pages = [
+                &Page::from((["Blind Signing", bs_status], true)),
+                &Page::from(("Back", &BACK)),
+            ];
+            match MultiPageMenu::new(comm, &pages).show() {
+                EventOrPageIndex::Event(e) => return e,
+                EventOrPageIndex::Index(0) => {
+                    bs_enabled = !bs_enabled;
+                    match bs_enabled {
+                        true => {
+                            settings.set_element(0, 1);
+                            bs_status = "Enabled";
+                        }
+                        false => {
+                            settings.set_element(0, 0);
+                            bs_status = "Disabled";
+                        }
+                    }
+                }
+                EventOrPageIndex::Index(1) => return main_ui(comm),
+                EventOrPageIndex::Index(_) => (),
+            }
+        }
+    }
+}
+
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
 pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
     const APP_ICON: Glyph = Glyph::from_include(include_gif!("starknet_small.gif"));
     let pages = [
@@ -406,14 +392,16 @@ pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
         // without having to use the new() function.
         &Page::from((["Starknet", "is ready"], &APP_ICON)),
         &Page::from((["Version", env!("CARGO_PKG_VERSION")], true)),
+        &Page::from(("Settings", &EYE)),
         &Page::from(("About", &CERTIFICATE)),
         &Page::from(("Quit", &DASHBOARD_X)),
     ];
     loop {
         match MultiPageMenu::new(comm, &pages).show() {
             EventOrPageIndex::Event(e) => return e,
-            EventOrPageIndex::Index(2) => return about_ui(comm),
-            EventOrPageIndex::Index(3) => ledger_device_sdk::exit_app(0),
+            EventOrPageIndex::Index(2) => return settings_ui(comm),
+            EventOrPageIndex::Index(3) => return about_ui(comm),
+            EventOrPageIndex::Index(4) => ledger_device_sdk::exit_app(0),
             EventOrPageIndex::Index(_) => (),
         }
     }
@@ -424,7 +412,7 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
     // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-    let settings_strings = [["Enable Blind signing", "Allow blind signing"]];
+    let settings_strings = [["Blind signing", "Enable transaction blind signing"]];
     let mut settings: Settings = Default::default();
 
     // Display the home screen.
@@ -438,20 +426,34 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
         .settings(settings.get_mut(), &settings_strings)
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[allow(unused_variables)]
 pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
-    let choice = NbglChoice::new().show(
-        "This transaction cannot be clear-signed",
-        "Enable blind-signing in the settings to sign this transaction",
-        "Go to settings",
-        "Reject transaction",
-    );
-    if choice {
-        ctx.home.set_start_page(PageIndex::Settings(0));
-        ctx.home.show_and_return();
-        ctx.home.set_start_page(PageIndex::Home);
-    } else {
-        ctx.home.show_and_return();
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        let page = Page::new(
+            PageStyle::PictureNormal,
+            ["Blind signing must ", "be enabled in Settings"],
+            Some(&CROSSMARK),
+        );
+
+        clear_screen();
+        page.place_and_wait();
+    }
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        let choice = NbglChoice::new().show(
+            "This transaction cannot be clear-signed",
+            "Enable blind-signing in the settings to sign this transaction",
+            "Go to settings",
+            "Reject transaction",
+        );
+        if choice {
+            ctx.home.set_start_page(PageIndex::Settings(0));
+            ctx.home.show_and_return();
+            ctx.home.set_start_page(PageIndex::Home);
+        } else {
+            ctx.home.show_and_return();
+        }
     }
 }
 
