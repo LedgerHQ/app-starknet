@@ -211,12 +211,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                 rdata.extend_from_slice(ctx.hash.r.as_ref());
                                 rdata.extend_from_slice(ctx.hash.s.as_ref());
                                 rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                send_data(comm, Ok(Some(rdata)));
                                 display::show_status(true, false, ctx);
+                                send_data(comm, Ok(Some(rdata)));
                             }
                             false => {
-                                send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 display::show_status(false, false, ctx);
+                                send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                             }
                         }
                     }
@@ -285,12 +285,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
                                 }
                                 false => {
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                     display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
                             None => {
@@ -309,15 +309,15 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                             rdata.extend_from_slice(ctx.hash.r.as_ref());
                                             rdata.extend_from_slice(ctx.hash.s.as_ref());
                                             rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                            send_data(comm, Ok(Some(rdata)));
                                             display::show_status(true, true, ctx);
+                                            send_data(comm, Ok(Some(rdata)));
                                         }
                                         false => {
+                                            display::show_status(false, true, ctx);
                                             send_data(
                                                 comm,
                                                 Err(io::StatusWords::UserCancelled.into()),
                                             );
-                                            display::show_status(false, true, ctx);
                                         }
                                     }
                                 }
@@ -386,12 +386,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
                                 }
                                 false => {
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                     display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
                             None => {
@@ -410,15 +410,15 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                             rdata.extend_from_slice(ctx.hash.r.as_ref());
                                             rdata.extend_from_slice(ctx.hash.s.as_ref());
                                             rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                            send_data(comm, Ok(Some(rdata)));
                                             display::show_status(true, true, ctx);
+                                            send_data(comm, Ok(Some(rdata)));
                                         }
                                         false => {
+                                            display::show_status(false, true, ctx);
                                             send_data(
                                                 comm,
                                                 Err(io::StatusWords::UserCancelled.into()),
                                             );
-                                            display::show_status(false, true, ctx);
                                         }
                                     }
                                 }
@@ -493,12 +493,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
                                 }
                                 false => {
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                     display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
                             None => {
@@ -570,12 +570,12 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     rdata.extend_from_slice(ctx.hash.r.as_ref());
                                     rdata.extend_from_slice(ctx.hash.s.as_ref());
                                     rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    send_data(comm, Ok(Some(rdata)));
                                     display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
                                 }
                                 false => {
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                     display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
                             None => {
