@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = "1.18.1"
-ledger_secure_sdk_sys = { version = "1.5.1", features = ["heap"]}
+ledger_device_sdk = "1.19.1"
+ledger_secure_sdk_sys = { version = "1.6.1", features = ["heap"]}
 include_gif = "1.2.0"
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
@@ -34,3 +34,5 @@ icon = "starknet_32x32.gif"
 [package.metadata.ledger.flex]
 icon = "starknet_40x40.gif"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))'] }

@@ -20,25 +20,25 @@ impl Settings {
     #[inline(never)]
     #[allow(unused)]
     pub fn get_mut(&mut self) -> &mut AtomicStorage<[u8; SETTINGS_SIZE]> {
-        return unsafe { DATA.get_mut() };
+        return unsafe { (*(&raw mut DATA)).get_mut() };
     }
 
     #[inline(never)]
     #[allow(unused)]
     pub fn get_ref(&mut self) -> &AtomicStorage<[u8; SETTINGS_SIZE]> {
-        return unsafe { DATA.get_ref() };
+        return unsafe { (*(&raw const DATA)).get_ref() };
     }
 
     #[allow(unused)]
     pub fn get_element(&self, index: usize) -> u8 {
-        let storage = unsafe { DATA.get_ref() };
+        let storage = unsafe { (*(&raw const DATA)).get_ref() };
         let settings = storage.get_ref();
         settings[index]
     }
 
     #[allow(unused)]
     pub fn set_element(&self, index: usize, value: u8) {
-        let storage = unsafe { DATA.get_mut() };
+        let storage = unsafe { (*(&raw mut DATA)).get_mut() };
         let mut updated_data = *storage.get_ref();
         updated_data[index] = value;
         unsafe {

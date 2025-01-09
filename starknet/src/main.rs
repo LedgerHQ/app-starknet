@@ -102,6 +102,8 @@ use ledger_device_sdk::io::Reply;
 
 const SIG_LENGTH: u8 = 0x41;
 
+const HASH_TX: &str = "Computing Tx Hash";
+
 fn send_data(comm: &mut io::Comm, data: Result<Option<Vec<u8>>, Reply>) {
     match data {
         Ok(data) => {
@@ -277,7 +279,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
-                                    display::show_pending();
+                                    display::show_pending(HASH_TX);
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -299,7 +301,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     display::blind_signing_enable_ui(ctx);
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 } else {
-                                    display::show_pending();
+                                    display::show_pending(HASH_TX);
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     match display::show_hash(ctx, true) {
                                         true => {
@@ -378,7 +380,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
-                                    display::show_pending();
+                                    display::show_pending(HASH_TX);
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -400,7 +402,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     display::blind_signing_enable_ui(ctx);
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 } else {
-                                    display::show_pending();
+                                    display::show_pending(HASH_TX);
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     match display::show_hash(ctx, true) {
                                         true => {
@@ -485,7 +487,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
-                                    display::show_pending();
+                                    display::show_pending(HASH_TX);
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -562,7 +564,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
-                                    display::show_pending();
+                                    display::show_pending(HASH_TX);
                                     ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
                                     rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();

@@ -1,0 +1,148 @@
+{
+    "url": "",
+    "version": 3,
+    "sender_address": "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+    "tip": "0",
+    "l1_gas_bounds": "0x00004C315F474153000000000000000000000000000000000000000000000000",
+    "l2_gas_bounds": "0x00004C325F474153000000000000000000000000000000000000000000000000",
+    "paymaster_data": [],
+    "chain_id": "0x534e5f4d41494e",
+    "nonce": "1",
+    "data_availability_mode": "0",
+    "account_deployment_data": [], 
+    "calls": [
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "mint",
+            "calldata": [
+                "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+                "0x00000000000000000000000000000000000000000000000000000000000003e8"
+            ]
+        },
+        {
+            "to": "0x0783e6b26807e9906b084b07cc2fcbb74ab1aec1621b3c7bd7b985c201ff32e5",
+            "entrypoint": "l2",
+            "calldata": [
+                "0x4c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
+                "0x7e70531745013da7d69b4f4a6f805466edb120d2a75241b462b2a575b2e5c85",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x18e2a9835344b",
+                "0x0",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "approve",
+            "selector": "0x0219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
+            "calldata": [
+                "0x1114c7103e12c2b2ecbd3a2472ba9c48ddcbf702b1c242dd570057e26212111",
+                "0x2386f26fc10000",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x01114c7103e12c2b2ecbd3a2472ba9c48ddcbf702b1c242dd570057e26212111",
+            "entrypoint": "swap",
+            "selector": "0x015543c3708653cda9d418b4ccd3be11368e40636c10c44b18cfe756b6d88b29",
+            "calldata": [
+                "0x71273c5c5780b4be42d9e6567b1b1a6934f43ab8abaf975c0c3da219fc4d040",
+                "0x1",
+                "0x2386f26fc10000",
+                "0x0",
+                "0x1",
+                "0x330054e958d20f2d04e7b",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "mint",
+            "calldata": [
+                "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+                "0x00000000000000000000000000000000000000000000000000000000000003e8"
+            ]
+        },
+        {
+            "to": "0x0783e6b26807e9906b084b07cc2fcbb74ab1aec1621b3c7bd7b985c201ff32e5",
+            "entrypoint": "l2",
+            "calldata": [
+                "0x4c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
+                "0x7e70531745013da7d69b4f4a6f805466edb120d2a75241b462b2a575b2e5c85",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x18e2a9835344b",
+                "0x0",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "mint",
+            "calldata": [
+                "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+                "0x00000000000000000000000000000000000000000000000000000000000003e8"
+            ]
+        },
+        {
+            "to": "0x0783e6b26807e9906b084b07cc2fcbb74ab1aec1621b3c7bd7b985c201ff32e5",
+            "entrypoint": "l2",
+            "calldata": [
+                "0x4c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
+                "0x7e70531745013da7d69b4f4a6f805466edb120d2a75241b462b2a575b2e5c85",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x18e2a9835344b",
+                "0x0",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "approve",
+            "selector": "0x0219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
+            "calldata": [
+                "0x1114c7103e12c2b2ecbd3a2472ba9c48ddcbf702b1c242dd570057e26212111",
+                "0x2386f26fc10000",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x01114c7103e12c2b2ecbd3a2472ba9c48ddcbf702b1c242dd570057e26212111",
+            "entrypoint": "swap",
+            "selector": "0x015543c3708653cda9d418b4ccd3be11368e40636c10c44b18cfe756b6d88b29",
+            "calldata": [
+                "0x71273c5c5780b4be42d9e6567b1b1a6934f43ab8abaf975c0c3da219fc4d040",
+                "0x1",
+                "0x2386f26fc10000",
+                "0x0",
+                "0x1",
+                "0x330054e958d20f2d04e7b",
+                "0x0"
+            ]
+        },
+        {
+            "to": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "entrypoint": "mint",
+            "calldata": [
+                "0x07e00d496e324876bbc8531f2d9a82bf154d1a04a50218ee74cdd372f75a551a",
+                "0x00000000000000000000000000000000000000000000000000000000000003e8"
+            ]
+        },
+        {
+            "to": "0x0783e6b26807e9906b084b07cc2fcbb74ab1aec1621b3c7bd7b985c201ff32e5",
+            "entrypoint": "l2",
+            "calldata": [
+                "0x4c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05",
+                "0x7e70531745013da7d69b4f4a6f805466edb120d2a75241b462b2a575b2e5c85",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x18e2a9835344b",
+                "0x0",
+                "0x0"
+            ]
+        }
+    ],
+    "dpath": "m/2645'/1195502025'/1148870696'/0'/0'/0"
+}

@@ -1,3 +1,4 @@
+//use alloc::format;
 use ledger_device_sdk::ecc::{ECPublicKey, SeedDerive, Stark256};
 use ledger_device_sdk::io::{Reply, SyscallError};
 
@@ -35,7 +36,10 @@ pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
     {
         Ok(s) => {
             let der = s.0;
-            convert_der_to_rs(&der[..], &mut ctx.hash.r, &mut ctx.hash.s).unwrap();
+            match convert_der_to_rs(&der[..], &mut ctx.hash.r, &mut ctx.hash.s) {
+                Ok(_) => (),
+                Err(_err) => return Err(CryptoError::Sign),
+            }
             ctx.hash.v = s.2 as u8;
             Ok(())
         }
@@ -75,21 +79,21 @@ pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(), CryptoE
 }
 
 #[derive(Debug)]
-enum ConvertError<const R: usize, const S: usize> {
+enum ConvertError {
     /// The DER prefix (at index 0) found was different than the expected 0x30
-    InvalidDERPrefix(u8),
+    InvalidDERPrefix,
     /// The R marker was different than expected (0x02)
-    InvalidRMarker(u8),
+    InvalidRMarker,
     /// The encoded len for R was not the same as the expected
-    InvalidRLen(usize),
+    InvalidRLen,
     /// The S marker was different than expected (0x02)
-    InvalidSMarker(u8),
+    InvalidSMarker,
     /// The encoded len for S was not the same as the expected
-    InvalidSLen(usize),
+    InvalidSLen,
     /// Passed signature was too short to be read properly
     TooShort,
     /// Passed signature encoded payload len was not in the expected range
-    InvalidPayloadLen(usize, usize, usize),
+    InvalidPayloadLen,
 }
 
 /// Converts a DER encoded signature into a (r, s) encoded signture
@@ -97,7 +101,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     sig: &[u8],
     out_r: &mut [u8; R],
     out_s: &mut [u8; S],
-) -> Result<(), ConvertError<R, S>> {
+) -> Result<(), ConvertError> {
     const MINPAYLOADLEN: usize = 1;
     const PAYLOADLEN: usize = 32;
     const MAXPAYLOADLEN: usize = 33;
@@ -120,7 +124,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     //check DER prefix
     if sig[0] != 0x30 {
-        return Err(ConvertError::InvalidDERPrefix(sig[0]));
+        return Err(ConvertError::InvalidDERPrefix);
     }
 
     //check payload len size
@@ -128,11 +132,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     let min_payload_len = 2 + MINPAYLOADLEN + 2 + MINPAYLOADLEN;
     let max_payload_len = 2 + MAXPAYLOADLEN + 2 + MAXPAYLOADLEN;
     if payload_len < min_payload_len || payload_len > max_payload_len {
-        return Err(ConvertError::InvalidPayloadLen(
-            min_payload_len,
-            payload_len,
-            max_payload_len,
-        ));
+        return Err(ConvertError::InvalidPayloadLen);
     }
 
     //check that the input slice is at least as long as the encoded len
@@ -142,12 +142,12 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     //retrieve R
     if sig[2] != 0x02 {
-        return Err(ConvertError::InvalidRMarker(sig[2]));
+        return Err(ConvertError::InvalidRMarker);
     }
 
     let r_len = sig[3] as usize;
     if !payload_range.contains(&r_len) {
-        return Err(ConvertError::InvalidRLen(r_len));
+        return Err(ConvertError::InvalidRLen);
     }
 
     //sig[4], after DER, after Payload, after marker after len
@@ -155,12 +155,12 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     //retrieve S
     if sig[4 + r_len] != 0x02 {
-        return Err(ConvertError::InvalidSMarker(sig[4 + r_len]));
+        return Err(ConvertError::InvalidSMarker);
     }
 
     let s_len = sig[4 + r_len + 1] as usize;
     if !payload_range.contains(&s_len) {
-        return Err(ConvertError::InvalidSLen(s_len));
+        return Err(ConvertError::InvalidSLen);
     }
 
     //after r (4 + r_len), after marker, after len
@@ -199,15 +199,19 @@ fn invoke_tx_hash(tx: &InvokeTransaction) -> FieldElement {
             let mut hasher_calldata = pedersen::PedersenHasher::new();
             hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
             let mut calldata_len = 1u8;
-            tx.calls.iter().for_each(|c| {
-                hasher_calldata.update(c.to);
-                hasher_calldata.update(c.selector);
-                hasher_calldata.update(FieldElement::from(c.calldata.len() as u8));
+            tx.calls.iter().enumerate().for_each(|c| {
+                //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
+                //crate::display::show_pending(&s);
+                hasher_calldata.update(c.1.to);
+                hasher_calldata.update(c.1.selector);
+                hasher_calldata.update(FieldElement::from(c.1.calldata.len() as u8));
                 calldata_len += 3;
-                c.calldata.iter().for_each(|d| {
+                c.1.calldata.iter().for_each(|d| {
                     hasher_calldata.update(*d);
                     calldata_len += 1;
                 });
+                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                ledger_secure_sdk_sys::seph::heartbeat();
             });
             hasher_calldata.update(FieldElement::from(calldata_len));
             let hash_calldata = hasher_calldata.finalize();
@@ -254,11 +258,16 @@ fn invoke_tx_hash(tx: &InvokeTransaction) -> FieldElement {
             /* h(calldata) */
             let mut hasher_calldata = poseidon::PoseidonHasher::new();
             hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
-            tx.calls.iter().for_each(|c| {
-                hasher_calldata.update(c.to);
-                hasher_calldata.update(c.selector);
-                hasher_calldata.update(FieldElement::from(c.calldata.len() as u8));
-                c.calldata.iter().for_each(|d| hasher_calldata.update(*d));
+            tx.calls.iter().enumerate().for_each(|c| {
+                //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
+                //crate::display::show_pending(&s);
+                hasher_calldata.update(c.1.to);
+                hasher_calldata.update(c.1.selector);
+                hasher_calldata.update(FieldElement::from(c.1.calldata.len() as u8));
+                c.1.calldata.iter().for_each(|d| hasher_calldata.update(*d));
+
+                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                ledger_secure_sdk_sys::seph::heartbeat();
             });
             let hash_calldata = hasher_calldata.finalize();
 

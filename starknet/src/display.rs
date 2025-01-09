@@ -236,17 +236,21 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
     }
 }
 
-pub fn show_pending() {
+pub fn show_pending(text: &str) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let page_0 = Page::new(PageStyle::BoldNormal, ["Computing ", "Tx Hash..."], None);
+        let mut split = text.splitn(2, ' ');
+        let s1 = split.next().unwrap();
+        let s2 = split.next().unwrap();
+
+        let page_0 = Page::new(PageStyle::BoldNormal, [s1, s2], None);
         clear_screen();
         page_0.place();
     }
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
         let spinner = NbglSpinner::new();
-        spinner.text("Computing Tx Hash...").show();
+        spinner.text(text).show();
     }
 }
 
