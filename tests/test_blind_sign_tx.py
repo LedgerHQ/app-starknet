@@ -75,7 +75,6 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -156,7 +155,6 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -237,7 +235,6 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -318,7 +315,6 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -399,7 +395,6 @@ def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
                                               NavInsID.BOTH_CLICK])
         else:
             instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,            
                 NavInsID.CENTERED_FOOTER_TAP,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,

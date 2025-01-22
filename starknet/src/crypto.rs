@@ -1,11 +1,13 @@
-//use alloc::format;
 use ledger_device_sdk::ecc::{ECPublicKey, SeedDerive, Stark256};
 use ledger_device_sdk::io::{Reply, SyscallError};
 
 pub mod pedersen;
 pub mod poseidon;
 
-use crate::context::{Ctx, DeployAccountTransaction, InvokeTransaction, Transaction};
+use crate::context::{
+    Ctx, DeployAccountTransactionV1, DeployAccountTransactionV3, InvokeTransactionV1,
+    InvokeTransactionV3, Transaction,
+};
 use crate::types::FieldElement;
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
@@ -27,20 +29,25 @@ impl From<CryptoError> for Reply {
     }
 }
 
+pub trait HasherTrait: Sized {
+    fn update(&mut self, data: FieldElement);
+    fn finalize(self) -> FieldElement;
+}
+
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
-    poseidon::poseidon_shift(&mut ctx.hash.m_hash);
+    poseidon::poseidon_shift(&mut ctx.hash);
 
     match Stark256::derive_from_path(ctx.bip32_path.as_ref())
-        .deterministic_sign(ctx.hash.m_hash.value.as_ref())
+        .deterministic_sign(ctx.hash.value.as_ref())
     {
         Ok(s) => {
             let der = s.0;
-            match convert_der_to_rs(&der[..], &mut ctx.hash.r, &mut ctx.hash.s) {
+            match convert_der_to_rs(&der[..], &mut ctx.signature.r, &mut ctx.signature.s) {
                 Ok(_) => (),
                 Err(_err) => return Err(CryptoError::Sign),
             }
-            ctx.hash.v = s.2 as u8;
+            ctx.signature.v = s.2 as u8;
             Ok(())
         }
         Err(_) => Err(CryptoError::Sign),
@@ -175,178 +182,170 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     Ok(())
 }
 
-pub fn tx_hash(tx: &Transaction) -> FieldElement {
+#[allow(dead_code)]
+pub fn tx_hash(tx: &mut Transaction) -> FieldElement {
     match tx {
-        Transaction::Invoke(tx) => invoke_tx_hash(tx),
-        Transaction::DeployAccount(tx) => deploy_account_tx_hash(tx),
+        Transaction::InvokeV3(tx) => invoke_tx_hash_v3(tx),
+        Transaction::InvokeV1(tx) => invoke_tx_hash_v1(tx),
+        Transaction::DeployAccountV3(tx) => deploy_account_tx_hash_v3(tx),
+        Transaction::DeployAccountV1(tx) => deploy_account_tx_hash_v1(tx),
         Transaction::None => FieldElement::ZERO,
     }
 }
 
-fn invoke_tx_hash(tx: &InvokeTransaction) -> FieldElement {
-    match tx.version.into() {
-        1u8 => {
-            let mut hasher = pedersen::PedersenHasher::new();
-            /* "invoke" */
-            hasher.update(FieldElement::INVOKE);
-            /* version */
-            hasher.update(tx.version);
-            /* sender_address */
-            hasher.update(tx.sender_address);
-            /* 0 */
-            hasher.update(FieldElement::ZERO);
-            /* h(calldata) */
-            let mut hasher_calldata = pedersen::PedersenHasher::new();
-            hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
-            let mut calldata_len = 1u8;
-            tx.calls.iter().enumerate().for_each(|c| {
-                //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
-                //crate::display::show_pending(&s);
-                hasher_calldata.update(c.1.to);
-                hasher_calldata.update(c.1.selector);
-                hasher_calldata.update(FieldElement::from(c.1.calldata.len() as u8));
-                calldata_len += 3;
-                c.1.calldata.iter().for_each(|d| {
-                    hasher_calldata.update(*d);
-                    calldata_len += 1;
-                });
-                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-                ledger_secure_sdk_sys::seph::heartbeat();
-            });
-            hasher_calldata.update(FieldElement::from(calldata_len));
-            let hash_calldata = hasher_calldata.finalize();
-            hasher.update(hash_calldata);
-            /* max fee */
-            hasher.update(tx.max_fee);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
+#[allow(dead_code)]
+fn invoke_tx_hash_v3(tx: &mut InvokeTransactionV3) -> FieldElement {
+    /* "invoke" */
+    tx.hasher.update(FieldElement::INVOKE);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* sender_address */
+    tx.hasher.update(tx.sender_address);
+    /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+    let fee_hash =
+        poseidon::PoseidonStark252::hash_many(&[tx.tip, tx.l1_gas_bounds, tx.l2_gas_bounds]);
+    tx.hasher.update(fee_hash);
+    /* h(paymaster_data) */
+    let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
+    tx.hasher.update(paymaster_hash);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
+    /* data_availability_modes */
+    tx.hasher.update(tx.data_availability_mode);
+    /* h(account_deployment_data) */
+    let accound_deployment_data_hash =
+        poseidon::PoseidonStark252::hash_many(&tx.account_deployment_data);
+    tx.hasher.update(accound_deployment_data_hash);
+    /* h(calldata) */
+    tx.hasher_calldata
+        .update(FieldElement::from(tx.calls.len() as u8));
+    tx.calls.iter().enumerate().for_each(|c| {
+        //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
+        //crate::display::show_pending(&s);
+        tx.hasher_calldata.update(c.1.to);
+        tx.hasher_calldata.update(c.1.selector);
+        tx.hasher_calldata
+            .update(FieldElement::from(c.1.calldata.len() as u8));
+        c.1.calldata
+            .iter()
+            .for_each(|d| tx.hasher_calldata.update(*d));
 
-            hasher.update(FieldElement::from(8u8));
+        #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+        ledger_secure_sdk_sys::seph::heartbeat();
+    });
+    let hash_calldata = tx.hasher_calldata.finalize();
 
-            hasher.finalize()
-        }
-        3u8 => {
-            let mut hasher = poseidon::PoseidonHasher::new();
-            /* "invoke" */
-            hasher.update(FieldElement::INVOKE);
-            /* version */
-            hasher.update(tx.version);
-            /* sender_address */
-            hasher.update(tx.sender_address);
-            /* h(tip, l1_gas_bounds, l2_gas_bounds) */
-            let fee_hash = poseidon::PoseidonStark252::hash_many(&[
-                tx.tip,
-                tx.l1_gas_bounds,
-                tx.l2_gas_bounds,
-            ]);
-            hasher.update(fee_hash);
-            /* h(paymaster_data) */
-            let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
-            hasher.update(paymaster_hash);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
-            /* data_availability_modes */
-            hasher.update(tx.data_availability_mode);
-            /* h(account_deployment_data) */
-            let accound_deployment_data_hash =
-                poseidon::PoseidonStark252::hash_many(&tx.account_deployment_data);
-            hasher.update(accound_deployment_data_hash);
-            /* h(calldata) */
-            let mut hasher_calldata = poseidon::PoseidonHasher::new();
-            hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
-            tx.calls.iter().enumerate().for_each(|c| {
-                //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
-                //crate::display::show_pending(&s);
-                hasher_calldata.update(c.1.to);
-                hasher_calldata.update(c.1.selector);
-                hasher_calldata.update(FieldElement::from(c.1.calldata.len() as u8));
-                c.1.calldata.iter().for_each(|d| hasher_calldata.update(*d));
+    tx.hasher.update(hash_calldata);
 
-                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-                ledger_secure_sdk_sys::seph::heartbeat();
-            });
-            let hash_calldata = hasher_calldata.finalize();
-
-            hasher.update(hash_calldata);
-
-            hasher.finalize()
-        }
-        _ => panic!("Invalid version"),
-    }
+    tx.hasher.finalize()
 }
 
-fn deploy_account_tx_hash(tx: &DeployAccountTransaction) -> FieldElement {
-    match tx.version.into() {
-        1u8 => {
-            let mut hasher = pedersen::PedersenHasher::new();
-            /* "deploy_account" */
-            hasher.update(FieldElement::DEPLOY_ACCOUNT);
-            /* version */
-            hasher.update(tx.version);
-            /* contract_address */
-            hasher.update(tx.contract_address);
-            /* 0 */
-            hasher.update(FieldElement::ZERO);
-            /* h(class_hash, contract_address_salt, constructor_calldata) */
-            let mut hasher_temp = pedersen::PedersenHasher::new();
-            hasher_temp.update(tx.class_hash);
-            hasher_temp.update(tx.contract_address_salt);
-            for d in &tx.constructor_calldata {
-                hasher_temp.update(*d);
-            }
-            hasher_temp.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
-            let hash_temp = hasher_temp.finalize();
-            hasher.update(hash_temp);
-            /* max fee */
-            hasher.update(tx.max_fee);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
+#[allow(dead_code)]
+fn invoke_tx_hash_v1(tx: &mut InvokeTransactionV1) -> FieldElement {
+    /* "invoke" */
+    tx.hasher.update(FieldElement::INVOKE);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* sender_address */
+    tx.hasher.update(tx.sender_address);
+    /* 0 */
+    tx.hasher.update(FieldElement::ZERO);
+    /* h(calldata) */
+    tx.hasher_calldata
+        .update(FieldElement::from(tx.calls.len() as u8));
+    let mut calldata_len = 1u8;
+    tx.calls.iter().enumerate().for_each(|c| {
+        //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
+        //crate::display::show_pending(&s);
+        tx.hasher_calldata.update(c.1.to);
+        tx.hasher_calldata.update(c.1.selector);
+        tx.hasher_calldata
+            .update(FieldElement::from(c.1.calldata.len() as u8));
+        calldata_len += 3;
+        c.1.calldata.iter().for_each(|d| {
+            tx.hasher_calldata.update(*d);
+            calldata_len += 1;
+        });
+        #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+        ledger_secure_sdk_sys::seph::heartbeat();
+    });
+    tx.hasher_calldata.update(FieldElement::from(calldata_len));
+    let hash_calldata = tx.hasher_calldata.finalize();
+    tx.hasher.update(hash_calldata);
+    /* max fee */
+    tx.hasher.update(tx.max_fee);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
 
-            hasher.update(FieldElement::from(8u8));
+    tx.hasher.update(FieldElement::from(8u8));
 
-            hasher.finalize()
-        }
-        3u8 => {
-            let mut hasher = poseidon::PoseidonHasher::new();
-            /* "deploy_account" */
-            hasher.update(FieldElement::DEPLOY_ACCOUNT);
-            /* version */
-            hasher.update(tx.version);
-            /* contract_address */
-            hasher.update(tx.contract_address);
-            /* h(tip, l1_gas_bounds, l2_gas_bounds) */
-            let fee_hash = poseidon::PoseidonStark252::hash_many(&[
-                tx.tip,
-                tx.l1_gas_bounds,
-                tx.l2_gas_bounds,
-            ]);
-            hasher.update(fee_hash);
-            /* h(paymaster_data) */
-            let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
-            hasher.update(paymaster_hash);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
-            /* data_availability_modes */
-            hasher.update(tx.data_availability_mode);
-            /* h(constructor_calldata) */
-            let constructor_calldata_hash =
-                poseidon::PoseidonStark252::hash_many(&tx.constructor_calldata);
-            hasher.update(constructor_calldata_hash);
-            /* class_hash */
-            hasher.update(tx.class_hash);
-            /* contract_address_salt */
-            hasher.update(tx.contract_address_salt);
+    tx.hasher.finalize()
+}
 
-            hasher.finalize()
-        }
-        _ => panic!("Invalid version"),
+#[allow(dead_code)]
+fn deploy_account_tx_hash_v3(tx: &mut DeployAccountTransactionV3) -> FieldElement {
+    /* "deploy_account" */
+    tx.hasher.update(FieldElement::DEPLOY_ACCOUNT);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* contract_address */
+    tx.hasher.update(tx.contract_address);
+    /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+    let fee_hash =
+        poseidon::PoseidonStark252::hash_many(&[tx.tip, tx.l1_gas_bounds, tx.l2_gas_bounds]);
+    tx.hasher.update(fee_hash);
+    /* h(paymaster_data) */
+    let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
+    tx.hasher.update(paymaster_hash);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
+    /* data_availability_modes */
+    tx.hasher.update(tx.data_availability_mode);
+    /* h(constructor_calldata) */
+    let constructor_calldata_hash = poseidon::PoseidonStark252::hash_many(&tx.constructor_calldata);
+    tx.hasher.update(constructor_calldata_hash);
+    /* class_hash */
+    tx.hasher.update(tx.class_hash);
+    /* contract_address_salt */
+    tx.hasher.update(tx.contract_address_salt);
+
+    tx.hasher.finalize()
+}
+
+#[allow(dead_code)]
+fn deploy_account_tx_hash_v1(tx: &mut DeployAccountTransactionV1) -> FieldElement {
+    /* "deploy_account" */
+    tx.hasher.update(FieldElement::DEPLOY_ACCOUNT);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* contract_address */
+    tx.hasher.update(tx.contract_address);
+    /* 0 */
+    tx.hasher.update(FieldElement::ZERO);
+    /* h(class_hash, contract_address_salt, constructor_calldata) */
+    let mut hasher_temp = pedersen::PedersenHasher::default();
+    hasher_temp.update(tx.class_hash);
+    hasher_temp.update(tx.contract_address_salt);
+    for d in &tx.constructor_calldata {
+        hasher_temp.update(*d);
     }
+    hasher_temp.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
+    let hash_temp = hasher_temp.finalize();
+    tx.hasher.update(hash_temp);
+    /* max fee */
+    tx.hasher.update(tx.max_fee);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
+
+    tx.hasher.update(FieldElement::from(8u8));
+
+    tx.hasher.finalize()
 }

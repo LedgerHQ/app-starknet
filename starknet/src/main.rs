@@ -12,7 +12,10 @@ mod types;
 extern crate alloc;
 use alloc::vec::Vec;
 
-use context::{Ctx, DeployAccountTransaction, InvokeTransaction, RequestType, Transaction};
+use context::{
+    Ctx, DeployAccountTransactionV1, DeployAccountTransactionV3, InvokeTransactionV1,
+    InvokeTransactionV3, RequestType, Transaction,
+};
 use ledger_device_sdk::io;
 use types::FieldElement;
 
@@ -28,7 +31,7 @@ extern "C" fn sample_main() {
     // Init comm and set the expected CLA byte for the application
     let mut comm = io::Comm::new().set_expected_cla(0x5A);
 
-    let mut ctx: Ctx = Ctx::new();
+    let mut ctx = Ctx::new();
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
@@ -102,8 +105,6 @@ use ledger_device_sdk::io::Reply;
 
 const SIG_LENGTH: u8 = 0x41;
 
-const HASH_TX: &str = "Computing Tx Hash";
-
 fn send_data(comm: &mut io::Comm, data: Result<Option<Vec<u8>>, Reply>) {
     match data {
         Ok(data) => {
@@ -122,6 +123,15 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
     }
 
     let apdu_header = comm.get_apdu_metadata();
+    let mut data = match comm.get_data() {
+        Ok(data) => data,
+        Err(e) => {
+            send_data(comm, Err(e.into()));
+            return;
+        }
+    };
+    let p1 = apdu_header.p1;
+    let p2 = apdu_header.p2;
 
     let mut rdata: Vec<u8> = Vec::new();
 
@@ -138,14 +148,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
         Ins::GetPubkey { display } => {
             ctx.reset();
             ctx.req_type = RequestType::GetPubkey;
-
-            let mut data = match comm.get_data() {
-                Ok(data) => data,
-                Err(e) => {
-                    send_data(comm, Err(e.into()));
-                    return;
-                }
-            };
 
             let res = crypto::set_derivation_path(&mut data, ctx);
             match res {
@@ -175,326 +177,285 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
         }
         #[cfg(feature = "signhash")]
-        Ins::SignHash => {
-            let p1 = apdu_header.p1;
-            let mut data = match comm.get_data() {
-                Ok(data) => data,
-                Err(e) => {
-                    send_data(comm, Err(e.into()));
-                    return;
-                }
-            };
+        Ins::SignHash => match p1 {
+            0 => {
+                ctx.reset();
+                ctx.req_type = RequestType::SignHash;
 
-            match p1 {
-                0 => {
-                    ctx.reset();
-                    ctx.req_type = RequestType::SignHash;
-
-                    match crypto::set_derivation_path(&mut data, ctx) {
-                        Ok(()) => {
-                            send_data(comm, Ok(None));
-                        }
-                        Err(e) => {
-                            send_data(comm, Err(e.into()));
-                        }
+                match crypto::set_derivation_path(&mut data, ctx) {
+                    Ok(()) => {
+                        send_data(comm, Ok(None));
+                    }
+                    Err(e) => {
+                        send_data(comm, Err(e.into()));
                     }
                 }
-                _ => {
-                    let settings: Settings = Default::default();
-                    if settings.get_element(0) == 0 {
-                        display::blind_signing_enable_ui(ctx);
-                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                    } else {
-                        ctx.hash.m_hash = data.into();
-                        match display::show_hash(ctx, false) {
-                            true => {
-                                crypto::sign_hash(ctx).unwrap();
-                                rdata.extend_from_slice([0x41].as_slice());
-                                rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                display::show_status(true, false, ctx);
-                                send_data(comm, Ok(Some(rdata)));
-                            }
-                            false => {
-                                display::show_status(false, false, ctx);
-                                send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                            }
+            }
+            _ => {
+                let settings: Settings = Default::default();
+                if settings.get_element(0) == 0 {
+                    display::blind_signing_enable_ui(ctx);
+                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                } else {
+                    ctx.hash = data.into();
+                    match display::show_hash(ctx, false) {
+                        true => {
+                            crypto::sign_hash(ctx).unwrap();
+                            rdata.extend_from_slice([0x41].as_slice());
+                            rdata.extend_from_slice(ctx.signature.r.as_ref());
+                            rdata.extend_from_slice(ctx.signature.s.as_ref());
+                            rdata.extend_from_slice([ctx.signature.v].as_slice());
+                            display::show_status(true, false, ctx);
+                            send_data(comm, Ok(Some(rdata)));
+                        }
+                        false => {
+                            display::show_status(false, false, ctx);
+                            send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                         }
                     }
                 }
             }
-        }
-        Ins::SignTx => {
-            let mut data = match comm.get_data() {
-                Ok(data) => data,
-                Err(e) => {
-                    send_data(comm, Err(e.into()));
-                    return;
+        },
+        Ins::SignTx => match p1 {
+            0 => {
+                ctx.reset();
+                ctx.req_type = RequestType::SignTx;
+                ctx.tx = Transaction::InvokeV3(InvokeTransactionV3::default());
+                match crypto::set_derivation_path(&mut data, ctx) {
+                    Ok(()) => {
+                        send_data(comm, Ok(None));
+                    }
+                    Err(e) => {
+                        send_data(comm, Err(e.into()));
+                    }
                 }
-            };
-            let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-
-            match p1 {
-                0 => {
-                    ctx.reset();
-                    ctx.req_type = RequestType::SignTx;
-                    ctx.tx = Transaction::Invoke(InvokeTransaction::default());
-
-                    match crypto::set_derivation_path(&mut data, ctx) {
-                        Ok(()) => {
+            }
+            1 => {
+                transaction::set_tx_fields(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            2 => {
+                transaction::set_paymaster_data(data, p2, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            3 => {
+                transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            4 => {
+                let nb_calls: u8 = FieldElement::from(data).into();
+                transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
+                send_data(comm, Ok(None));
+            }
+            5 => {
+                if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
+                    send_data(comm, Err(Reply(err as u16)));
+                }
+                if p2 == transaction::SetCallStep::End.into() {
+                    match transaction::tx_complete(&mut ctx.tx) {
+                        None => {
                             send_data(comm, Ok(None));
                         }
-                        Err(e) => {
-                            send_data(comm, Err(e.into()));
+                        Some(hash) => {
+                            ctx.hash = hash;
+                            match display::show_tx(ctx) {
+                                Some(approved) => match approved {
+                                    true => {
+                                        rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                        crypto::sign_hash(ctx).unwrap();
+                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                        rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                        rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                        rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                        display::show_status(true, true, ctx);
+                                        send_data(comm, Ok(Some(rdata)));
+                                    }
+                                    false => {
+                                        display::show_status(false, true, ctx);
+                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                    }
+                                },
+                                None => {
+                                    let settings: Settings = Default::default();
+                                    if settings.get_element(0) == 0 {
+                                        display::blind_signing_enable_ui(ctx);
+                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                    } else {
+                                        match display::show_hash(ctx, true) {
+                                            true => {
+                                                rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                                crypto::sign_hash(ctx).unwrap();
+                                                rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                                rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                                rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                                rdata.extend_from_slice(
+                                                    [ctx.signature.v].as_slice(),
+                                                );
+                                                display::show_status(true, true, ctx);
+                                                send_data(comm, Ok(Some(rdata)));
+                                            }
+                                            false => {
+                                                display::show_status(false, true, ctx);
+                                                send_data(
+                                                    comm,
+                                                    Err(io::StatusWords::UserCancelled.into()),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-                1 => {
-                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3);
+                } else {
                     send_data(comm, Ok(None));
                 }
-                2 => {
-                    transaction::set_paymaster_data(data, p2, &mut ctx.tx);
-                    send_data(comm, Ok(None));
-                }
-                3 => {
-                    transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
-                    send_data(comm, Ok(None));
-                }
-                4 => {
-                    let nb_calls: u8 = FieldElement::from(data).into();
-                    transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
-                    send_data(comm, Ok(None));
-                }
-                5 => {
-                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
-                    {
-                        send_data(comm, Err(Reply(err as u16)));
+            }
+            _ => {
+                send_data(comm, Err(io::StatusWords::BadP1P2.into()));
+            }
+        },
+        Ins::SignTxV1 => match p1 {
+            0 => {
+                ctx.reset();
+                ctx.req_type = RequestType::SignTxV1;
+                ctx.tx = Transaction::InvokeV1(InvokeTransactionV1::default());
+                match crypto::set_derivation_path(&mut data, ctx) {
+                    Ok(()) => {
+                        send_data(comm, Ok(None));
                     }
-                    if p2 == transaction::SetCallStep::End.into()
-                        && transaction::tx_complete(&ctx.tx)
-                    {
+                    Err(e) => {
+                        send_data(comm, Err(e.into()));
+                    }
+                }
+            }
+            1 => {
+                transaction::set_tx_fields(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            2 => {
+                let nb_calls: u8 = FieldElement::from(data).into();
+                transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
+                send_data(comm, Ok(None));
+            }
+            3 => {
+                if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
+                    send_data(comm, Err(Reply(err as u16)));
+                }
+                if p2 == transaction::SetCallStep::End.into() {
+                    match transaction::tx_complete(&mut ctx.tx) {
+                        None => {
+                            send_data(comm, Ok(None));
+                        }
+                        Some(hash) => {
+                            ctx.hash = hash;
+                            match display::show_tx(ctx) {
+                                Some(approved) => match approved {
+                                    true => {
+                                        rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                        crypto::sign_hash(ctx).unwrap();
+                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                        rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                        rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                        rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                        display::show_status(true, true, ctx);
+                                        send_data(comm, Ok(Some(rdata)));
+                                    }
+                                    false => {
+                                        display::show_status(false, true, ctx);
+                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                    }
+                                },
+                                None => {
+                                    let settings: Settings = Default::default();
+                                    if settings.get_element(0) == 0 {
+                                        display::blind_signing_enable_ui(ctx);
+                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                    } else {
+                                        match display::show_hash(ctx, true) {
+                                            true => {
+                                                rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                                crypto::sign_hash(ctx).unwrap();
+                                                rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                                rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                                rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                                rdata.extend_from_slice(
+                                                    [ctx.signature.v].as_slice(),
+                                                );
+                                                display::show_status(true, true, ctx);
+                                                send_data(comm, Ok(Some(rdata)));
+                                            }
+                                            false => {
+                                                display::show_status(false, true, ctx);
+                                                send_data(
+                                                    comm,
+                                                    Err(io::StatusWords::UserCancelled.into()),
+                                                );
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    send_data(comm, Ok(None));
+                }
+            }
+            _ => {
+                send_data(comm, Err(io::StatusWords::BadP1P2.into()));
+            }
+        },
+        Ins::SignDeployAccount => match p1 {
+            0 => {
+                ctx.reset();
+                ctx.req_type = RequestType::SignDeployAccount;
+                ctx.tx = Transaction::DeployAccountV3(DeployAccountTransactionV3::default());
+                match crypto::set_derivation_path(&mut data, ctx) {
+                    Ok(()) => {
+                        send_data(comm, Ok(None));
+                    }
+                    Err(e) => {
+                        send_data(comm, Err(e.into()));
+                    }
+                }
+            }
+            1 => {
+                transaction::set_tx_fields(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            2 => {
+                transaction::set_tx_fees(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            3 => {
+                transaction::set_paymaster_data(data, p2, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            4 => {
+                let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
+                send_data(comm, Ok(None));
+            }
+            5 => {
+                if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
+                    send_data(comm, Err(Reply(err as u16)));
+                }
+                match transaction::tx_complete(&mut ctx.tx) {
+                    None => {
+                        send_data(comm, Ok(None));
+                    }
+                    Some(hash) => {
+                        ctx.hash = hash;
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
-                                    display::show_pending(HASH_TX);
-                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
                                     rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    display::show_status(true, true, ctx);
-                                    send_data(comm, Ok(Some(rdata)));
-                                }
-                                false => {
-                                    display::show_status(false, true, ctx);
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                }
-                            },
-                            None => {
-                                let settings: Settings = Default::default();
-                                if settings.get_element(0) == 0 {
-                                    display::blind_signing_enable_ui(ctx);
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                } else {
-                                    display::show_pending(HASH_TX);
-                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    match display::show_hash(ctx, true) {
-                                        true => {
-                                            rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
-                                            crypto::sign_hash(ctx).unwrap();
-                                            rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                            rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                            rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                            rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                            display::show_status(true, true, ctx);
-                                            send_data(comm, Ok(Some(rdata)));
-                                        }
-                                        false => {
-                                            display::show_status(false, true, ctx);
-                                            send_data(
-                                                comm,
-                                                Err(io::StatusWords::UserCancelled.into()),
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        send_data(comm, Ok(None));
-                    }
-                }
-                _ => {
-                    send_data(comm, Err(io::StatusWords::BadP1P2.into()));
-                }
-            }
-        }
-        Ins::SignTxV1 => {
-            let mut data = match comm.get_data() {
-                Ok(data) => data,
-                Err(e) => {
-                    send_data(comm, Err(e.into()));
-                    return;
-                }
-            };
-            let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-
-            match p1 {
-                0 => {
-                    ctx.reset();
-                    ctx.req_type = RequestType::SignTxV1;
-                    ctx.tx = Transaction::Invoke(InvokeTransaction::default());
-
-                    match crypto::set_derivation_path(&mut data, ctx) {
-                        Ok(()) => {
-                            send_data(comm, Ok(None));
-                        }
-                        Err(e) => {
-                            send_data(comm, Err(e.into()));
-                        }
-                    }
-                }
-                1 => {
-                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1);
-                    send_data(comm, Ok(None));
-                }
-                2 => {
-                    let nb_calls: u8 = FieldElement::from(data).into();
-                    transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
-                    send_data(comm, Ok(None));
-                }
-                3 => {
-                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
-                    {
-                        send_data(comm, Err(Reply(err as u16)));
-                    }
-                    if p2 == transaction::SetCallStep::End.into()
-                        && transaction::tx_complete(&ctx.tx)
-                    {
-                        match display::show_tx(ctx) {
-                            Some(approved) => match approved {
-                                true => {
-                                    display::show_pending(HASH_TX);
-                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
-                                    crypto::sign_hash(ctx).unwrap();
-                                    rdata.extend_from_slice([0x41].as_slice());
-                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                    display::show_status(true, true, ctx);
-                                    send_data(comm, Ok(Some(rdata)));
-                                }
-                                false => {
-                                    display::show_status(false, true, ctx);
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                }
-                            },
-                            None => {
-                                let settings: Settings = Default::default();
-                                if settings.get_element(0) == 0 {
-                                    display::blind_signing_enable_ui(ctx);
-                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                } else {
-                                    display::show_pending(HASH_TX);
-                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    match display::show_hash(ctx, true) {
-                                        true => {
-                                            rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
-                                            crypto::sign_hash(ctx).unwrap();
-                                            rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                            rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                            rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                            rdata.extend_from_slice([ctx.hash.v].as_slice());
-                                            display::show_status(true, true, ctx);
-                                            send_data(comm, Ok(Some(rdata)));
-                                        }
-                                        false => {
-                                            display::show_status(false, true, ctx);
-                                            send_data(
-                                                comm,
-                                                Err(io::StatusWords::UserCancelled.into()),
-                                            );
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        send_data(comm, Ok(None));
-                    }
-                }
-                _ => {
-                    send_data(comm, Err(io::StatusWords::BadP1P2.into()));
-                }
-            }
-        }
-        Ins::SignDeployAccount => {
-            let mut data = match comm.get_data() {
-                Ok(data) => data,
-                Err(e) => {
-                    send_data(comm, Err(e.into()));
-                    return;
-                }
-            };
-            let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-
-            match p1 {
-                0 => {
-                    ctx.reset();
-                    ctx.req_type = RequestType::SignDeployAccount;
-                    ctx.tx = Transaction::DeployAccount(DeployAccountTransaction::default());
-
-                    match crypto::set_derivation_path(&mut data, ctx) {
-                        Ok(()) => {
-                            send_data(comm, Ok(None));
-                        }
-                        Err(e) => {
-                            send_data(comm, Err(e.into()));
-                        }
-                    }
-                }
-                1 => {
-                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V3);
-                    send_data(comm, Ok(None));
-                }
-                2 => {
-                    transaction::set_tx_fees(data, &mut ctx.tx);
-                    send_data(comm, Ok(None));
-                }
-                3 => {
-                    transaction::set_paymaster_data(data, p2, &mut ctx.tx);
-                    send_data(comm, Ok(None));
-                }
-                4 => {
-                    let constructor_calldata_length: u8 = FieldElement::from(data).into();
-                    transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
-                    send_data(comm, Ok(None));
-                }
-                5 => {
-                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
-                    {
-                        send_data(comm, Err(Reply(err as u16)));
-                    }
-                    if transaction::tx_complete(&ctx.tx) {
-                        match display::show_tx(ctx) {
-                            Some(approved) => match approved {
-                                true => {
-                                    display::show_pending(HASH_TX);
-                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
-                                    crypto::sign_hash(ctx).unwrap();
-                                    rdata.extend_from_slice([0x41].as_slice());
-                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
+                                    rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                    rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                    rdata.extend_from_slice([ctx.signature.v].as_slice());
                                     display::show_status(true, true, ctx);
                                     send_data(comm, Ok(Some(rdata)));
                                 }
@@ -507,71 +468,60 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                 send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                             }
                         }
-                    } else {
-                        send_data(comm, Ok(None));
                     }
-                }
-                _ => {
-                    send_data(comm, Err(io::StatusWords::BadP1P2.into()));
                 }
             }
-        }
-        Ins::SignDeployAccountV1 => {
-            let mut data = match comm.get_data() {
-                Ok(data) => data,
-                Err(e) => {
-                    send_data(comm, Err(e.into()));
-                    return;
-                }
-            };
-            let p1 = apdu_header.p1;
-            let p2 = apdu_header.p2;
-
-            match p1 {
-                0 => {
-                    ctx.reset();
-                    ctx.req_type = RequestType::SignDeployAccountV1;
-                    ctx.tx = Transaction::DeployAccount(DeployAccountTransaction::default());
-
-                    match crypto::set_derivation_path(&mut data, ctx) {
-                        Ok(()) => {
-                            send_data(comm, Ok(None));
-                        }
-                        Err(e) => {
-                            send_data(comm, Err(e.into()));
-                        }
+            _ => {
+                send_data(comm, Err(io::StatusWords::BadP1P2.into()));
+            }
+        },
+        Ins::SignDeployAccountV1 => match p1 {
+            0 => {
+                ctx.reset();
+                ctx.req_type = RequestType::SignDeployAccountV1;
+                ctx.tx = Transaction::DeployAccountV1(DeployAccountTransactionV1::default());
+                match crypto::set_derivation_path(&mut data, ctx) {
+                    Ok(()) => {
+                        send_data(comm, Ok(None));
+                    }
+                    Err(e) => {
+                        send_data(comm, Err(e.into()));
                     }
                 }
-                1 => {
-                    transaction::set_tx_fields(data, &mut ctx.tx, transaction::TxVersion::V1);
-                    send_data(comm, Ok(None));
+            }
+            1 => {
+                transaction::set_tx_fields(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            2 => {
+                transaction::set_tx_fees(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            3 => {
+                let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
+                send_data(comm, Ok(None));
+            }
+            4 => {
+                if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
+                    send_data(comm, Err(Reply(err as u16)));
                 }
-                2 => {
-                    transaction::set_tx_fees(data, &mut ctx.tx);
-                    send_data(comm, Ok(None));
-                }
-                3 => {
-                    let constructor_calldata_length: u8 = FieldElement::from(data).into();
-                    transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
-                    send_data(comm, Ok(None));
-                }
-                4 => {
-                    if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err()
-                    {
-                        send_data(comm, Err(Reply(err as u16)));
+
+                match transaction::tx_complete(&mut ctx.tx) {
+                    None => {
+                        send_data(comm, Ok(None));
                     }
-                    if transaction::tx_complete(&ctx.tx) {
+                    Some(hash) => {
+                        ctx.hash = hash;
                         match display::show_tx(ctx) {
                             Some(approved) => match approved {
                                 true => {
-                                    display::show_pending(HASH_TX);
-                                    ctx.hash.m_hash = crypto::tx_hash(&ctx.tx);
-                                    rdata.extend_from_slice(ctx.hash.m_hash.value.as_ref());
+                                    rdata.extend_from_slice(ctx.hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
-                                    rdata.extend_from_slice([0x41].as_slice());
-                                    rdata.extend_from_slice(ctx.hash.r.as_ref());
-                                    rdata.extend_from_slice(ctx.hash.s.as_ref());
-                                    rdata.extend_from_slice([ctx.hash.v].as_slice());
+                                    rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                    rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                    rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                    rdata.extend_from_slice([ctx.signature.v].as_slice());
                                     display::show_status(true, true, ctx);
                                     send_data(comm, Ok(Some(rdata)));
                                 }
@@ -584,15 +534,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                 send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                             }
                         }
-                    } else {
-                        send_data(comm, Ok(None));
                     }
                 }
-                _ => {
-                    send_data(comm, Err(io::StatusWords::BadP1P2.into()));
-                }
             }
-        }
+            _ => {
+                send_data(comm, Err(io::StatusWords::BadP1P2.into()));
+            }
+        },
         #[cfg(feature = "poseidon")]
         Ins::Poseidon => {
             let data = comm.get_data()?;
@@ -629,7 +577,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     let d = FieldElement::from(data[3]);
                     let e = FieldElement::from(data[4]);
                     let f = FieldElement::from(data[5]);
-                    let mut hasher = crypto::poseidon::PoseidonHasher::new();
+                    let mut hasher = crypto::poseidon::PoseidonHasher::default();
                     hasher.update(a);
                     hasher.update(b);
                     hasher.update(c);

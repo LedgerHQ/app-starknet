@@ -218,23 +218,28 @@ fn double_accum_ec_mul(
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct PedersenHasher {
     state: FieldElement,
+    nb_fe: usize,
+}
+
+use super::HasherTrait;
+
+impl HasherTrait for PedersenHasher {
+    /// Absorbs message into the hash.
+    fn update(&mut self, msg: FieldElement) {
+        pedersen_hash(&mut self.state, &msg);
+        self.nb_fe += 1;
+    }
+
+    fn finalize(self) -> FieldElement {
+        self.state
+    }
 }
 
 impl PedersenHasher {
-    /// Creates a new [PedersenHasher].
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Absorbs message into the hash.
-    pub fn update(&mut self, msg: FieldElement) {
-        pedersen_hash(&mut self.state, &msg);
-    }
-
-    pub fn finalize(self) -> FieldElement {
-        self.state
+    pub fn get_nb_fe(&self) -> usize {
+        self.nb_fe
     }
 }
