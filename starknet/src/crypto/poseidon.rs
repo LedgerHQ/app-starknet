@@ -400,7 +400,7 @@ impl PoseidonStark252 {
         // Pad input with 1 followed by 0's (if necessary).
         let mut values = inputs.to_owned();
         values.push(FieldElement::from(1u8));
-        values.resize(((values.len() + r - 1) / r) * r, FieldElement::ZERO);
+        values.resize(values.len().div_ceil(r) * r, FieldElement::ZERO);
 
         assert!(values.len() % r == 0);
         let mut state: Vec<FieldElement> = Vec::from([FieldElement::ZERO; STATE_SIZE]);

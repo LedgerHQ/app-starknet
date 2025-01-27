@@ -7,7 +7,7 @@ use crate::{
     erc20::{ERC20_TOKENS, TRANSFER},
     types::FieldElement,
 };
-use alloc::vec::Vec;
+
 use include_gif::include_gif;
 use ledger_device_sdk::io::Comm;
 
@@ -348,9 +348,7 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 pub fn show_pending(text: &str) {
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let mut split = text.splitn(2, ' ');
-        let s1 = split.next().unwrap();
-        let s2 = split.next().unwrap();
+        let (s1, s2) = text.split_once(' ').unwrap();
 
         let page_0 = Page::new(PageStyle::BoldNormal, [s1, s2], None);
         clear_screen();
@@ -570,7 +568,7 @@ pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
     }
 }
 
-fn support_clear_sign(calls: &Vec<Call>) -> Option<usize> {
+fn support_clear_sign(calls: &[Call]) -> Option<usize> {
     match calls.len() {
         1 => {
             for (idx, t) in ERC20_TOKENS.iter().enumerate() {
