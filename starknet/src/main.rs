@@ -231,6 +231,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                display::show_pending("Start parsing transaction");
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
@@ -330,6 +331,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                display::show_pending("Start parsing transaction");
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }

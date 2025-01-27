@@ -8,7 +8,7 @@ use crate::{
 };
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 
 const FIELD_ELEMENT_SIZE: usize = 32;
 
@@ -34,6 +34,7 @@ impl From<FieldElement> for TxVersion {
 }
 
 pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
+    crate::display::show_pending("End parsing transaction");
     match tx {
         Transaction::InvokeV3(tx) => {
             if tx.calls.len() == tx.calls.capacity() {
@@ -318,6 +319,13 @@ fn set_calldata_invoke(
 ) -> Result<(), SetCallError> {
     match p2 {
         SetCallStep::New => {
+            let s = format!(
+                "{}{}/{}",
+                "Parsing call ",
+                calls.len() + 1,
+                calls.capacity()
+            );
+            crate::display::show_pending(s.as_str());
             if calls.len() == calls.capacity() {
                 return Err(SetCallError::TooManyCalls);
             }
