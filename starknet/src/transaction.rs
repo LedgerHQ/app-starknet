@@ -280,8 +280,12 @@ pub fn set_calldata(
     tx: &mut Transaction,
 ) -> Result<(), SetCallError> {
     match tx {
-        Transaction::InvokeV3(tx) => set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher),
-        Transaction::InvokeV1(tx) => set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher),
+        Transaction::InvokeV3(tx) => {
+            set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher_calldata)
+        }
+        Transaction::InvokeV1(tx) => {
+            set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher_calldata)
+        }
         Transaction::DeployAccountV3(tx) => {
             let constructor_calldata_hash =
                 set_calldata_deploy_account_v3(data, &mut tx.constructor_calldata).unwrap();
