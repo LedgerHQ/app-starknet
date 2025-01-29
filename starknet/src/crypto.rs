@@ -222,8 +222,6 @@ fn invoke_tx_hash_v3(tx: &mut InvokeTransactionV3) -> FieldElement {
     tx.hasher_calldata
         .update(FieldElement::from(tx.calls.len() as u8));
     tx.calls.iter().enumerate().for_each(|c| {
-        //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
-        //crate::display::show_pending(&s);
         tx.hasher_calldata.update(c.1.to);
         tx.hasher_calldata.update(c.1.selector);
         tx.hasher_calldata
@@ -257,8 +255,6 @@ fn invoke_tx_hash_v1(tx: &mut InvokeTransactionV1) -> FieldElement {
         .update(FieldElement::from(tx.calls.len() as u8));
     let mut calldata_len = 1u8;
     tx.calls.iter().enumerate().for_each(|c| {
-        //let s = format!("Hashing Call: {}/{}", c.0 + 1, tx.calls.len());
-        //crate::display::show_pending(&s);
         tx.hasher_calldata.update(c.1.to);
         tx.hasher_calldata.update(c.1.selector);
         tx.hasher_calldata

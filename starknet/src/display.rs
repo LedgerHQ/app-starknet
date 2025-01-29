@@ -5,8 +5,11 @@ use crate::{
         InvokeTransactionV3,
     },
     erc20::{ERC20_TOKENS, TRANSFER},
+    transaction::SetCallStep,
     types::FieldElement,
+    Ins,
 };
+use alloc::{format, string::String};
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::Comm;
@@ -25,8 +28,8 @@ use crate::settings::Settings;
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglChoice, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent,
-    NbglReview, NbglReviewStatus, NbglSpinner, NbglStatus, PageIndex, StatusType, TagValueConfirm,
-    TagValueList, TransactionType, TuneIndex,
+    NbglReview, NbglReviewStatus, NbglStatus, PageIndex, StatusType, TagValueConfirm, TagValueList,
+    TransactionType, TuneIndex,
 };
 
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
@@ -344,20 +347,42 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
     }
 }
 
-#[allow(dead_code)]
-pub fn show_pending(text: &str) {
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
-    {
-        let (s1, s2) = text.split_once(' ').unwrap();
-
-        let page_0 = Page::new(PageStyle::BoldNormal, [s1, s2], None);
-        clear_screen();
-        page_0.place();
+pub fn show_step(ins: &Ins, p1: u8, p2: u8, ctx: &mut Ctx) {
+    match ins {
+        Ins::SignTxV1 | Ins::SignTx => (),
+        _ => return,
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
-    {
-        let spinner = NbglSpinner::new();
-        spinner.text(text).show();
+
+    let text = match p1 {
+        1 => Some(String::from("Start parsing the transaction")),
+        5 => {
+            if p2 == SetCallStep::New.into() {
+                Some(format!(
+                    "{}{}/{}",
+                    "Parsing call ",
+                    ctx.tx.get_nb_received_calls() + 1,
+                    ctx.tx.get_nb_calls()
+                ))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    };
+
+    if let Some(text) = text {
+        #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+        {
+            let (s1, s2) = text.split_once(' ').unwrap();
+
+            let page_0 = Page::new(PageStyle::BoldNormal, [s1, s2], None);
+            clear_screen();
+            page_0.place();
+        }
+        #[cfg(any(target_os = "stax", target_os = "flex"))]
+        {
+            ctx.spinner.show(text.as_str());
+        }
     }
 }
 

@@ -8,7 +8,7 @@ use crate::{
 };
 
 extern crate alloc;
-use alloc::{format, vec::Vec};
+use alloc::vec::Vec;
 
 const FIELD_ELEMENT_SIZE: usize = 32;
 
@@ -34,7 +34,6 @@ impl From<FieldElement> for TxVersion {
 }
 
 pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
-    crate::display::show_pending("End parsing transaction");
     match tx {
         Transaction::InvokeV3(tx) => {
             if tx.calls.len() == tx.calls.capacity() {
@@ -319,13 +318,6 @@ fn set_calldata_invoke(
 ) -> Result<(), SetCallError> {
     match p2 {
         SetCallStep::New => {
-            let s = format!(
-                "{}{}/{}",
-                "Parsing call ",
-                calls.len() + 1,
-                calls.capacity()
-            );
-            crate::display::show_pending(s.as_str());
             if calls.len() == calls.capacity() {
                 return Err(SetCallError::TooManyCalls);
             }
@@ -350,8 +342,14 @@ fn set_calldata_invoke(
                 hasher.update(call.to);
                 hasher.update(call.selector);
                 hasher.update(FieldElement::from(call.calldata.len() as u8));
-                for d in &call.calldata {
+                for (pulse, d) in call.calldata.iter().enumerate() {
                     hasher.update(*d);
+                    // Add heartbeat every 40 pulses (max seems to be between 50 and 60)
+                    #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                    if pulse % 40 == 0 {
+                        // add heartbeat here
+                        ledger_secure_sdk_sys::seph::heartbeat();
+                    }
                 }
             }
             Ok(())

@@ -80,6 +80,28 @@ pub enum Transaction {
     DeployAccountV3(DeployAccountTransactionV3),
 }
 
+impl Transaction {
+    pub fn get_nb_received_calls(&self) -> usize {
+        match self {
+            Transaction::InvokeV1(tx) => tx.calls.len(),
+            Transaction::InvokeV3(tx) => tx.calls.len(),
+            Transaction::DeployAccountV1(_tx) => 1usize,
+            Transaction::DeployAccountV3(_tx) => 1usize,
+            Transaction::None => 0usize,
+        }
+    }
+
+    pub fn get_nb_calls(&self) -> usize {
+        match self {
+            Transaction::InvokeV1(tx) => tx.calls.capacity(),
+            Transaction::InvokeV3(tx) => tx.calls.capacity(),
+            Transaction::DeployAccountV1(_tx) => 1usize,
+            Transaction::DeployAccountV3(_tx) => 1usize,
+            Transaction::None => 0usize,
+        }
+    }
+}
+
 pub enum RequestType {
     Unknown,
     GetPubkey,
@@ -99,7 +121,7 @@ pub struct Signature {
 }
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-use ledger_device_sdk::nbgl::NbglHomeAndSettings;
+use ledger_device_sdk::nbgl::{NbglHomeAndSettings, NbglSpinner};
 
 pub struct Ctx {
     pub req_type: RequestType,
@@ -109,6 +131,8 @@ pub struct Ctx {
     pub bip32_path: [u32; 6],
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     pub home: NbglHomeAndSettings,
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    pub spinner: NbglSpinner,
 }
 
 impl Ctx {
@@ -121,6 +145,8 @@ impl Ctx {
             bip32_path: [0u32; 6],
             #[cfg(any(target_os = "stax", target_os = "flex"))]
             home: NbglHomeAndSettings::new(),
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            spinner: NbglSpinner::new(),
         }
     }
 
