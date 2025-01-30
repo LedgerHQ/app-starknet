@@ -30,14 +30,34 @@ def test_clear_sign_tx_0(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+        if firmware.device.startswith("nanosp"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
+        elif firmware.device.startswith("nanox"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
         else:
             instructions = [
+                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -90,14 +110,34 @@ def test_clear_sign_tx_1(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+        if firmware.device.startswith("nanosp"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
+        elif firmware.device.startswith("nanox"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
         else:
             instructions = [
+                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -150,14 +190,34 @@ def test_clear_sign_tx_2(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+        if firmware.device.startswith("nanosp"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
+        elif firmware.device.startswith("nanox"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
         else:
             instructions = [
+                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
@@ -211,14 +271,34 @@ def test_clear_sign_tx_3(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+        if firmware.device.startswith("nanosp"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
+        elif firmware.device.startswith("nanox"):
+            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                             test_name,
+                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.RIGHT_CLICK,
+                                              NavInsID.BOTH_CLICK])
         else:
             instructions = [
+                NavInsID.WAIT_FOR_SCREEN_CHANGE,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
                 NavInsID.SWIPE_CENTER_TO_LEFT,
