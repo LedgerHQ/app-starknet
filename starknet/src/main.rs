@@ -10,7 +10,7 @@ mod transaction;
 mod types;
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 
 use context::{
     Ctx, DeployAccountTransactionV1, DeployAccountTransactionV3, InvokeTransactionV1,
@@ -20,6 +20,7 @@ use ledger_device_sdk::io;
 use types::FieldElement;
 
 use settings::Settings;
+use transaction::SetCallStep;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -61,7 +62,7 @@ extern "C" fn sample_main() {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
 enum Ins {
     GetVersion,
@@ -135,7 +136,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
     let mut rdata: Vec<u8> = Vec::new();
 
-    display::show_step(ins, p1, p2, ctx);
+    //display::show_step(ins, p1, p2, ctx);
 
     match ins {
         Ins::GetVersion => {
@@ -233,23 +234,63 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step("Parsing transaction", ctx);
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                display::show_step("Start parsing the transaction", ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step("Parsing transaction", ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step("Parsing transaction", ctx);
                 transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step("Parsing transaction", ctx);
                 let nb_calls: u8 = FieldElement::from(data).into();
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             5 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                {
+                    if p2 == SetCallStep::End.into() {
+                        display::show_step(
+                            format!(
+                                "{}{}/{}",
+                                "Parsing call ",
+                                ctx.tx.get_nb_received_calls(),
+                                ctx.tx.get_nb_calls()
+                            )
+                            .as_str(),
+                            ctx,
+                        );
+                    }
+                }
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                {
+                    if p2 == SetCallStep::New.into() {
+                        display::show_step(
+                            format!(
+                                "{}{}/{}",
+                                "Parsing call ",
+                                ctx.tx.get_nb_received_calls() + 1,
+                                ctx.tx.get_nb_calls()
+                            )
+                            .as_str(),
+                            ctx,
+                        );
+                    }
+                }
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -332,15 +373,51 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step("Parsing transaction", ctx);
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                display::show_step("Start parsing the transaction", ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step("Parsing transaction", ctx);
                 let nb_calls: u8 = FieldElement::from(data).into();
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             3 => {
+                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                {
+                    if p2 == SetCallStep::End.into() {
+                        display::show_step(
+                            format!(
+                                "{}{}/{}",
+                                "Parsing call ",
+                                ctx.tx.get_nb_received_calls(),
+                                ctx.tx.get_nb_calls()
+                            )
+                            .as_str(),
+                            ctx,
+                        );
+                    }
+                }
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                {
+                    if p2 == SetCallStep::New.into() {
+                        display::show_step(
+                            format!(
+                                "{}{}/{}",
+                                "Parsing call ",
+                                ctx.tx.get_nb_received_calls() + 1,
+                                ctx.tx.get_nb_calls()
+                            )
+                            .as_str(),
+                            ctx,
+                        );
+                    }
+                }
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
