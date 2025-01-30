@@ -66,25 +66,33 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
         if firmware.device.startswith("nano"):
-                navigator.navigate_until_text(NavIns(NavInsID.WAIT, (0,)), [NavInsID.BOTH_CLICK], "Blind Signing", 3000)
-                navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
+                navigator.navigate_until_text_and_compare(
+                    NavIns(NavInsID.WAIT, (0,)),
+                    [
+                        NavInsID.BOTH_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK
+                    ],
+                    "Blind",
+                    path=ROOT_SCREENSHOT_PATH,
+                    test_case_name=test_name
+                )
         else:
-            instructions = [
-                NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(
+                NavIns(NavInsID.WAIT, (0,)),
+                [
+                    NavInsID.CENTERED_FOOTER_TAP,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ],
+                "Blind signing ahead",
+                path=ROOT_SCREENSHOT_PATH,
+                test_case_name=test_name
+            )
     
     response = backend.last_async_response.data
     
@@ -146,35 +154,34 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nanosp"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
-        elif firmware.device.startswith("nanox"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                                              NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
+        if firmware.device.startswith("nano"):
+                navigator.navigate_until_text_and_compare(
+                    NavIns(NavInsID.WAIT, (0,)),
+                    [
+                        NavInsID.BOTH_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK
+                    ],
+                    "Blind",
+                    path=ROOT_SCREENSHOT_PATH,
+                    test_case_name=test_name
+                )
         else:
-            instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(
+                NavIns(NavInsID.WAIT, (0,)),
+                [
+                    NavInsID.CENTERED_FOOTER_TAP,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ],
+                "Blind signing ahead",
+                path=ROOT_SCREENSHOT_PATH,
+                test_case_name=test_name
+            )
     
     response = backend.last_async_response.data
     
@@ -236,35 +243,34 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nanosp"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
-        elif firmware.device.startswith("nanox"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                                              NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
+        if firmware.device.startswith("nano"):
+                navigator.navigate_until_text_and_compare(
+                    NavIns(NavInsID.WAIT, (0,)),
+                    [
+                        NavInsID.BOTH_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK
+                    ],
+                    "Blind",
+                    path=ROOT_SCREENSHOT_PATH,
+                    test_case_name=test_name
+                )
         else:
-            instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(
+                NavIns(NavInsID.WAIT, (0,)),
+                [
+                    NavInsID.CENTERED_FOOTER_TAP,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ],
+                "Blind signing ahead",
+                path=ROOT_SCREENSHOT_PATH,
+                test_case_name=test_name
+            )
     
     response = backend.last_async_response.data
     
@@ -326,35 +332,34 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nanosp"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
-        elif firmware.device.startswith("nanox"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                                              NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
+        if firmware.device.startswith("nano"):
+                navigator.navigate_until_text_and_compare(
+                    NavIns(NavInsID.WAIT, (0,)),
+                    [
+                        NavInsID.BOTH_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK
+                    ],
+                    "Blind",
+                    path=ROOT_SCREENSHOT_PATH,
+                    test_case_name=test_name
+                )
         else:
-            instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(
+                NavIns(NavInsID.WAIT, (0,)),
+                [
+                    NavInsID.CENTERED_FOOTER_TAP,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ],
+                "Blind signing ahead",
+                path=ROOT_SCREENSHOT_PATH,
+                test_case_name=test_name
+            )
     
     response = backend.last_async_response.data
     
@@ -416,35 +421,34 @@ def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
 
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
-        if firmware.device.startswith("nanosp"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
-        elif firmware.device.startswith("nanox"):
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                             test_name,
-                                             [NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                                              NavInsID.BOTH_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.RIGHT_CLICK,
-                                              NavInsID.BOTH_CLICK])
+        if firmware.device.startswith("nano"):
+                navigator.navigate_until_text_and_compare(
+                    NavIns(NavInsID.WAIT, (0,)),
+                    [
+                        NavInsID.BOTH_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK
+                    ],
+                    "Blind",
+                    path=ROOT_SCREENSHOT_PATH,
+                    test_case_name=test_name
+                )
         else:
-            instructions = [
-                NavInsID.WAIT_FOR_SCREEN_CHANGE,
-                NavInsID.CENTERED_FOOTER_TAP,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(
+                NavIns(NavInsID.WAIT, (0,)),
+                [
+                    NavInsID.CENTERED_FOOTER_TAP,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ],
+                "Blind signing ahead",
+                path=ROOT_SCREENSHOT_PATH,
+                test_case_name=test_name
+            )
     
     response = backend.last_async_response.data
     
