@@ -342,14 +342,11 @@ fn set_calldata_invoke(
                 hasher.update(call.to);
                 hasher.update(call.selector);
                 hasher.update(FieldElement::from(call.calldata.len() as u8));
-                for (pulse, d) in call.calldata.iter().enumerate() {
+                for d in &call.calldata {
                     hasher.update(*d);
-                    // Add heartbeat every 40 pulses (max seems to be between 50 and 60)
+                    // Add heartbeat to prevent watchdog reset
                     #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-                    if pulse % 40 == 0 {
-                        // add heartbeat here
-                        ledger_secure_sdk_sys::seph::heartbeat();
-                    }
+                    ledger_secure_sdk_sys::seph::heartbeat();
                 }
             }
             Ok(())
