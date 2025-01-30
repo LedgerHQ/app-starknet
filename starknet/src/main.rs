@@ -27,6 +27,14 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::init_comm;
 
+#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+const PARSING_STEP_TX_WORDING: &str = "Parsing transaction";
+
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+const PARSING_STEP_TX_WORDING: &str = "Start parsing the transaction";
+
+const PARSING_STEP_CALL_WORDING: &str = "Parsing call ";
+
 #[no_mangle]
 extern "C" fn sample_main() {
     // Init comm and set the expected CLA byte for the application
@@ -136,8 +144,6 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
 
     let mut rdata: Vec<u8> = Vec::new();
 
-    //display::show_step(ins, p1, p2, ctx);
-
     match ins {
         Ins::GetVersion => {
             let version_major = env!("CARGO_PKG_VERSION_MAJOR").parse::<u8>().unwrap();
@@ -234,28 +240,25 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step("Parsing transaction", ctx);
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                display::show_step("Start parsing the transaction", ctx);
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step("Parsing transaction", ctx);
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step("Parsing transaction", ctx);
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step("Parsing transaction", ctx);
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls: u8 = FieldElement::from(data).into();
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
@@ -267,7 +270,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         display::show_step(
                             format!(
                                 "{}{}/{}",
-                                "Parsing call ",
+                                PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls(),
                                 ctx.tx.get_nb_calls()
                             )
@@ -282,7 +285,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         display::show_step(
                             format!(
                                 "{}{}/{}",
-                                "Parsing call ",
+                                PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls() + 1,
                                 ctx.tx.get_nb_calls()
                             )
@@ -373,16 +376,13 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step("Parsing transaction", ctx);
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                display::show_step("Start parsing the transaction", ctx);
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step("Parsing transaction", ctx);
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls: u8 = FieldElement::from(data).into();
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
@@ -394,7 +394,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         display::show_step(
                             format!(
                                 "{}{}/{}",
-                                "Parsing call ",
+                                PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls(),
                                 ctx.tx.get_nb_calls()
                             )
@@ -409,7 +409,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                         display::show_step(
                             format!(
                                 "{}{}/{}",
-                                "Parsing call ",
+                                PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls() + 1,
                                 ctx.tx.get_nb_calls()
                             )
