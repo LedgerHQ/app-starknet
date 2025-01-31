@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.19.6"}
+ledger_device_sdk = {version = "1.20.0"}
 ledger_secure_sdk_sys = { version = "1.6.3", features = ["heap"]}
 include_gif = "1.2.0"
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
