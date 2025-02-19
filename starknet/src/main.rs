@@ -31,7 +31,7 @@ use ledger_device_sdk::nbgl::init_comm;
 const PARSING_STEP_TX_WORDING: &str = "Parsing transaction";
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
-const PARSING_STEP_TX_WORDING: &str = "Start parsing the transaction";
+const PARSING_STEP_TX_WORDING: &str = "Start parsing the transaction...";
 
 const PARSING_STEP_CALL_WORDING: &str = "Parsing call ";
 
@@ -284,7 +284,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     if p2 == SetCallStep::New.into() {
                         display::show_step(
                             format!(
-                                "{}{}/{}",
+                                "{}{}/{}...",
                                 PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls() + 1,
                                 ctx.tx.get_nb_calls()
@@ -408,7 +408,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     if p2 == SetCallStep::New.into() {
                         display::show_step(
                             format!(
-                                "{}{}/{}",
+                                "{}{}/{}...",
                                 PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls() + 1,
                                 ctx.tx.get_nb_calls()
