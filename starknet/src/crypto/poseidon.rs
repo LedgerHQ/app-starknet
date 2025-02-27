@@ -400,7 +400,7 @@ impl PoseidonStark252 {
         // Pad input with 1 followed by 0's (if necessary).
         let mut values = inputs.to_owned();
         values.push(FieldElement::from(1u8));
-        values.resize(((values.len() + r - 1) / r) * r, FieldElement::ZERO);
+        values.resize(values.len().div_ceil(r) * r, FieldElement::ZERO);
 
         assert!(values.len() % r == 0);
         let mut state: Vec<FieldElement> = Vec::from([FieldElement::ZERO; STATE_SIZE]);
@@ -425,20 +425,17 @@ impl PoseidonStark252 {
 
 // Code ported from the implementation here:
 // https://github.com/xJonathanLEI/starknet-rs/blob/7bb13d3f02f23949cf3c263e1b53ffcc43990ce6/starknet-crypto/src/poseidon_hash.rs#L13
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct PoseidonHasher {
     state: [FieldElement; 3],
     buffer: Option<FieldElement>,
 }
 
-impl PoseidonHasher {
-    /// Creates a new [PoseidonHasher].
-    pub fn new() -> Self {
-        Self::default()
-    }
+use super::HasherTrait;
 
+impl HasherTrait for PoseidonHasher {
     /// Absorbs message into the hash.
-    pub fn update(&mut self, msg: FieldElement) {
+    fn update(&mut self, msg: FieldElement) {
         match self.buffer.take() {
             Some(previous_message) => {
                 self.state[0] += previous_message;
@@ -452,7 +449,7 @@ impl PoseidonHasher {
     }
 
     /// Finishes and returns hash.
-    pub fn finalize(mut self) -> FieldElement {
+    fn finalize(mut self) -> FieldElement {
         // Applies padding
         match self.buffer.take() {
             Some(last_message) => {

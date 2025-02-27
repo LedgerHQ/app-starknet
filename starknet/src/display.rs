@@ -1,13 +1,17 @@
 extern crate alloc;
 use crate::{
+    context::{
+        Call, DeployAccountTransactionV1, DeployAccountTransactionV3, InvokeTransactionV1,
+        InvokeTransactionV3,
+    },
     erc20::{ERC20_TOKENS, TRANSFER},
     types::FieldElement,
 };
-use alloc::string::String;
+
 use include_gif::include_gif;
 use ledger_device_sdk::io::Comm;
 
-use crate::context::{Ctx, InvokeTransaction, Transaction};
+use crate::context::{Ctx, Transaction};
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::ui::{
@@ -17,56 +21,66 @@ use ledger_device_sdk::ui::{
     },
 };
 
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use crate::Ins;
+
 use crate::settings::Settings;
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglChoice, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent,
-    NbglReview, NbglReviewStatus, NbglSpinner, NbglStatus, PageIndex, StatusType, TagValueConfirm,
-    TagValueList, TransactionType, TuneIndex,
+    NbglReview, NbglReviewStatus, NbglStatus, PageIndex, StatusType, TagValueConfirm, TagValueList,
+    TransactionType, TuneIndex,
 };
 
 pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
     let tx = &mut ctx.tx;
-
     match tx {
         Transaction::None => None,
-        Transaction::DeployAccount(t) => {
-            // display contract_address, fees and class_hash
-            let mut contract_address = t.contract_address.to_hex_string();
-            contract_address.insert_str(0, "0x");
+        Transaction::DeployAccountV3(tx) => show_tx_deploy_account_v3(tx),
+        Transaction::DeployAccountV1(tx) => show_tx_deploy_account_v1(tx),
+        Transaction::InvokeV3(tx) => show_tx_invoke_v3(tx),
+        Transaction::InvokeV1(tx) => show_tx_invoke_v1(tx),
+    }
+}
 
-            let mut class_hash = t.class_hash.to_hex_string();
-            class_hash.insert_str(0, "0x");
+fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
+    match support_clear_sign(&tx.calls) {
+        Some(idx) => {
+            let call = &tx.calls[0];
 
-            let fees = match t.version {
-                FieldElement::ONE => {
-                    let mut fees = t.max_fee.to_dec_string(Some(18));
-                    fees.push_str(" ETH");
-                    fees
-                }
-                FieldElement::THREE => {
-                    let max_amount = FieldElement::from(&t.l1_gas_bounds.value[8..16]);
-                    let max_price_per_unit = FieldElement::from(&t.l1_gas_bounds.value[16..32]);
-                    let max_fees = max_amount * max_price_per_unit;
-                    let mut fees = max_fees.to_dec_string(Some(18));
-                    fees.push_str(" STRK");
-                    fees
-                }
-                _ => String::from(""), // should not happen
-            };
+            let mut sender = tx.sender_address.to_hex_string();
+            sender.insert_str(0, "0x");
+            let token = ERC20_TOKENS[idx].ticker;
+            let mut to = call.calldata[0].to_hex_string();
+            to.insert_str(0, "0x");
+            let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[idx].decimals));
+
+            let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
+            let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
+            let max_fees = max_amount * max_price_per_unit;
+            let mut max_fees_str = max_fees.to_dec_string(Some(18));
+            max_fees_str.push_str(" STRK");
 
             let my_fields = [
                 Field {
-                    name: "Deploy account",
-                    value: contract_address.as_str(),
+                    name: "From",
+                    value: sender.as_str(),
+                },
+                Field {
+                    name: "Token",
+                    value: token,
+                },
+                Field {
+                    name: "Amount",
+                    value: amount.as_str(),
+                },
+                Field {
+                    name: "To",
+                    value: to.as_str(),
                 },
                 Field {
                     name: "Max Fees",
-                    value: fees.as_str(),
-                },
-                Field {
-                    name: "Class Hash",
-                    value: class_hash.as_str(),
+                    value: max_fees_str.as_str(),
                 },
             ];
 
@@ -97,94 +111,191 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
                 Some(review.show(&my_fields))
             }
         }
-        Transaction::Invoke(t) => {
-            match support_clear_sign(t) {
-                Some(idx) => {
-                    let call = &t.calls[0];
+        None => None,
+    }
+}
 
-                    let mut sender = t.sender_address.to_hex_string();
-                    sender.insert_str(0, "0x");
-                    let token = ERC20_TOKENS[idx].ticker;
-                    let mut to = call.calldata[0].to_hex_string();
-                    to.insert_str(0, "0x");
-                    let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[idx].decimals));
+fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
+    match support_clear_sign(&tx.calls) {
+        Some(idx) => {
+            let call = &tx.calls[0];
 
-                    let max_fees_str = match t.version {
-                        FieldElement::ONE => {
-                            let mut max_fees_str = t.max_fee.to_dec_string(Some(18));
-                            max_fees_str.push_str(" ETH");
-                            max_fees_str
-                        }
-                        FieldElement::THREE => {
-                            let max_amount = FieldElement::from(&t.l1_gas_bounds.value[8..16]);
-                            let max_price_per_unit =
-                                FieldElement::from(&t.l1_gas_bounds.value[16..32]);
-                            let max_fees = max_amount * max_price_per_unit;
-                            let mut max_fees_str = max_fees.to_dec_string(Some(18));
-                            max_fees_str.push_str(" STRK");
-                            max_fees_str
-                        }
-                        _ => String::from(""), // should not happen
-                    };
+            let mut sender = tx.sender_address.to_hex_string();
+            sender.insert_str(0, "0x");
+            let token = ERC20_TOKENS[idx].ticker;
+            let mut to = call.calldata[0].to_hex_string();
+            to.insert_str(0, "0x");
+            let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[idx].decimals));
 
-                    let my_fields = [
-                        Field {
-                            name: "From",
-                            value: sender.as_str(),
-                        },
-                        Field {
-                            name: "Token",
-                            value: token,
-                        },
-                        Field {
-                            name: "Amount",
-                            value: amount.as_str(),
-                        },
-                        Field {
-                            name: "To",
-                            value: to.as_str(),
-                        },
-                        Field {
-                            name: "Max Fees",
-                            value: max_fees_str.as_str(),
-                        },
-                    ];
+            let mut max_fees_str = tx.max_fee.to_dec_string(Some(18));
+            max_fees_str.push_str(" ETH");
 
-                    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
-                    {
-                        let my_review = MultiFieldReview::new(
-                            &my_fields,
-                            &["Confirm Tx to sign"],
-                            Some(&EYE),
-                            "Approve",
-                            Some(&VALIDATE_14),
-                            "Reject",
-                            Some(&CROSSMARK),
-                        );
-                        Some(my_review.show())
-                    }
-                    #[cfg(any(target_os = "stax", target_os = "flex"))]
-                    {
-                        // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
-                        const APP_ICON: NbglGlyph =
-                            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+            let my_fields = [
+                Field {
+                    name: "From",
+                    value: sender.as_str(),
+                },
+                Field {
+                    name: "Token",
+                    value: token,
+                },
+                Field {
+                    name: "Amount",
+                    value: amount.as_str(),
+                },
+                Field {
+                    name: "To",
+                    value: to.as_str(),
+                },
+                Field {
+                    name: "Max Fees",
+                    value: max_fees_str.as_str(),
+                },
+            ];
 
-                        let review = NbglReview::new()
-                            .tx_type(TransactionType::Transaction)
-                            .titles("Review transaction", "", "Sign Transaction ?")
-                            .glyph(&APP_ICON);
+            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            {
+                let my_review = MultiFieldReview::new(
+                    &my_fields,
+                    &["Confirm Tx to sign"],
+                    Some(&EYE),
+                    "Approve",
+                    Some(&VALIDATE_14),
+                    "Reject",
+                    Some(&CROSSMARK),
+                );
+                Some(my_review.show())
+            }
+            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            {
+                // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
 
-                        Some(review.show(&my_fields))
-                    }
-                }
-                None => None,
+                let review = NbglReview::new()
+                    .tx_type(TransactionType::Transaction)
+                    .titles("Review transaction", "", "Sign Transaction ?")
+                    .glyph(&APP_ICON);
+
+                Some(review.show(&my_fields))
             }
         }
+        None => None,
+    }
+}
+
+fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
+    let mut contract_address = tx.contract_address.to_hex_string();
+    contract_address.insert_str(0, "0x");
+
+    let mut class_hash = tx.class_hash.to_hex_string();
+    class_hash.insert_str(0, "0x");
+
+    let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
+    let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
+    let max_fees = max_amount * max_price_per_unit;
+    let mut fees = max_fees.to_dec_string(Some(18));
+    fees.push_str(" STRK");
+
+    let my_fields = [
+        Field {
+            name: "Deploy account",
+            value: contract_address.as_str(),
+        },
+        Field {
+            name: "Max Fees",
+            value: fees.as_str(),
+        },
+        Field {
+            name: "Class Hash",
+            value: class_hash.as_str(),
+        },
+    ];
+
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        let my_review = MultiFieldReview::new(
+            &my_fields,
+            &["Confirm Tx to sign"],
+            Some(&EYE),
+            "Approve",
+            Some(&VALIDATE_14),
+            "Reject",
+            Some(&CROSSMARK),
+        );
+        Some(my_review.show())
+    }
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+
+        let review = NbglReview::new()
+            .tx_type(TransactionType::Transaction)
+            .titles("Review transaction", "", "Sign Transaction ?")
+            .glyph(&APP_ICON);
+
+        Some(review.show(&my_fields))
+    }
+}
+
+fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Option<bool> {
+    // display contract_address, fees and class_hash
+    let mut contract_address = tx.contract_address.to_hex_string();
+    contract_address.insert_str(0, "0x");
+
+    let mut class_hash = tx.class_hash.to_hex_string();
+    class_hash.insert_str(0, "0x");
+
+    let mut fees = tx.max_fee.to_dec_string(Some(18));
+    fees.push_str(" ETH");
+
+    let my_fields = [
+        Field {
+            name: "Deploy account",
+            value: contract_address.as_str(),
+        },
+        Field {
+            name: "Max Fees",
+            value: fees.as_str(),
+        },
+        Field {
+            name: "Class Hash",
+            value: class_hash.as_str(),
+        },
+    ];
+
+    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    {
+        let my_review = MultiFieldReview::new(
+            &my_fields,
+            &["Confirm Tx to sign"],
+            Some(&EYE),
+            "Approve",
+            Some(&VALIDATE_14),
+            "Reject",
+            Some(&CROSSMARK),
+        );
+        Some(my_review.show())
+    }
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    {
+        // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+
+        let review = NbglReview::new()
+            .tx_type(TransactionType::Transaction)
+            .titles("Review transaction", "", "Sign Transaction ?")
+            .glyph(&APP_ICON);
+
+        Some(review.show(&my_fields))
     }
 }
 
 pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
-    let mut hash = ctx.hash.m_hash.to_hex_string();
+    let mut hash = ctx.hash.to_hex_string();
     hash.make_ascii_uppercase();
 
     let my_field = [Field {
@@ -236,17 +347,20 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
     }
 }
 
-pub fn show_pending() {
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+pub fn show_step(text: &str, ctx: &mut Ctx) {
+    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
     {
-        let page_0 = Page::new(PageStyle::BoldNormal, ["Computing ", "Tx Hash..."], None);
+        let _c = ctx;
+        let (s1, s2) = text.split_once(' ').unwrap();
+
+        let page_0 = Page::new(PageStyle::BoldNormal, [s1, s2], None);
         clear_screen();
         page_0.place();
     }
+
     #[cfg(any(target_os = "stax", target_os = "flex"))]
     {
-        let spinner = NbglSpinner::new();
-        spinner.text("Computing Tx Hash...").show();
+        ctx.spinner.show(text);
     }
 }
 
@@ -328,8 +442,6 @@ pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
     }
 }
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
-use crate::Ins;
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::io::Event;
 
@@ -457,12 +569,12 @@ pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
     }
 }
 
-fn support_clear_sign(tx: &InvokeTransaction) -> Option<usize> {
-    match tx.calls.len() {
+fn support_clear_sign(calls: &[Call]) -> Option<usize> {
+    match calls.len() {
         1 => {
             for (idx, t) in ERC20_TOKENS.iter().enumerate() {
-                if tx.calls[0].to == FieldElement::from(t.address)
-                    && tx.calls[0].selector == FieldElement::from(TRANSFER)
+                if calls[0].to == FieldElement::from(t.address)
+                    && calls[0].selector == FieldElement::from(TRANSFER)
                 {
                     return Some(idx);
                 }

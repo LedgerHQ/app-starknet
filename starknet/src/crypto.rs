@@ -4,7 +4,10 @@ use ledger_device_sdk::io::{Reply, SyscallError};
 pub mod pedersen;
 pub mod poseidon;
 
-use crate::context::{Ctx, DeployAccountTransaction, InvokeTransaction, Transaction};
+use crate::context::{
+    Ctx, DeployAccountTransactionV1, DeployAccountTransactionV3, InvokeTransactionV1,
+    InvokeTransactionV3, Transaction,
+};
 use crate::types::FieldElement;
 
 /// Length in bytes of an EIP-2645 derivation path (without m), e.g m/2645'/1195502025'/1148870696'/0'/0'/0
@@ -26,17 +29,25 @@ impl From<CryptoError> for Reply {
     }
 }
 
+pub trait HasherTrait: Sized {
+    fn update(&mut self, data: FieldElement);
+    fn finalize(self) -> FieldElement;
+}
+
 /// Helper function that signs with ECDSA in deterministic nonce
 pub fn sign_hash(ctx: &mut Ctx) -> Result<(), CryptoError> {
-    poseidon::poseidon_shift(&mut ctx.hash.m_hash);
+    poseidon::poseidon_shift(&mut ctx.hash);
 
     match Stark256::derive_from_path(ctx.bip32_path.as_ref())
-        .deterministic_sign(ctx.hash.m_hash.value.as_ref())
+        .deterministic_sign(ctx.hash.value.as_ref())
     {
         Ok(s) => {
             let der = s.0;
-            convert_der_to_rs(&der[..], &mut ctx.hash.r, &mut ctx.hash.s).unwrap();
-            ctx.hash.v = s.2 as u8;
+            match convert_der_to_rs(&der[..], &mut ctx.signature.r, &mut ctx.signature.s) {
+                Ok(_) => (),
+                Err(_err) => return Err(CryptoError::Sign),
+            }
+            ctx.signature.v = s.2 as u8;
             Ok(())
         }
         Err(_) => Err(CryptoError::Sign),
@@ -75,21 +86,21 @@ pub fn set_derivation_path(buf: &mut &[u8], ctx: &mut Ctx) -> Result<(), CryptoE
 }
 
 #[derive(Debug)]
-enum ConvertError<const R: usize, const S: usize> {
+enum ConvertError {
     /// The DER prefix (at index 0) found was different than the expected 0x30
-    InvalidDERPrefix(u8),
+    InvalidDERPrefix,
     /// The R marker was different than expected (0x02)
-    InvalidRMarker(u8),
+    InvalidRMarker,
     /// The encoded len for R was not the same as the expected
-    InvalidRLen(usize),
+    InvalidRLen,
     /// The S marker was different than expected (0x02)
-    InvalidSMarker(u8),
+    InvalidSMarker,
     /// The encoded len for S was not the same as the expected
-    InvalidSLen(usize),
+    InvalidSLen,
     /// Passed signature was too short to be read properly
     TooShort,
     /// Passed signature encoded payload len was not in the expected range
-    InvalidPayloadLen(usize, usize, usize),
+    InvalidPayloadLen,
 }
 
 /// Converts a DER encoded signature into a (r, s) encoded signture
@@ -97,7 +108,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     sig: &[u8],
     out_r: &mut [u8; R],
     out_s: &mut [u8; S],
-) -> Result<(), ConvertError<R, S>> {
+) -> Result<(), ConvertError> {
     const MINPAYLOADLEN: usize = 1;
     const PAYLOADLEN: usize = 32;
     const MAXPAYLOADLEN: usize = 33;
@@ -120,7 +131,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     //check DER prefix
     if sig[0] != 0x30 {
-        return Err(ConvertError::InvalidDERPrefix(sig[0]));
+        return Err(ConvertError::InvalidDERPrefix);
     }
 
     //check payload len size
@@ -128,11 +139,7 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     let min_payload_len = 2 + MINPAYLOADLEN + 2 + MINPAYLOADLEN;
     let max_payload_len = 2 + MAXPAYLOADLEN + 2 + MAXPAYLOADLEN;
     if payload_len < min_payload_len || payload_len > max_payload_len {
-        return Err(ConvertError::InvalidPayloadLen(
-            min_payload_len,
-            payload_len,
-            max_payload_len,
-        ));
+        return Err(ConvertError::InvalidPayloadLen);
     }
 
     //check that the input slice is at least as long as the encoded len
@@ -142,12 +149,12 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     //retrieve R
     if sig[2] != 0x02 {
-        return Err(ConvertError::InvalidRMarker(sig[2]));
+        return Err(ConvertError::InvalidRMarker);
     }
 
     let r_len = sig[3] as usize;
     if !payload_range.contains(&r_len) {
-        return Err(ConvertError::InvalidRLen(r_len));
+        return Err(ConvertError::InvalidRLen);
     }
 
     //sig[4], after DER, after Payload, after marker after len
@@ -155,12 +162,12 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
 
     //retrieve S
     if sig[4 + r_len] != 0x02 {
-        return Err(ConvertError::InvalidSMarker(sig[4 + r_len]));
+        return Err(ConvertError::InvalidSMarker);
     }
 
     let s_len = sig[4 + r_len + 1] as usize;
     if !payload_range.contains(&s_len) {
-        return Err(ConvertError::InvalidSLen(s_len));
+        return Err(ConvertError::InvalidSLen);
     }
 
     //after r (4 + r_len), after marker, after len
@@ -175,169 +182,166 @@ fn convert_der_to_rs<const R: usize, const S: usize>(
     Ok(())
 }
 
-pub fn tx_hash(tx: &Transaction) -> FieldElement {
+#[allow(dead_code)]
+pub fn tx_hash(tx: &mut Transaction) -> FieldElement {
     match tx {
-        Transaction::Invoke(tx) => invoke_tx_hash(tx),
-        Transaction::DeployAccount(tx) => deploy_account_tx_hash(tx),
+        Transaction::InvokeV3(tx) => invoke_tx_hash_v3(tx),
+        Transaction::InvokeV1(tx) => invoke_tx_hash_v1(tx),
+        Transaction::DeployAccountV3(tx) => deploy_account_tx_hash_v3(tx),
+        Transaction::DeployAccountV1(tx) => deploy_account_tx_hash_v1(tx),
         Transaction::None => FieldElement::ZERO,
     }
 }
 
-fn invoke_tx_hash(tx: &InvokeTransaction) -> FieldElement {
-    match tx.version.into() {
-        1u8 => {
-            let mut hasher = pedersen::PedersenHasher::new();
-            /* "invoke" */
-            hasher.update(FieldElement::INVOKE);
-            /* version */
-            hasher.update(tx.version);
-            /* sender_address */
-            hasher.update(tx.sender_address);
-            /* 0 */
-            hasher.update(FieldElement::ZERO);
-            /* h(calldata) */
-            let mut hasher_calldata = pedersen::PedersenHasher::new();
-            hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
-            let mut calldata_len = 1u8;
-            tx.calls.iter().for_each(|c| {
-                hasher_calldata.update(c.to);
-                hasher_calldata.update(c.selector);
-                hasher_calldata.update(FieldElement::from(c.calldata.len() as u8));
-                calldata_len += 3;
-                c.calldata.iter().for_each(|d| {
-                    hasher_calldata.update(*d);
-                    calldata_len += 1;
-                });
-            });
-            hasher_calldata.update(FieldElement::from(calldata_len));
-            let hash_calldata = hasher_calldata.finalize();
-            hasher.update(hash_calldata);
-            /* max fee */
-            hasher.update(tx.max_fee);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
+#[allow(dead_code)]
+fn invoke_tx_hash_v3(tx: &mut InvokeTransactionV3) -> FieldElement {
+    /* "invoke" */
+    tx.hasher.update(FieldElement::INVOKE);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* sender_address */
+    tx.hasher.update(tx.sender_address);
+    /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+    let fee_hash =
+        poseidon::PoseidonStark252::hash_many(&[tx.tip, tx.l1_gas_bounds, tx.l2_gas_bounds]);
+    tx.hasher.update(fee_hash);
+    /* h(paymaster_data) */
+    let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
+    tx.hasher.update(paymaster_hash);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
+    /* data_availability_modes */
+    tx.hasher.update(tx.data_availability_mode);
+    /* h(account_deployment_data) */
+    let accound_deployment_data_hash =
+        poseidon::PoseidonStark252::hash_many(&tx.account_deployment_data);
+    tx.hasher.update(accound_deployment_data_hash);
+    /* h(calldata) */
+    tx.hasher_calldata
+        .update(FieldElement::from(tx.calls.len() as u8));
+    tx.calls.iter().enumerate().for_each(|c| {
+        tx.hasher_calldata.update(c.1.to);
+        tx.hasher_calldata.update(c.1.selector);
+        tx.hasher_calldata
+            .update(FieldElement::from(c.1.calldata.len() as u8));
+        c.1.calldata
+            .iter()
+            .for_each(|d| tx.hasher_calldata.update(*d));
 
-            hasher.update(FieldElement::from(8u8));
+        #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+        ledger_secure_sdk_sys::seph::heartbeat();
+    });
+    let hash_calldata = tx.hasher_calldata.finalize();
 
-            hasher.finalize()
-        }
-        3u8 => {
-            let mut hasher = poseidon::PoseidonHasher::new();
-            /* "invoke" */
-            hasher.update(FieldElement::INVOKE);
-            /* version */
-            hasher.update(tx.version);
-            /* sender_address */
-            hasher.update(tx.sender_address);
-            /* h(tip, l1_gas_bounds, l2_gas_bounds) */
-            let fee_hash = poseidon::PoseidonStark252::hash_many(&[
-                tx.tip,
-                tx.l1_gas_bounds,
-                tx.l2_gas_bounds,
-            ]);
-            hasher.update(fee_hash);
-            /* h(paymaster_data) */
-            let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
-            hasher.update(paymaster_hash);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
-            /* data_availability_modes */
-            hasher.update(tx.data_availability_mode);
-            /* h(account_deployment_data) */
-            let accound_deployment_data_hash =
-                poseidon::PoseidonStark252::hash_many(&tx.account_deployment_data);
-            hasher.update(accound_deployment_data_hash);
-            /* h(calldata) */
-            let mut hasher_calldata = poseidon::PoseidonHasher::new();
-            hasher_calldata.update(FieldElement::from(tx.calls.len() as u8));
-            tx.calls.iter().for_each(|c| {
-                hasher_calldata.update(c.to);
-                hasher_calldata.update(c.selector);
-                hasher_calldata.update(FieldElement::from(c.calldata.len() as u8));
-                c.calldata.iter().for_each(|d| hasher_calldata.update(*d));
-            });
-            let hash_calldata = hasher_calldata.finalize();
+    tx.hasher.update(hash_calldata);
 
-            hasher.update(hash_calldata);
-
-            hasher.finalize()
-        }
-        _ => panic!("Invalid version"),
-    }
+    tx.hasher.finalize()
 }
 
-fn deploy_account_tx_hash(tx: &DeployAccountTransaction) -> FieldElement {
-    match tx.version.into() {
-        1u8 => {
-            let mut hasher = pedersen::PedersenHasher::new();
-            /* "deploy_account" */
-            hasher.update(FieldElement::DEPLOY_ACCOUNT);
-            /* version */
-            hasher.update(tx.version);
-            /* contract_address */
-            hasher.update(tx.contract_address);
-            /* 0 */
-            hasher.update(FieldElement::ZERO);
-            /* h(class_hash, contract_address_salt, constructor_calldata) */
-            let mut hasher_temp = pedersen::PedersenHasher::new();
-            hasher_temp.update(tx.class_hash);
-            hasher_temp.update(tx.contract_address_salt);
-            for d in &tx.constructor_calldata {
-                hasher_temp.update(*d);
-            }
-            hasher_temp.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
-            let hash_temp = hasher_temp.finalize();
-            hasher.update(hash_temp);
-            /* max fee */
-            hasher.update(tx.max_fee);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
+#[allow(dead_code)]
+fn invoke_tx_hash_v1(tx: &mut InvokeTransactionV1) -> FieldElement {
+    /* "invoke" */
+    tx.hasher.update(FieldElement::INVOKE);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* sender_address */
+    tx.hasher.update(tx.sender_address);
+    /* 0 */
+    tx.hasher.update(FieldElement::ZERO);
+    /* h(calldata) */
+    tx.hasher_calldata
+        .update(FieldElement::from(tx.calls.len() as u8));
+    let mut calldata_len = 1u8;
+    tx.calls.iter().enumerate().for_each(|c| {
+        tx.hasher_calldata.update(c.1.to);
+        tx.hasher_calldata.update(c.1.selector);
+        tx.hasher_calldata
+            .update(FieldElement::from(c.1.calldata.len() as u8));
+        calldata_len += 3;
+        c.1.calldata.iter().for_each(|d| {
+            tx.hasher_calldata.update(*d);
+            calldata_len += 1;
+        });
+        #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+        ledger_secure_sdk_sys::seph::heartbeat();
+    });
+    tx.hasher_calldata.update(FieldElement::from(calldata_len));
+    let hash_calldata = tx.hasher_calldata.finalize();
+    tx.hasher.update(hash_calldata);
+    /* max fee */
+    tx.hasher.update(tx.max_fee);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
 
-            hasher.update(FieldElement::from(8u8));
+    tx.hasher.update(FieldElement::from(8u8));
 
-            hasher.finalize()
-        }
-        3u8 => {
-            let mut hasher = poseidon::PoseidonHasher::new();
-            /* "deploy_account" */
-            hasher.update(FieldElement::DEPLOY_ACCOUNT);
-            /* version */
-            hasher.update(tx.version);
-            /* contract_address */
-            hasher.update(tx.contract_address);
-            /* h(tip, l1_gas_bounds, l2_gas_bounds) */
-            let fee_hash = poseidon::PoseidonStark252::hash_many(&[
-                tx.tip,
-                tx.l1_gas_bounds,
-                tx.l2_gas_bounds,
-            ]);
-            hasher.update(fee_hash);
-            /* h(paymaster_data) */
-            let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
-            hasher.update(paymaster_hash);
-            /* chain_id */
-            hasher.update(tx.chain_id);
-            /* nonce */
-            hasher.update(tx.nonce);
-            /* data_availability_modes */
-            hasher.update(tx.data_availability_mode);
-            /* h(constructor_calldata) */
-            let constructor_calldata_hash =
-                poseidon::PoseidonStark252::hash_many(&tx.constructor_calldata);
-            hasher.update(constructor_calldata_hash);
-            /* class_hash */
-            hasher.update(tx.class_hash);
-            /* contract_address_salt */
-            hasher.update(tx.contract_address_salt);
+    tx.hasher.finalize()
+}
 
-            hasher.finalize()
-        }
-        _ => panic!("Invalid version"),
+#[allow(dead_code)]
+fn deploy_account_tx_hash_v3(tx: &mut DeployAccountTransactionV3) -> FieldElement {
+    /* "deploy_account" */
+    tx.hasher.update(FieldElement::DEPLOY_ACCOUNT);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* contract_address */
+    tx.hasher.update(tx.contract_address);
+    /* h(tip, l1_gas_bounds, l2_gas_bounds) */
+    let fee_hash =
+        poseidon::PoseidonStark252::hash_many(&[tx.tip, tx.l1_gas_bounds, tx.l2_gas_bounds]);
+    tx.hasher.update(fee_hash);
+    /* h(paymaster_data) */
+    let paymaster_hash = poseidon::PoseidonStark252::hash_many(&tx.paymaster_data);
+    tx.hasher.update(paymaster_hash);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
+    /* data_availability_modes */
+    tx.hasher.update(tx.data_availability_mode);
+    /* h(constructor_calldata) */
+    let constructor_calldata_hash = poseidon::PoseidonStark252::hash_many(&tx.constructor_calldata);
+    tx.hasher.update(constructor_calldata_hash);
+    /* class_hash */
+    tx.hasher.update(tx.class_hash);
+    /* contract_address_salt */
+    tx.hasher.update(tx.contract_address_salt);
+
+    tx.hasher.finalize()
+}
+
+#[allow(dead_code)]
+fn deploy_account_tx_hash_v1(tx: &mut DeployAccountTransactionV1) -> FieldElement {
+    /* "deploy_account" */
+    tx.hasher.update(FieldElement::DEPLOY_ACCOUNT);
+    /* version */
+    tx.hasher.update(tx.version);
+    /* contract_address */
+    tx.hasher.update(tx.contract_address);
+    /* 0 */
+    tx.hasher.update(FieldElement::ZERO);
+    /* h(class_hash, contract_address_salt, constructor_calldata) */
+    let mut hasher_temp = pedersen::PedersenHasher::default();
+    hasher_temp.update(tx.class_hash);
+    hasher_temp.update(tx.contract_address_salt);
+    for d in &tx.constructor_calldata {
+        hasher_temp.update(*d);
     }
+    hasher_temp.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
+    let hash_temp = hasher_temp.finalize();
+    tx.hasher.update(hash_temp);
+    /* max fee */
+    tx.hasher.update(tx.max_fee);
+    /* chain_id */
+    tx.hasher.update(tx.chain_id);
+    /* nonce */
+    tx.hasher.update(tx.nonce);
+
+    tx.hasher.update(FieldElement::from(8u8));
+
+    tx.hasher.finalize()
 }

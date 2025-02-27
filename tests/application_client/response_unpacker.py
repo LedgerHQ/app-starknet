@@ -85,7 +85,7 @@ def unpack_sign_hash_response(response: bytes) -> Tuple[bytes, bytes, bytes]:
     return r, s, v
 
 class Errors(IntEnum):
-    SW_DENY                    = 0x6E04
+    SW_DENY                    = 0x6985
     SW_CLA_NOT_SUPPORTED       = 0x6E00
     SW_INS_NOT_SUPPORTED       = 0x6E01
     SW_WRONG_P1P2              = 0x6E02

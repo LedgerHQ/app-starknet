@@ -1,7 +1,7 @@
 import pytest
 
 from application_client.response_unpacker import unpack_get_public_key_response, unpack_sign_tx_response, Errors
-from ragger.navigator import NavInsID
+from ragger.navigator import NavInsID, NavIns
 from utils import ROOT_SCREENSHOT_PATH, read_lines_from_file, call_external_binary
 
 CHECK_SIGNATURE_BINARY_PATH = "./target/debug/check-signature"
@@ -31,22 +31,33 @@ def test_clear_sign_tx_0(firmware, backend, navigator, test_name):
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
         if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+                navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)), 
+                                              [
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.BOTH_CLICK
+                                              ],
+                                              "Confirm Tx to sign",
+                                              path=ROOT_SCREENSHOT_PATH,
+                                              test_case_name=test_name)
         else:
-            instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)),
+                                                      [
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.USE_CASE_REVIEW_CONFIRM,
+                                                          NavInsID.USE_CASE_STATUS_DISMISS
+                                                      ], 
+                                                      "Review transaction",
+                                                      path=ROOT_SCREENSHOT_PATH,
+                                                      test_case_name=test_name)
             
     response = backend.last_async_response.data
     
@@ -91,22 +102,33 @@ def test_clear_sign_tx_1(firmware, backend, navigator, test_name):
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
         if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+                navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)), 
+                                              [
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.BOTH_CLICK
+                                              ],
+                                              "Confirm Tx to sign",
+                                              path=ROOT_SCREENSHOT_PATH,
+                                              test_case_name=test_name)
         else:
-            instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)),
+                                                      [
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.USE_CASE_REVIEW_CONFIRM,
+                                                          NavInsID.USE_CASE_STATUS_DISMISS
+                                                      ], 
+                                                      "Review transaction",
+                                                      path=ROOT_SCREENSHOT_PATH,
+                                                      test_case_name=test_name)
             
     response = backend.last_async_response.data
     
@@ -151,22 +173,33 @@ def test_clear_sign_tx_2(firmware, backend, navigator, test_name):
     # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
         if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+                navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)), 
+                                              [
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.BOTH_CLICK
+                                              ],
+                                              "Confirm Tx to sign",
+                                              path=ROOT_SCREENSHOT_PATH,
+                                              test_case_name=test_name)
         else:
-            instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)),
+                                                      [
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.USE_CASE_REVIEW_CONFIRM,
+                                                          NavInsID.USE_CASE_STATUS_DISMISS
+                                                      ], 
+                                                      "Review transaction",
+                                                      path=ROOT_SCREENSHOT_PATH,
+                                                      test_case_name=test_name)
             
     response = backend.last_async_response.data
     
@@ -209,25 +242,36 @@ def test_clear_sign_tx_3(firmware, backend, navigator, test_name):
     for apdu in all_apdus[:-1]:
         backend.exchange_raw(bytes.fromhex(apdu))
 
-    # send last apdu and yield the response
+   # send last apdu and yield the response
     with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
         if firmware.device.startswith("nano"):
-            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
-                                                    [NavInsID.BOTH_CLICK],
-                                                    "Approve",
-                                                    ROOT_SCREENSHOT_PATH,
-                                                    test_name)
+                navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)), 
+                                              [
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.RIGHT_CLICK,
+                                                  NavInsID.BOTH_CLICK
+                                              ],
+                                              "Confirm Tx to sign",
+                                              path=ROOT_SCREENSHOT_PATH,
+                                              test_case_name=test_name)
         else:
-            instructions = [
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.SWIPE_CENTER_TO_LEFT,
-                NavInsID.USE_CASE_REVIEW_CONFIRM,
-                NavInsID.USE_CASE_STATUS_DISMISS
-            ]
-            navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
-                                           test_name,
-                                           instructions)
+            navigator.navigate_until_text_and_compare(NavIns(NavInsID.WAIT, (0,)),
+                                                      [
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                          NavInsID.USE_CASE_REVIEW_CONFIRM,
+                                                          NavInsID.USE_CASE_STATUS_DISMISS
+                                                      ], 
+                                                      "Review transaction",
+                                                      path=ROOT_SCREENSHOT_PATH,
+                                                      test_case_name=test_name)
             
     response = backend.last_async_response.data
     

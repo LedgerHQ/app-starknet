@@ -1,18 +1,19 @@
 [package]
 name = "starknet"
-version = "2.2.1"
+version = "2.2.3"
 edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = "1.18.1"
-ledger_secure_sdk_sys = { version = "1.5.1", features = ["heap"]}
+ledger_device_sdk = {version = "1.21.2"}
+ledger_secure_sdk_sys = { version = "1.7.1", features = ["heap"]}
 include_gif = "1.2.0"
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
 [features]
 default = ["signhash"]
+debug = ["signhash", "ledger_device_sdk/debug"]
 poseidon = []
 signhash = []
 
@@ -34,3 +35,5 @@ icon = "starknet_32x32.gif"
 [package.metadata.ledger.flex]
 icon = "starknet_40x40.gif"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))'] }
