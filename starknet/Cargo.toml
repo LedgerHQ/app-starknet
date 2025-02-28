@@ -5,15 +5,15 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.21.2"}
+ledger_device_sdk = {version = "1.21.3"}
 ledger_secure_sdk_sys = { version = "1.7.1", features = ["heap"]}
 include_gif = "1.2.0"
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
 [features]
-default = ["signhash"]
-debug = ["signhash", "ledger_device_sdk/debug"]
+default = ["signhash", "ledger_device_sdk/nano_nbgl"]
+debug = ["ledger_device_sdk/debug"]
 poseidon = []
 signhash = []
 

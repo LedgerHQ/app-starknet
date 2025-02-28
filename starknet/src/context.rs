@@ -120,7 +120,6 @@ pub struct Signature {
     pub v: u8,
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::{NbglHomeAndSettings, NbglSpinner};
 
 pub struct Ctx {
@@ -129,9 +128,7 @@ pub struct Ctx {
     pub hash: FieldElement,
     pub signature: Signature,
     pub bip32_path: [u32; 6],
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
     pub home: NbglHomeAndSettings,
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
     pub spinner: NbglSpinner,
 }
 
@@ -143,9 +140,7 @@ impl Ctx {
             hash: FieldElement::default(),
             signature: Signature::default(),
             bip32_path: [0u32; 6],
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
             home: NbglHomeAndSettings::new(),
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
             spinner: NbglSpinner::new(),
         }
     }

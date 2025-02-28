@@ -24,7 +24,6 @@ use transaction::SetCallStep;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::init_comm;
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
@@ -42,31 +41,17 @@ extern "C" fn sample_main() {
 
     let mut ctx = Ctx::new();
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
-    {
-        loop {
-            // Wait for either a specific button push to exit the app
-            // or an APDU command
-            if let io::Event::Command(ins) = display::main_ui(&mut comm) {
-                handle_apdu(&mut comm, &ins, &mut ctx);
-            }
-        }
-    }
+    // Initialize reference to Comm instance for NBGL
+    // API calls.
+    init_comm(&mut comm);
 
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
-    {
-        // Initialize reference to Comm instance for NBGL
-        // API calls.
-        init_comm(&mut comm);
+    ctx.home = display::main_ui_nbgl(&mut comm);
 
-        ctx.home = display::main_ui_nbgl(&mut comm);
-
-        ctx.home.show_and_return();
-        loop {
-            // Wait for an APDU command
-            let ins: Ins = comm.next_command();
-            handle_apdu(&mut comm, &ins, &mut ctx);
-        }
+    ctx.home.show_and_return();
+    loop {
+        // Wait for an APDU command
+        let ins: Ins = comm.next_command();
+        handle_apdu(&mut comm, &ins, &mut ctx);
     }
 }
 
@@ -245,55 +230,32 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             2 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls: u8 = FieldElement::from(data).into();
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             5 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                {
-                    if p2 == SetCallStep::End.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls(),
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
+                if p2 == SetCallStep::New.into() {
+                    display::show_step(
+                        format!(
+                            "{}{}/{}...",
+                            PARSING_STEP_CALL_WORDING,
+                            ctx.tx.get_nb_received_calls() + 1,
+                            ctx.tx.get_nb_calls()
+                        )
+                        .as_str(),
+                        ctx,
+                    );
                 }
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                {
-                    if p2 == SetCallStep::New.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}...",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
+
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -381,43 +343,24 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             2 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls: u8 = FieldElement::from(data).into();
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             3 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                {
-                    if p2 == SetCallStep::End.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls(),
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
+                if p2 == SetCallStep::New.into() {
+                    display::show_step(
+                        format!(
+                            "{}{}/{}...",
+                            PARSING_STEP_CALL_WORDING,
+                            ctx.tx.get_nb_received_calls() + 1,
+                            ctx.tx.get_nb_calls()
+                        )
+                        .as_str(),
+                        ctx,
+                    );
                 }
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                {
-                    if p2 == SetCallStep::New.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}...",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
+
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }

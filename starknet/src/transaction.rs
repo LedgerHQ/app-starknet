@@ -8,7 +8,7 @@ use crate::{
 };
 
 extern crate alloc;
-use alloc::vec::Vec;
+use alloc::{format, vec::Vec};
 
 const FIELD_ELEMENT_SIZE: usize = 32;
 
@@ -282,6 +282,7 @@ pub fn set_calldata(
 ) -> Result<(), SetCallError> {
     match tx {
         Transaction::InvokeV3(tx) => {
+            ledger_device_sdk::testing::debug_print("set_calldata InvokeV3\n");
             set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher_calldata)
         }
         Transaction::InvokeV1(tx) => {
@@ -337,6 +338,9 @@ fn set_calldata_invoke(
             let iter = data.chunks(FIELD_ELEMENT_SIZE);
             for d in iter {
                 call.calldata.push(d.into());
+                ledger_device_sdk::testing::debug_print(
+                    format!("calldata length: {:?}\n", call.calldata.len()).as_str(),
+                );
             }
             if p2 == SetCallStep::End {
                 hasher.update(call.to);
