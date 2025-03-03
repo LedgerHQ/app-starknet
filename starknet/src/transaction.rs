@@ -324,31 +324,39 @@ fn set_calldata_invoke(
             let mut call = Call::default();
             let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
             call.to = iter.next().unwrap().into();
+            hasher.update(call.to);
             call.selector = iter.next().unwrap().into();
+            hasher.update(call.selector);
+            let calldata_len = iter.next().unwrap().into();
+            hasher.update(calldata_len);
             for d in iter {
                 call.calldata.push(d.into());
+                hasher.update(d.into());
             }
             calls.push(call);
             Ok(())
         }
         SetCallStep::Add | SetCallStep::End => {
-            let idx = calls.len() - 1;
-            let call: &mut Call = calls.get_mut(idx).unwrap();
+            //let idx = calls.len() - 1;
+            //let call: &mut Call = calls.get_mut(idx).unwrap();
             let iter = data.chunks(FIELD_ELEMENT_SIZE);
             for d in iter {
-                call.calldata.push(d.into());
+                //call.calldata.push(d.into());
+                hasher.update(d.into());
+                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                ledger_secure_sdk_sys::seph::heartbeat();
             }
-            if p2 == SetCallStep::End {
-                hasher.update(call.to);
-                hasher.update(call.selector);
-                hasher.update(FieldElement::from(call.calldata.len() as u8));
-                for d in &call.calldata {
-                    hasher.update(*d);
-                    // Add heartbeat to prevent watchdog reset
-                    #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-                    ledger_secure_sdk_sys::seph::heartbeat();
-                }
-            }
+            // if p2 == SetCallStep::End {
+            //     hasher.update(call.to);
+            //     hasher.update(call.selector);
+            //     hasher.update(FieldElement::from(call.calldata.len() as u8));
+            //     for d in &call.calldata {
+            //         hasher.update(*d);
+            //         // Add heartbeat to prevent watchdog reset
+            //         #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+            //         ledger_secure_sdk_sys::seph::heartbeat();
+            //     }
+            // }
             Ok(())
         }
     }
