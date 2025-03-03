@@ -222,6 +222,7 @@ fn set_deploy_account_fields_v1(data: &[u8], tx: &mut DeployAccountTransactionV1
     tx.hasher.update(FieldElement::ZERO);
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum SetCallError {
     TooManyCalls = 0xFF01,

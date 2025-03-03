@@ -20,7 +20,6 @@ use ledger_device_sdk::io;
 use types::FieldElement;
 
 use settings::Settings;
-use transaction::SetCallStep;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
@@ -296,7 +295,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
                 {
-                    if p2 == SetCallStep::New.into() {
+                    if p2 == transaction::SetCallStep::New.into() {
                         display::show_step(
                             format!(
                                 "{}{}/{}...",
@@ -435,7 +434,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
                 {
-                    if p2 == SetCallStep::New.into() {
+                    if p2 == transaction::SetCallStep::New.into() {
                         display::show_step(
                             format!(
                                 "{}{}/{}...",

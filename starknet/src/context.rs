@@ -97,8 +97,8 @@ impl Transaction {
 
     pub fn get_nb_calls(&self) -> usize {
         match self {
-            Transaction::InvokeV1(tx) => tx.nb_calls.into(),
-            Transaction::InvokeV3(tx) => tx.nb_calls.into(),
+            Transaction::InvokeV1(tx) => tx.nb_calls,
+            Transaction::InvokeV3(tx) => tx.nb_calls,
             Transaction::DeployAccountV1(_tx) => 1usize,
             Transaction::DeployAccountV3(_tx) => 1usize,
             Transaction::None => 0usize,
