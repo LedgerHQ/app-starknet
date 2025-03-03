@@ -10,12 +10,14 @@ use crate::{
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::Comm;
+#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+use ledger_device_sdk::ui::gadgets::Validator;
 
 use crate::context::{Ctx, Transaction};
 
 #[cfg(not(any(target_os = "stax", target_os = "flex")))]
 use ledger_device_sdk::ui::{
-    bitmaps::{Glyph, BACK, CERTIFICATE, CROSSMARK, DASHBOARD_X, EYE, VALIDATE_14, WARNING},
+    bitmaps::{Glyph, BACK, CERTIFICATE, CROSSMARK, DASHBOARD_X, EYE, VALIDATE_14},
     gadgets::{
         clear_screen, EventOrPageIndex, Field, MultiFieldReview, MultiPageMenu, Page, PageStyle,
     },
@@ -44,9 +46,9 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 }
 
 fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
-    match support_clear_sign(&tx.calls) {
+    match support_clear_sign(&tx.call) {
         Some(idx) => {
-            let call = &tx.calls[0];
+            let call = &tx.call;
 
             let mut sender = tx.sender_address.to_hex_string();
             sender.insert_str(0, "0x");
@@ -116,9 +118,9 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
 }
 
 fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
-    match support_clear_sign(&tx.calls) {
+    match support_clear_sign(&tx.call) {
         Some(idx) => {
-            let call = &tx.calls[0];
+            let call = &tx.call;
 
             let mut sender = tx.sender_address.to_hex_string();
             sender.insert_str(0, "0x");
@@ -308,9 +310,15 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        let page = Page::new(PageStyle::PictureBold, ["Blind", "Signing"], Some(&WARNING));
-        clear_screen();
-        page.place_and_wait();
+        // let page = Page::new(PageStyle::PictureBold, ["Blind", "Signing"], Some(&WARNING));
+        // clear_screen();
+        // page.place_and_wait();
+
+        let validator = Validator::new("Blind Signing");
+        match validator.ask() {
+            true => (),
+            false => return false,
+        }
 
         let my_review = MultiFieldReview::new(
             &my_field,
@@ -569,18 +577,12 @@ pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
     }
 }
 
-fn support_clear_sign(calls: &[Call]) -> Option<usize> {
-    match calls.len() {
-        1 => {
-            for (idx, t) in ERC20_TOKENS.iter().enumerate() {
-                if calls[0].to == FieldElement::from(t.address)
-                    && calls[0].selector == FieldElement::from(TRANSFER)
-                {
-                    return Some(idx);
-                }
-            }
-            None
+fn support_clear_sign(call: &Call) -> Option<usize> {
+    for (idx, t) in ERC20_TOKENS.iter().enumerate() {
+        if call.to == FieldElement::from(t.address) && call.selector == FieldElement::from(TRANSFER)
+        {
+            return Some(idx);
         }
-        _ => None,
     }
+    None
 }

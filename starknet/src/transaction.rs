@@ -36,7 +36,7 @@ impl From<FieldElement> for TxVersion {
 pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
     match tx {
         Transaction::InvokeV3(tx) => {
-            if tx.calls.len() == tx.calls.capacity() {
+            if tx.nb_rcv_calls == tx.nb_calls {
                 let hash_calldata = tx.hasher_calldata.finalize();
                 tx.hasher.update(hash_calldata);
                 return Some(tx.hasher.finalize());
@@ -44,7 +44,7 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::InvokeV1(tx) => {
-            if tx.calls.len() == tx.calls.capacity() {
+            if tx.nb_rcv_calls == tx.nb_calls {
                 tx.hasher_calldata
                     .update(FieldElement::from(tx.hasher_calldata.get_nb_fe() as u8));
                 let hash_calldata = tx.hasher_calldata.finalize();
@@ -255,21 +255,21 @@ impl From<SetCallStep> for u8 {
     }
 }
 
-pub fn set_calldata_nb(tx: &mut Transaction, nb: u8) {
+pub fn set_calldata_nb(tx: &mut Transaction, nb: FieldElement) {
     match tx {
         Transaction::InvokeV3(tx) => {
-            tx.calls = Vec::with_capacity(nb as usize);
-            tx.hasher_calldata.update(FieldElement::from(nb));
+            tx.nb_calls = nb.into();
+            tx.hasher_calldata.update(nb);
         }
         Transaction::InvokeV1(tx) => {
-            tx.calls = Vec::with_capacity(nb as usize);
-            tx.hasher_calldata.update(FieldElement::from(nb));
+            tx.nb_calls = nb.into();
+            tx.hasher_calldata.update(nb);
         }
         Transaction::DeployAccountV3(tx) => {
-            tx.constructor_calldata = Vec::with_capacity(nb as usize);
+            tx.constructor_calldata = Vec::with_capacity(nb.into());
         }
         Transaction::DeployAccountV1(tx) => {
-            tx.constructor_calldata = Vec::with_capacity(nb as usize);
+            tx.constructor_calldata = Vec::with_capacity(nb.into());
         }
         Transaction::None => panic!("Invalid transaction type"),
     }
@@ -281,12 +281,20 @@ pub fn set_calldata(
     tx: &mut Transaction,
 ) -> Result<(), SetCallError> {
     match tx {
-        Transaction::InvokeV3(tx) => {
-            set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher_calldata)
-        }
-        Transaction::InvokeV1(tx) => {
-            set_calldata_invoke(data, p2, &mut tx.calls, &mut tx.hasher_calldata)
-        }
+        Transaction::InvokeV3(tx) => set_calldata_invoke(
+            data,
+            p2,
+            &mut tx.call,
+            &mut tx.hasher_calldata,
+            &mut tx.nb_rcv_calls,
+        ),
+        Transaction::InvokeV1(tx) => set_calldata_invoke(
+            data,
+            p2,
+            &mut tx.call,
+            &mut tx.hasher_calldata,
+            &mut tx.nb_rcv_calls,
+        ),
         Transaction::DeployAccountV3(tx) => {
             let constructor_calldata_hash =
                 set_calldata_deploy_account_v3(data, &mut tx.constructor_calldata).unwrap();
@@ -313,15 +321,12 @@ pub fn set_calldata(
 fn set_calldata_invoke(
     data: &[u8],
     p2: SetCallStep,
-    calls: &mut Vec<Call>,
+    call: &mut Call,
     hasher: &mut impl HasherTrait,
+    nb_rcv_calls: &mut usize,
 ) -> Result<(), SetCallError> {
     match p2 {
         SetCallStep::New => {
-            if calls.len() == calls.capacity() {
-                return Err(SetCallError::TooManyCalls);
-            }
-            let mut call = Call::default();
             let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
             call.to = iter.next().unwrap().into();
             hasher.update(call.to);
@@ -333,7 +338,7 @@ fn set_calldata_invoke(
                 call.calldata.push(d.into());
                 hasher.update(d.into());
             }
-            calls.push(call);
+            *nb_rcv_calls += 1;
             Ok(())
         }
         SetCallStep::Add | SetCallStep::End => {
@@ -343,8 +348,8 @@ fn set_calldata_invoke(
             for d in iter {
                 //call.calldata.push(d.into());
                 hasher.update(d.into());
-                #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-                ledger_secure_sdk_sys::seph::heartbeat();
+                //#[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
+                //ledger_secure_sdk_sys::seph::heartbeat();
             }
             // if p2 == SetCallStep::End {
             //     hasher.update(call.to);

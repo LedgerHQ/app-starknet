@@ -28,7 +28,7 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 use ledger_device_sdk::nbgl::init_comm;
 
 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-const PARSING_STEP_TX_WORDING: &str = "Parsing transaction";
+const PARSING_STEP_TX_WORDING: &str = "Parsing transaction...";
 
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 const PARSING_STEP_TX_WORDING: &str = "Start parsing the transaction...";
@@ -259,24 +259,39 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             4 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                let nb_calls: u8 = FieldElement::from(data).into();
+                let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             5 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 {
-                    if p2 == SetCallStep::End.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls(),
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
+                    match p2 {
+                        0x00 => {
+                            display::show_step(
+                                format!(
+                                    "{}{}/{}...",
+                                    PARSING_STEP_CALL_WORDING,
+                                    ctx.tx.get_nb_received_calls() + 1,
+                                    ctx.tx.get_nb_calls(),
+                                )
+                                .as_str(),
+                                ctx,
+                            );
+                        }
+                        0x01 | 0x02 => {
+                            display::show_step(
+                                format!(
+                                    "{}{}/{}...",
+                                    PARSING_STEP_CALL_WORDING,
+                                    ctx.tx.get_nb_received_calls(),
+                                    ctx.tx.get_nb_calls(),
+                                )
+                                .as_str(),
+                                ctx,
+                            );
+                        }
+                        _ => {}
                     }
                 }
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
@@ -287,7 +302,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                 "{}{}/{}...",
                                 PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls()
+                                ctx.tx.get_nb_calls(),
                             )
                             .as_str(),
                             ctx,
@@ -383,24 +398,39 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             2 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                let nb_calls: u8 = FieldElement::from(data).into();
+                let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             3 => {
                 #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 {
-                    if p2 == SetCallStep::End.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls(),
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
+                    match p2 {
+                        0x00 => {
+                            display::show_step(
+                                format!(
+                                    "{}{}/{}...",
+                                    PARSING_STEP_CALL_WORDING,
+                                    ctx.tx.get_nb_received_calls() + 1,
+                                    ctx.tx.get_nb_calls(),
+                                )
+                                .as_str(),
+                                ctx,
+                            );
+                        }
+                        0x01 | 0x02 => {
+                            display::show_step(
+                                format!(
+                                    "{}{}/{}...",
+                                    PARSING_STEP_CALL_WORDING,
+                                    ctx.tx.get_nb_received_calls(),
+                                    ctx.tx.get_nb_calls(),
+                                )
+                                .as_str(),
+                                ctx,
+                            );
+                        }
+                        _ => {}
                     }
                 }
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
@@ -411,7 +441,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                 "{}{}/{}...",
                                 PARSING_STEP_CALL_WORDING,
                                 ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls()
+                                ctx.tx.get_nb_calls(),
                             )
                             .as_str(),
                             ctx,
@@ -512,7 +542,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             4 => {
-                let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
@@ -577,7 +607,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             3 => {
-                let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }

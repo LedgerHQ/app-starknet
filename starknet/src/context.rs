@@ -18,7 +18,9 @@ pub struct InvokeTransactionV1 {
     pub max_fee: FieldElement,
     pub chain_id: FieldElement,
     pub nonce: FieldElement,
-    pub calls: Vec<Call>,
+    pub nb_calls: usize,
+    pub nb_rcv_calls: usize,
+    pub call: Call,
     pub hasher: crypto::pedersen::PedersenHasher,
     pub hasher_calldata: crypto::pedersen::PedersenHasher,
 }
@@ -35,7 +37,9 @@ pub struct InvokeTransactionV3 {
     pub nonce: FieldElement,
     pub data_availability_mode: FieldElement,
     pub account_deployment_data: Vec<FieldElement>,
-    pub calls: Vec<Call>,
+    pub nb_calls: usize,
+    pub nb_rcv_calls: usize,
+    pub call: Call,
     pub hasher: crypto::poseidon::PoseidonHasher,
     pub hasher_calldata: crypto::poseidon::PoseidonHasher,
 }
@@ -83,8 +87,8 @@ pub enum Transaction {
 impl Transaction {
     pub fn get_nb_received_calls(&self) -> usize {
         match self {
-            Transaction::InvokeV1(tx) => tx.calls.len(),
-            Transaction::InvokeV3(tx) => tx.calls.len(),
+            Transaction::InvokeV1(tx) => tx.nb_rcv_calls,
+            Transaction::InvokeV3(tx) => tx.nb_rcv_calls,
             Transaction::DeployAccountV1(_tx) => 1usize,
             Transaction::DeployAccountV3(_tx) => 1usize,
             Transaction::None => 0usize,
@@ -93,8 +97,8 @@ impl Transaction {
 
     pub fn get_nb_calls(&self) -> usize {
         match self {
-            Transaction::InvokeV1(tx) => tx.calls.capacity(),
-            Transaction::InvokeV3(tx) => tx.calls.capacity(),
+            Transaction::InvokeV1(tx) => tx.nb_calls.into(),
+            Transaction::InvokeV3(tx) => tx.nb_calls.into(),
             Transaction::DeployAccountV1(_tx) => 1usize,
             Transaction::DeployAccountV3(_tx) => 1usize,
             Transaction::None => 0usize,
