@@ -26,11 +26,7 @@ ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 #[cfg(any(target_os = "stax", target_os = "flex"))]
 use ledger_device_sdk::nbgl::init_comm;
 
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
 const PARSING_STEP_TX_WORDING: &str = "Parsing transaction...";
-
-#[cfg(any(target_os = "stax", target_os = "flex"))]
-const PARSING_STEP_TX_WORDING: &str = "Start parsing the transaction...";
 
 const PARSING_STEP_CALL_WORDING: &str = "Parsing call ";
 
@@ -244,70 +240,36 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             2 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             5 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                {
-                    match p2 {
-                        0x00 => {
-                            display::show_step(
-                                format!(
-                                    "{}{}/{}...",
-                                    PARSING_STEP_CALL_WORDING,
-                                    ctx.tx.get_nb_received_calls() + 1,
-                                    ctx.tx.get_nb_calls(),
-                                )
-                                .as_str(),
-                                ctx,
-                            );
-                        }
-                        0x01 | 0x02 => {
-                            display::show_step(
-                                format!(
-                                    "{}{}/{}...",
-                                    PARSING_STEP_CALL_WORDING,
-                                    ctx.tx.get_nb_received_calls(),
-                                    ctx.tx.get_nb_calls(),
-                                )
-                                .as_str(),
-                                ctx,
-                            );
-                        }
-                        _ => {}
-                    }
-                }
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                {
-                    if p2 == transaction::SetCallStep::New.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}...",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls(),
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
+                let nb_rcv_calls = match p2 == transaction::SetCallStep::New.into() {
+                    true => ctx.tx.get_nb_received_calls() + 1,
+                    false => ctx.tx.get_nb_received_calls(),
+                };
+                display::show_step(
+                    format!(
+                        "{}{}/{}...",
+                        PARSING_STEP_CALL_WORDING,
+                        nb_rcv_calls,
+                        ctx.tx.get_nb_calls(),
+                    )
+                    .as_str(),
+                    ctx,
+                );
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -395,58 +357,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             2 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             3 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                {
-                    match p2 {
-                        0x00 => {
-                            display::show_step(
-                                format!(
-                                    "{}{}/{}...",
-                                    PARSING_STEP_CALL_WORDING,
-                                    ctx.tx.get_nb_received_calls() + 1,
-                                    ctx.tx.get_nb_calls(),
-                                )
-                                .as_str(),
-                                ctx,
-                            );
-                        }
-                        0x01 | 0x02 => {
-                            display::show_step(
-                                format!(
-                                    "{}{}/{}...",
-                                    PARSING_STEP_CALL_WORDING,
-                                    ctx.tx.get_nb_received_calls(),
-                                    ctx.tx.get_nb_calls(),
-                                )
-                                .as_str(),
-                                ctx,
-                            );
-                        }
-                        _ => {}
-                    }
-                }
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                {
-                    if p2 == transaction::SetCallStep::New.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}...",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls(),
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
+                let nb_rcv_calls = match p2 == transaction::SetCallStep::New.into() {
+                    true => ctx.tx.get_nb_received_calls() + 1,
+                    false => ctx.tx.get_nb_received_calls(),
+                };
+                display::show_step(
+                    format!(
+                        "{}{}/{}...",
+                        PARSING_STEP_CALL_WORDING,
+                        nb_rcv_calls,
+                        ctx.tx.get_nb_calls(),
+                    )
+                    .as_str(),
+                    ctx,
+                );
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -529,23 +459,28 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fees(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
             5 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -598,19 +533,23 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fees(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
             4 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
