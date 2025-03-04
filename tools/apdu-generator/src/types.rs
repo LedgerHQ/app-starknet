@@ -100,6 +100,9 @@ impl From<&Call> for Vec<FieldElement> {
 
         v.push(selector);
 
+        let calldata_length = c.calldata.len();
+        v.push(FieldElement(U256::from(calldata_length as u8)));
+
         for c in c.calldata.iter() {
             let data = FieldElement(U256::from_str_radix(c, 16).unwrap());
             v.push(data);
