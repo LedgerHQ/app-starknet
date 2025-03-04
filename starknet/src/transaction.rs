@@ -343,14 +343,10 @@ fn set_calldata_invoke(
             Ok(())
         }
         SetCallStep::Add | SetCallStep::End => {
-            //let idx = calls.len() - 1;
-            //let call: &mut Call = calls.get_mut(idx).unwrap();
             let iter = data.chunks(FIELD_ELEMENT_SIZE);
             for d in iter {
                 hasher.update(d.into());
             }
-            // #[cfg(any(target_os = "nanox", target_os = "stax", target_os = "flex"))]
-            // ledger_secure_sdk_sys::seph::heartbeat();
             Ok(())
         }
     }

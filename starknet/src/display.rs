@@ -310,10 +310,6 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
     #[cfg(not(any(target_os = "stax", target_os = "flex")))]
     {
-        // let page = Page::new(PageStyle::PictureBold, ["Blind", "Signing"], Some(&WARNING));
-        // clear_screen();
-        // page.place_and_wait();
-
         let validator = Validator::new("Blind Signing");
         match validator.ask() {
             true => (),
