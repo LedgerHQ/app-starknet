@@ -17,6 +17,8 @@ use context::{
     InvokeTransactionV3, RequestType, Transaction,
 };
 use ledger_device_sdk::io;
+#[cfg(any(target_os = "stax", target_os = "flex"))]
+use ledger_device_sdk::uxapp;
 use types::FieldElement;
 
 use settings::Settings;
@@ -270,6 +272,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     .as_str(),
                     ctx,
                 );
+                // Delay lock to prevent the device to pinlock
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                uxapp::UxEvent::DelayLock.request(Some(10000));
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -303,6 +308,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                         display::blind_signing_enable_ui(ctx);
                                         send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                     } else {
+                                        // Delay lock to prevent the device to pinlock
+                                        #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                        uxapp::UxEvent::DelayLock.request(Some(10000));
                                         match display::show_hash(ctx, true) {
                                             true => {
                                                 rdata.extend_from_slice(ctx.hash.value.as_ref());
@@ -377,6 +385,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     .as_str(),
                     ctx,
                 );
+                // Delay lock to prevent the device to pinlock
+                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                uxapp::UxEvent::DelayLock.request(Some(10000));
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -410,6 +421,9 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                         display::blind_signing_enable_ui(ctx);
                                         send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                     } else {
+                                        // Delay lock to prevent the device to pinlock
+                                        #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                        uxapp::UxEvent::DelayLock.request(Some(10000));
                                         match display::show_hash(ctx, true) {
                                             true => {
                                                 rdata.extend_from_slice(ctx.hash.value.as_ref());
