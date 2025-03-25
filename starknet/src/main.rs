@@ -274,7 +274,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 );
                 // Delay lock to prevent the device to pinlock
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
-                uxapp::UxEvent::DelayLock.request(Some(10000));
+                uxapp::UxEvent::DelayLock.request();
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -310,7 +310,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     } else {
                                         // Delay lock to prevent the device to pinlock
                                         #[cfg(any(target_os = "stax", target_os = "flex"))]
-                                        uxapp::UxEvent::DelayLock.request(Some(10000));
+                                        uxapp::UxEvent::DelayLock.request();
                                         match display::show_hash(ctx, true) {
                                             true => {
                                                 rdata.extend_from_slice(ctx.hash.value.as_ref());
@@ -387,7 +387,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 );
                 // Delay lock to prevent the device to pinlock
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
-                uxapp::UxEvent::DelayLock.request(Some(10000));
+                uxapp::UxEvent::DelayLock.request();
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -423,7 +423,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     } else {
                                         // Delay lock to prevent the device to pinlock
                                         #[cfg(any(target_os = "stax", target_os = "flex"))]
-                                        uxapp::UxEvent::DelayLock.request(Some(10000));
+                                        uxapp::UxEvent::DelayLock.request();
                                         match display::show_hash(ctx, true) {
                                             true => {
                                                 rdata.extend_from_slice(ctx.hash.value.as_ref());
