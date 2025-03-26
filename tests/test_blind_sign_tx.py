@@ -69,6 +69,7 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
+                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -158,6 +159,7 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
+                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -247,6 +249,7 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
+                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -336,6 +339,7 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
+                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -425,6 +429,7 @@ def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
+                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,

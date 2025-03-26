@@ -1183,9 +1183,9 @@ checksum = "03087c2bad5e1034e8cace5926dec053fb3790248370865f5117a7d0213354c8"
 
 [[package]]
 name = "ledger_device_sdk"
-version = "1.21.2"
+version = "1.22.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81d6a58c51cf481459f56f2bbde3fa18fd8ed04c9e7aead7e2c70242e3f7ae4b"
+checksum = "7fa04b221f714b098e9f7f0348122a1572bbc0e8098cee70bc3fbe1c85e63ffd"
 dependencies = [
  "const-zero",
  "include_gif",
@@ -1198,9 +1198,9 @@ dependencies = [
 
 [[package]]
 name = "ledger_secure_sdk_sys"
-version = "1.7.1"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "35bd6947248c3d4668979fe987af10cb2ee667695cf8ed1d3ed534c9f65b8404"
+checksum = "c0a7893c01d2d881b44f01bf85be30c08fed7f741a0a4fa0068b185d797fcaff"
 dependencies = [
  "bindgen",
  "cc",
@@ -1988,7 +1988,7 @@ dependencies = [
 
 [[package]]
 name = "starknet"
-version = "2.2.3"
+version = "2.2.4"
 dependencies = [
  "hex",
  "include_gif",
