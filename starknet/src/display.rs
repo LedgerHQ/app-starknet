@@ -46,6 +46,9 @@ pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
 }
 
 fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
+    if tx.nb_calls > 1 {
+        return None;
+    }
     match support_clear_sign(&tx.call) {
         Some(idx) => {
             let call = &tx.call;
@@ -118,6 +121,9 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
 }
 
 fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
+    if tx.nb_calls > 1 {
+        return None;
+    }
     match support_clear_sign(&tx.call) {
         Some(idx) => {
             let call = &tx.call;
