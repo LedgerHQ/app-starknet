@@ -243,21 +243,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
             2 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_paymaster_data(data, p2, &mut ctx.tx);
+                transaction::set_tx_fees(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
+                transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
+                transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            5 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
-            5 => {
+            6 => {
                 let nb_rcv_calls = match p2 == transaction::SetCallStep::New.into() {
                     true => ctx.tx.get_nb_received_calls() + 1,
                     false => ctx.tx.get_nb_received_calls(),

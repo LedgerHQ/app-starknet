@@ -96,19 +96,45 @@ pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
             tx.max_fee = iter.next().unwrap().into();
         }
         Transaction::DeployAccountV3(tx) => {
+            let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
             let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
             tx.tip = iter.next().unwrap().into();
+            fee_hasher.update(tx.tip);
             tx.l1_gas_bounds = iter.next().unwrap().into();
+            fee_hasher.update(tx.l1_gas_bounds);
             tx.l2_gas_bounds = iter.next().unwrap().into();
-
-            let fee_hash = crate::crypto::poseidon::PoseidonStark252::hash_many(&[
-                tx.tip,
-                tx.l1_gas_bounds,
-                tx.l2_gas_bounds,
-            ]);
+            fee_hasher.update(tx.l2_gas_bounds);
+            tx.l1_data_gas_bounds = match iter.next() {
+                Some(data) => {
+                    fee_hasher.update(data.into());
+                    data.into()
+                }
+                None => FieldElement::ZERO,
+            };
+            let fee_hash = fee_hasher.finalize();
             tx.hasher.update(fee_hash);
         }
-        Transaction::InvokeV1(_) | Transaction::InvokeV3(_) | Transaction::None => {
+        Transaction::InvokeV3(tx) => {
+            let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
+            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
+            tx.tip = iter.next().unwrap().into();
+            fee_hasher.update(tx.tip);
+            tx.l1_gas_bounds = iter.next().unwrap().into();
+            fee_hasher.update(tx.l1_gas_bounds);
+            tx.l2_gas_bounds = iter.next().unwrap().into();
+            fee_hasher.update(tx.l2_gas_bounds);
+            tx.l1_data_gas_bounds = match iter.next() {
+                Some(data) => {
+                    ledger_device_sdk::testing::debug_print("we have l1_data_gas filed\n");
+                    fee_hasher.update(data.into());
+                    data.into()
+                }
+                None => FieldElement::ZERO,
+            };
+            let fee_hash = fee_hasher.finalize();
+            tx.hasher.update(fee_hash);
+        }
+        Transaction::InvokeV1(_)  | Transaction::None => {
             panic!("Invalid transaction type")
         }
     }
@@ -118,9 +144,6 @@ fn set_invoke_fields_v3(data: &[u8], tx: &mut InvokeTransactionV3) {
     tx.version = FieldElement::from(TxVersion::V3 as u8);
     let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
     tx.sender_address = iter.next().unwrap().into();
-    tx.tip = iter.next().unwrap().into();
-    tx.l1_gas_bounds = iter.next().unwrap().into();
-    tx.l2_gas_bounds = iter.next().unwrap().into();
     tx.chain_id = iter.next().unwrap().into();
     tx.nonce = iter.next().unwrap().into();
     tx.data_availability_mode = iter.next().unwrap().into();
@@ -129,12 +152,6 @@ fn set_invoke_fields_v3(data: &[u8], tx: &mut InvokeTransactionV3) {
     tx.hasher.update(FieldElement::INVOKE);
     tx.hasher.update(tx.version);
     tx.hasher.update(tx.sender_address);
-    let fee_hash = crate::crypto::poseidon::PoseidonStark252::hash_many(&[
-        tx.tip,
-        tx.l1_gas_bounds,
-        tx.l2_gas_bounds,
-    ]);
-    tx.hasher.update(fee_hash);
 }
 
 fn set_invoke_fields_v1(data: &[u8], tx: &mut InvokeTransactionV1) {

@@ -1,0 +1,24 @@
+{
+    "url": "https://starkscan.co/tx/0x03ffbe4d68822856e3298394e8f845fbe1412358385d01b1246c23c0479eeee7",
+    "version": 3,
+    "sender_address": "0x01deb50cc6f0535bbdc61427d12d40ccc836726a9fecfd4845c6e8fd1d87f590",
+    "tip": "0",
+    "l1_gas_bounds":    "0x00004C315F4741530000000000003a980000000000000000000019330b42cce8",
+    "l2_gas_bounds":    "0x00004C325F474153000000000000000000000000000000000000000000000000",
+    "l1_data_gas":      "0x004C315F44415441000000000000000000000000000000000000000000000000",
+    "paymaster_data": [],
+    "chain_id": "0x534e5f4d41494e",
+    "nonce": "58129",
+    "data_availability_mode": "0",
+    "account_deployment_data": [],
+    "calls": [
+        {
+            "to": "0x0484f3eb69529806165340259fe032cc667c3745bc5d3446602090fd321d7ba3",
+            "entrypoint": "swap",
+            "calldata": [
+                "0x00000000000000000000000000000000000000000000000000000000000001f4"
+            ]
+        }
+    ],
+    "dpath": "m/2645'/1195502025'/1148870696'/0'/0'/0"   
+  }

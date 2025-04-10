@@ -119,6 +119,7 @@ pub struct InvokeV3 {
     pub tip: String,
     pub l1_gas_bounds: String,
     pub l2_gas_bounds: String,
+    pub l1_data_gas: Option<String>,
     pub paymaster_data: Vec<String>,
     pub chain_id: String,
     pub nonce: String,
@@ -155,6 +156,7 @@ pub struct DeployAccountV3 {
     pub tip: String,
     pub l1_gas_bounds: String,
     pub l2_gas_bounds: String,
+    pub l1_data_gas: Option<String>,
     pub paymaster_data: Vec<String>,
     pub chain_id: String,
     pub nonce: String,
@@ -186,13 +188,13 @@ pub struct Data {
 
 #[derive(Deserialize, Debug)]
 pub struct Hash {
-    pub dpath: String,
+    pub dpath_signhash: String,
     pub hash: String,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Dpath {
-    pub dpath: String,
+    pub dpath_getpubkey: String,
 }
 
 pub fn get_selector_from_name(func_name: &str) -> FieldElement {
