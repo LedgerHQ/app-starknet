@@ -1,12 +1,12 @@
 use crate::apdu::{Apdu, ApduHeader};
-use crate::types::{Call, DeployAccountV1, DeployAccountV3, FieldElement, Ins, InvokeV1, InvokeV3};
-use ethereum_types::U256;
+use crate::types::{Call, DeployAccountV1, DeployAccountV3, Ins, InvokeV1, InvokeV3,ResourceBounds};
+use starknet_types_core::felt::Felt;
 
 pub enum ApduError {
     InternalError,
 }
 
-pub fn data_to_apdu(data: Vec<FieldElement>, cla: u8, ins: u8, p1: u8, p2: u8) -> Apdu {
+pub fn data_to_apdu(data: Vec<Felt>, cla: u8, ins: u8, p1: u8, p2: u8) -> Apdu {
     let apdu_header = ApduHeader {
         cla: cla,
         ins: ins.into(),
@@ -16,7 +16,7 @@ pub fn data_to_apdu(data: Vec<FieldElement>, cla: u8, ins: u8, p1: u8, p2: u8) -
     let mut apdu = Apdu::new(apdu_header);
 
     for felt in data {
-        let arr: [u8; 32] = felt.try_into().unwrap();
+        let arr= felt.to_bytes_be();
         apdu.append(&arr[..]).unwrap();
     }
     apdu
@@ -33,11 +33,8 @@ pub fn hash_to_apdu(hash: &str, cla: u8, ins: Ins, sub_ins: u8, show_hash: bool)
         },
     };
     let mut apdu = Apdu::new(header);
-
-    let fixed_hash: String = String::from(hash.trim_start_matches("0x"));
-    let data: [u8; 32] = FieldElement(U256::from_str_radix(fixed_hash.as_str(), 16).unwrap())
-        .try_into()
-        .unwrap();
+    // Convert the hash string to a Felt and then to bytes
+    let data: [u8; 32] = Felt::from_hex_unchecked(hash).to_bytes_be();
     apdu.append(&data[..]).unwrap();
     apdu
 }
@@ -77,20 +74,20 @@ pub fn tx_fields_invoke_v1(tx: &InvokeV1, cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe: FieldElement = FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
-    let mut data: [u8; 32] = fe.try_into().unwrap();
+    let mut fe= Felt::from_hex_unchecked(&tx.sender_address);
+    let mut data= fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.max_fee, 10).unwrap());
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.max_fee);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.chain_id);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.nonce); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
     apdu
@@ -105,20 +102,20 @@ pub fn tx_fields_invoke_v3(tx: &InvokeV3, cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe: FieldElement = FieldElement(U256::from_str_radix(&tx.sender_address, 16).unwrap());
-    let mut data: [u8; 32] = fe.try_into().unwrap();
+    let mut fe= Felt::from_hex_unchecked(&tx.sender_address);
+    let mut data= fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.chain_id, 16).unwrap());
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.chain_id);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement(U256::from_str_radix(&tx.nonce, 10).unwrap());
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.nonce); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.data_availability_mode.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.data_availability_mode);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
     apdu
@@ -133,28 +130,28 @@ pub fn tx_fields_deploy_v3(tx: &DeployAccountV3, cla: u8, ins: Ins, p1: u8) -> A
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe: FieldElement = FieldElement::try_from(tx.contract_address.as_str()).unwrap();
-    let mut data: [u8; 32] = fe.try_into().unwrap();
+    let mut fe = Felt::from_hex_unchecked(&tx.contract_address);
+    let mut data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.chain_id.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.chain_id);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.nonce.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.nonce);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.data_availability_mode.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.data_availability_mode); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.class_hash.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.class_hash);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.contract_address_salt.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.contract_address_salt); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
     apdu
@@ -169,30 +166,35 @@ pub fn tx_fields_deploy_v1(tx: &DeployAccountV1, cla: u8, ins: Ins, p1: u8) -> A
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe: FieldElement = FieldElement::try_from(tx.contract_address.as_str()).unwrap();
-    let mut data: [u8; 32] = fe.try_into().unwrap();
+    let mut fe = Felt::from_hex_unchecked(&tx.contract_address); 
+    let mut data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.class_hash.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.class_hash); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.contract_address_salt.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.contract_address_salt); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.chain_id.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.max_fee); 
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = FieldElement::try_from(tx.nonce.as_str()).unwrap();
-    data = fe.try_into().unwrap();
+    fe = Felt::from_hex_unchecked(&tx.chain_id); 
+    data = fe.to_bytes_be();
+    apdu.append(data.as_slice()).unwrap();
+
+    fe = Felt::from_hex_unchecked(&tx.nonce);
+    data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
     apdu
 }
 
-pub fn tx_fees(fees: &[FieldElement], cla: u8, ins: Ins, p1: u8) -> Apdu {
+pub fn tx_fees(tip: &str, resources: &ResourceBounds, cla: u8, ins: Ins, p1: u8) -> Apdu {
+    
     let apdu_header = ApduHeader {
         cla: cla,
         ins: ins.into(),
@@ -201,10 +203,54 @@ pub fn tx_fees(fees: &[FieldElement], cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    for f in fees {
-        let data: [u8; 32] = (*f).try_into().unwrap();
-        apdu.append(data.as_slice()).unwrap();
-    }
+    // Tip
+    let _ = apdu.append(Felt::from_hex_unchecked(tip).to_bytes_be().as_slice());
+
+    // L1 Gas
+    let mut resource_buffer = [0; 32];
+    resource_buffer[2..8].copy_from_slice(b"L1_GAS");
+    resource_buffer[8..16].copy_from_slice(
+        &u64::from_str_radix(resources.l1_gas.max_amount.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_be_bytes(),
+    );
+    resource_buffer[16..].copy_from_slice(
+        &u128::from_str_radix(resources.l1_gas.max_price_per_unit.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_be_bytes(),
+    );
+    let _ = apdu.append(&resource_buffer).unwrap();
+
+    // L2 Gas
+    let mut resource_buffer = [0; 32];
+    resource_buffer[2..8].copy_from_slice(b"L2_GAS");
+    resource_buffer[8..16].copy_from_slice(
+        &u64::from_str_radix(resources.l2_gas.max_amount.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_be_bytes(),
+    );
+    resource_buffer[16..].copy_from_slice(
+        &u128::from_str_radix(resources.l2_gas.max_price_per_unit.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_be_bytes(),
+    );
+    let _ =apdu.append(&resource_buffer).unwrap();
+
+    // L1 Data Gas
+    let mut resource_buffer = [0; 32];
+    resource_buffer[1..8].copy_from_slice(b"L1_DATA");
+    resource_buffer[8..16].copy_from_slice(
+        &u64::from_str_radix(resources.l1_data_gas.max_amount.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_be_bytes(),
+    );
+    resource_buffer[16..].copy_from_slice(
+        &u128::from_str_radix(resources.l1_data_gas.max_price_per_unit.trim_start_matches("0x"), 16)
+            .unwrap()
+            .to_be_bytes(),
+    );
+    let _ =apdu.append(&resource_buffer).unwrap();
+
     apdu
 }
 
@@ -239,16 +285,15 @@ pub fn calls_nb(calls: &[Call], cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let fe = FieldElement(U256::from(calls.len()));
-    let data: [u8; 32] = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+    let fe = Felt::from(calls.len());
+    let data = fe.to_bytes_be();
+    let _ = apdu.append(data.as_slice()).unwrap();
     apdu
 }
 
 pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
     let mut apdu_list: Vec<Apdu> = Vec::new();
-    let mut fe: [u8; 32] = [0u8; 32];
-    let data: Vec<FieldElement> = call.into();
+    let data: Vec<Felt> = call.into();
 
     let nb_apdu = data.chunks(7).len();
 
@@ -264,8 +309,7 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
 
             let data = data.chunks(7).next().unwrap();
             for d in data {
-                d.0.to_big_endian(&mut fe);
-                apdu.append(&fe).unwrap();
+                let _ = apdu.append(&d.to_bytes_be()).unwrap();
             }
             apdu_list.push(apdu);
 
@@ -287,8 +331,7 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
             let mut apdu = Apdu::new(apdu_header);
             let data = iter.next().unwrap();
             for d in data {
-                d.0.to_big_endian(&mut fe);
-                apdu.append(&fe).unwrap();
+                let _ = apdu.append(&d.to_bytes_be()).unwrap();
             }
             apdu_list.push(apdu);
 
@@ -304,8 +347,7 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
                         };
                         apdu = Apdu::new(apdu_header);
                         for d in felts {
-                            d.0.to_big_endian(&mut fe);
-                            apdu.append(&fe).unwrap();
+                            let _ = apdu.append(&d.to_bytes_be()).unwrap();
                         }
                         apdu_list.push(apdu);
                     }
@@ -325,7 +367,7 @@ pub fn call(call: &Call, cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
     apdu_list
 }
 
-pub fn constructor_calldata(calldata: &[FieldElement], cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
+pub fn constructor_calldata(calldata: &[String], cla: u8, ins: Ins, p1: u8) -> Vec<Apdu> {
     let mut apdu_list: Vec<Apdu> = Vec::new();
     let mut p1 = p1;
 
@@ -337,9 +379,9 @@ pub fn constructor_calldata(calldata: &[FieldElement], cla: u8, ins: Ins, p1: u8
         p2: 0x00,
     };
     let mut apdu = Apdu::new(apdu_header);
-    let fe = FieldElement(U256::from(calldata.len()));
-    let data: [u8; 32] = fe.try_into().unwrap();
-    apdu.append(data.as_slice()).unwrap();
+    let fe = Felt::from(calldata.len());
+    let data: [u8; 32] = fe.to_bytes_be();
+    let _ = apdu.append(data.as_slice()).unwrap();
     p1 += 1;
     apdu_list.push(apdu);
 
@@ -358,8 +400,7 @@ pub fn constructor_calldata(calldata: &[FieldElement], cla: u8, ins: Ins, p1: u8
                 };
                 let mut apdu = Apdu::new(apdu_header);
                 for d in s {
-                    let data: [u8; 32] = (*d).try_into().unwrap();
-                    apdu.append(data.as_slice()).unwrap();
+                    let _ = apdu.append(&Felt::from_hex_unchecked(d).to_bytes_be()).unwrap();
                 }
                 apdu_list.push(apdu);
             }

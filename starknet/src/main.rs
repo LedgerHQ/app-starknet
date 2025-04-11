@@ -558,16 +558,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
             2 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_tx_fees(data, &mut ctx.tx);
-                send_data(comm, Ok(None));
-            }
-            3 => {
-                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
-            4 => {
+            3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));

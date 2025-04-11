@@ -91,10 +91,6 @@ pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
 
 pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
     match tx {
-        Transaction::DeployAccountV1(tx) => {
-            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-            tx.max_fee = iter.next().unwrap().into();
-        }
         Transaction::DeployAccountV3(tx) => {
             let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
             let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
@@ -134,7 +130,7 @@ pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
             let fee_hash = fee_hasher.finalize();
             tx.hasher.update(fee_hash);
         }
-        Transaction::InvokeV1(_)  | Transaction::None => {
+        Transaction::InvokeV1(_)  | Transaction::DeployAccountV1(_) | Transaction::None => {
             panic!("Invalid transaction type")
         }
     }
@@ -229,6 +225,7 @@ fn set_deploy_account_fields_v1(data: &[u8], tx: &mut DeployAccountTransactionV1
     tx.contract_address = iter.next().unwrap().into();
     tx.class_hash = iter.next().unwrap().into();
     tx.contract_address_salt = iter.next().unwrap().into();
+    tx.max_fee = iter.next().unwrap().into();
     tx.chain_id = iter.next().unwrap().into();
     tx.nonce = iter.next().unwrap().into();
 
