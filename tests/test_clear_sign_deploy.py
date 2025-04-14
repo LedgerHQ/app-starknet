@@ -10,7 +10,7 @@ CHECK_SIGNATURE_BINARY_PATH = "./target/debug/check-signature"
 
 # In this test we send to the device a tx to sign and validate it on screen
 # We will ensure that the displayed information is correct by using screenshots comparison
-def test_clear_sign_deploy_v3(firmware, backend, navigator, test_name):
+def test_tx_v3_deploy_account(firmware, backend, navigator, test_name):
         
     # We need to get the public key of the device to check the signature   
     file_path = 'samples/apdu/dpath_0.dat'
@@ -78,7 +78,7 @@ def test_clear_sign_deploy_v3(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_clear_sign_deploy_v1(firmware, backend, navigator, test_name):
+def test_tx_v1_deploy_account(firmware, backend, navigator, test_name):
         
     # We need to get the public key of the device to check the signature   
     file_path = 'samples/apdu/dpath_0.dat'
@@ -146,7 +146,7 @@ def test_clear_sign_deploy_v1(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_clear_sign_deploy_v3_l1_data_gas(firmware, backend, navigator, test_name):
+def test_tx_v3_l1_data_gas_deploy_account(firmware, backend, navigator, test_name):
         
     # We need to get the public key of the device to check the signature   
     file_path = 'samples/apdu/dpath_0.dat'

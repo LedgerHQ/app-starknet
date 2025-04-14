@@ -27,7 +27,7 @@ def get_setting_position(firmware: Firmware, setting_idx: int, per_page: int) ->
 
 # In those tests we check the behavior of the device when asked to sign a Tx (blind signing)
 
-def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
+def test_tx_v1_approve_and_remove(firmware, backend, navigator, test_name):
 
     # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -117,7 +117,7 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
+def test_tx_v1_approve_and_swap(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -207,7 +207,7 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
+def test_tx_v1_explore(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -297,7 +297,7 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
+def test_tx_v1_l2(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -387,7 +387,7 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
+def test_tx_v3_l1_data_gas_swap(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -477,7 +477,7 @@ def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_5(firmware, backend, navigator, test_name):
+def test_tx_v3_mint(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):

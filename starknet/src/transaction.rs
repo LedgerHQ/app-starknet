@@ -58,7 +58,8 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::DeployAccountV3(tx) => {
-            if tx.constructor_calldata.len() == tx.constructor_calldata.capacity() {
+            if tx.nb_rcv_constructor_calldata == tx.nb_constructor_calldata {
+                tx.hasher.update(tx.hasher_calldata.finalize());
                 tx.hasher.update(tx.class_hash);
                 tx.hasher.update(tx.contract_address_salt);
                 return Some(tx.hasher.finalize());
@@ -281,7 +282,7 @@ pub fn set_calldata_nb(tx: &mut Transaction, nb: FieldElement) {
             tx.hasher_calldata.update(nb);
         }
         Transaction::DeployAccountV3(tx) => {
-            tx.constructor_calldata = Vec::with_capacity(nb.into());
+            tx.nb_constructor_calldata = nb.into();
         }
         Transaction::DeployAccountV1(tx) => {
             tx.constructor_calldata = Vec::with_capacity(nb.into());
@@ -311,9 +312,11 @@ pub fn set_calldata(
             &mut tx.nb_rcv_calls,
         ),
         Transaction::DeployAccountV3(tx) => {
-            let constructor_calldata_hash =
-                set_calldata_deploy_account_v3(data, &mut tx.constructor_calldata).unwrap();
-            tx.hasher.update(constructor_calldata_hash);
+            let iter = data.chunks(FIELD_ELEMENT_SIZE);
+            for d in iter {
+                tx.hasher_calldata.update(d.into());
+                tx.nb_rcv_constructor_calldata += 1;
+            }
             Ok(())
         }
         Transaction::DeployAccountV1(tx) => {
@@ -364,21 +367,6 @@ fn set_calldata_invoke(
             Ok(())
         }
     }
-}
-
-fn set_calldata_deploy_account_v3(
-    data: &[u8],
-    constructor_calldata: &mut Vec<FieldElement>,
-) -> Result<FieldElement, SetCallError> {
-    let iter = data.chunks(FIELD_ELEMENT_SIZE);
-    for d in iter {
-        constructor_calldata.push(d.into());
-    }
-
-    let constructor_calldata_hash =
-        crypto::poseidon::PoseidonStark252::hash_many(constructor_calldata);
-
-    Ok(constructor_calldata_hash)
 }
 
 fn set_calldata_deploy_account_v1(

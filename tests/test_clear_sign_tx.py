@@ -10,7 +10,7 @@ CHECK_SIGNATURE_BINARY_PATH = "./target/debug/check-signature"
 
 # In this test we send to the device a tx to sign and validate it on screen
 # We will ensure that the displayed information is correct by using screenshots comparison
-def test_clear_sign_tx_0(firmware, backend, navigator, test_name):
+def test_tx_v1_transfer_ETH_0(firmware, backend, navigator, test_name):
         
     # First we need to get the public key of the device in order to build the transaction    
     file_path = 'samples/apdu/dpath_0.dat'
@@ -81,7 +81,7 @@ def test_clear_sign_tx_0(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_clear_sign_tx_1(firmware, backend, navigator, test_name):
+def test_tx_v1_transfer_ETH_1(firmware, backend, navigator, test_name):
         
     # First we need to get the public key of the device in order to build the transaction    
     file_path = 'samples/apdu/dpath_0.dat'
@@ -152,7 +152,7 @@ def test_clear_sign_tx_1(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_clear_sign_tx_2(firmware, backend, navigator, test_name):
+def test_tx_v1_transfer_STRK_0(firmware, backend, navigator, test_name):
         
     # First we need to get the public key of the device in order to build the transaction    
     file_path = 'samples/apdu/dpath_0.dat'
@@ -224,7 +224,7 @@ def test_clear_sign_tx_2(firmware, backend, navigator, test_name):
         assert(False)
 
 
-def test_clear_sign_tx_3(firmware, backend, navigator, test_name):
+def test_tx_v3_transfer_ETH(firmware, backend, navigator, test_name):
         
     # First we need to get the public key of the device in order to build the transaction    
     file_path = 'samples/apdu/dpath_0.dat'
@@ -295,7 +295,7 @@ def test_clear_sign_tx_3(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_clear_sign_tx_4(firmware, backend, navigator, test_name):
+def test_tx_v3_l1_data_gas_transfer(firmware, backend, navigator, test_name):
         
     # First we need to get the public key of the device in order to build the transaction    
     file_path = 'samples/apdu/dpath_0.dat'

@@ -72,8 +72,10 @@ pub struct DeployAccountTransactionV3 {
     pub data_availability_mode: FieldElement,
     pub class_hash: FieldElement,
     pub contract_address_salt: FieldElement,
-    pub constructor_calldata: Vec<FieldElement>,
+    pub nb_constructor_calldata: usize,
+    pub nb_rcv_constructor_calldata: usize,
     pub hasher: crypto::poseidon::PoseidonHasher,
+    pub hasher_calldata: crypto::poseidon::PoseidonHasher,
 }
 
 #[derive(Default, Debug)]
