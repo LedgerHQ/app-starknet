@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use starknet::core::utils::get_selector_from_name;
-use std::vec::Vec; 
 use starknet_types_core::felt::Felt;
+use std::vec::Vec;
 
 #[derive(Copy, Clone)]
 pub enum Ins {
@@ -63,7 +63,7 @@ impl From<&Call> for Vec<Felt> {
         v.push(selector);
 
         let calldata_length = c.calldata.len();
-        v.push(Felt::from(calldata_length));  
+        v.push(Felt::from(calldata_length));
 
         c.calldata.iter().for_each(|c| {
             let data = Felt::from_hex_unchecked(c);
@@ -83,8 +83,8 @@ pub struct Fee {
 pub struct ResourceBounds {
     pub l2_gas: Fee,
     pub l1_gas: Fee,
-    pub l1_data_gas: Fee
-} 
+    pub l1_data_gas: Fee,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct InvokeV3 {

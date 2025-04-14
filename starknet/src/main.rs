@@ -322,9 +322,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                             rdata.extend_from_slice([SIG_LENGTH].as_slice());
                                             rdata.extend_from_slice(ctx.signature.r.as_ref());
                                             rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                            rdata.extend_from_slice(
-                                                [ctx.signature.v].as_slice(),
-                                            );
+                                            rdata.extend_from_slice([ctx.signature.v].as_slice());
                                             display::show_status(true, true, ctx);
                                             send_data(comm, Ok(Some(rdata)));
                                         }
@@ -431,9 +429,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                             rdata.extend_from_slice([SIG_LENGTH].as_slice());
                                             rdata.extend_from_slice(ctx.signature.r.as_ref());
                                             rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                            rdata.extend_from_slice(
-                                                [ctx.signature.v].as_slice(),
-                                            );
+                                            rdata.extend_from_slice([ctx.signature.v].as_slice());
                                             display::show_status(true, true, ctx);
                                             send_data(comm, Ok(Some(rdata)));
                                         }

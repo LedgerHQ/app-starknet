@@ -19,7 +19,7 @@ struct Args {
 use apdu_generator::{
     apdu::Apdu,
     builder,
-    types::{DeployAccountV1, DeployAccountV3, Dpath, Hash, InvokeV1, InvokeV3, Tx, Ins},
+    types::{DeployAccountV1, DeployAccountV3, Dpath, Hash, Ins, InvokeV1, InvokeV3, Tx},
 };
 
 const DPATH: &str = "m/2645'/1195502025'/1148870696'/0'/0'/0";
@@ -37,7 +37,8 @@ fn main() {
 
     if let Ok(path) = serde_json::from_str::<Dpath>(&data) {
         println!("Derivation path: {:?}", path);
-        let dpath_apdu = builder::derivation_path(&path.dpath_getpubkey, args.cla, Ins::GetPubkey, 0);
+        let dpath_apdu =
+            builder::derivation_path(&path.dpath_getpubkey, args.cla, Ins::GetPubkey, 0);
         apdus.push(dpath_apdu.clone());
     } else if let Ok(hash) = serde_json::from_str::<Hash>(&data) {
         let dpath_apdu = builder::derivation_path(&hash.dpath_signhash, args.cla, Ins::SignHash, 0);
@@ -53,12 +54,10 @@ fn main() {
     {
         match tx {
             Tx::V1(mut tx) => {
-                let dpath_apdu =
-                    builder::derivation_path(DPATH, args.cla, Ins::SignTxV1, 0);
+                let dpath_apdu = builder::derivation_path(DPATH, args.cla, Ins::SignTxV1, 0);
                 apdus.push(dpath_apdu.clone());
 
-                let tx_data_apdu =
-                    builder::tx_fields_invoke_v1(&tx, args.cla, Ins::SignTxV1, 1);
+                let tx_data_apdu = builder::tx_fields_invoke_v1(&tx, args.cla, Ins::SignTxV1, 1);
                 apdus.push(tx_data_apdu.clone());
 
                 let tx_data_apdu = builder::calls_nb(&tx.calls, args.cla, Ins::SignTxV1, 2);
@@ -71,15 +70,14 @@ fn main() {
                 }
             }
             Tx::V3(mut tx) => {
-                let dpath_apdu =
-                    builder::derivation_path(DPATH, args.cla, Ins::SignTx, 0);
+                let dpath_apdu = builder::derivation_path(DPATH, args.cla, Ins::SignTx, 0);
                 apdus.push(dpath_apdu.clone());
 
-                let tx_data_apdu =
-                    builder::tx_fields_invoke_v3(&tx, args.cla, Ins::SignTx, 1);
+                let tx_data_apdu = builder::tx_fields_invoke_v3(&tx, args.cla, Ins::SignTx, 1);
                 apdus.push(tx_data_apdu.clone());
 
-                let fees_apdu = builder::tx_fees(&tx.tip, &tx.resource_bounds, args.cla, Ins::SignTx, 2);
+                let fees_apdu =
+                    builder::tx_fees(&tx.tip, &tx.resource_bounds, args.cla, Ins::SignTx, 2);
                 apdus.push(fees_apdu.clone());
 
                 let tx_data_apdu =
@@ -113,11 +111,21 @@ fn main() {
                     builder::tx_fields_deploy_v3(&tx, args.cla, Ins::SignDeployAccount, 1);
                 apdus.push(tx_data_apdu.clone());
 
-                let fees_apdu = builder::tx_fees(&tx.tip, &tx.resource_bounds, args.cla, Ins::SignDeployAccount, 2);
+                let fees_apdu = builder::tx_fees(
+                    &tx.tip,
+                    &tx.resource_bounds,
+                    args.cla,
+                    Ins::SignDeployAccount,
+                    2,
+                );
                 apdus.push(fees_apdu.clone());
 
-                let paymaster_apdu =
-                    builder::paymaster_data(&tx.paymaster_data, args.cla, Ins::SignDeployAccount, 3);
+                let paymaster_apdu = builder::paymaster_data(
+                    &tx.paymaster_data,
+                    args.cla,
+                    Ins::SignDeployAccount,
+                    3,
+                );
                 apdus.push(paymaster_apdu.clone());
 
                 let mut constructor_calldata_apdus = builder::constructor_calldata(
@@ -161,10 +169,7 @@ fn main() {
         .join("apdu")
         .join(out_name_with_ext_apdu.clone());
 
-    println!(
-        "Writing APDUs to {:?}",
-        raw_out_name
-    );
+    println!("Writing APDUs to {:?}", raw_out_name);
 
     if let Some(parent) = raw_out_name.parent() {
         std::fs::create_dir_all(parent).unwrap();

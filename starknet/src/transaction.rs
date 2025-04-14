@@ -36,7 +36,8 @@ impl From<FieldElement> for TxVersion {
 pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
     match tx {
         Transaction::InvokeV3(tx) => {
-            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata) {
+            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata)
+            {
                 let hash_calldata = tx.hasher_calldata.finalize();
                 tx.hasher.update(hash_calldata);
                 return Some(tx.hasher.finalize());
@@ -44,7 +45,8 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::InvokeV1(tx) => {
-            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata) {
+            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata)
+            {
                 tx.hasher_calldata
                     .update(FieldElement::from(tx.hasher_calldata.get_nb_fe() as u8));
                 let hash_calldata = tx.hasher_calldata.finalize();
@@ -131,7 +133,7 @@ pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
             let fee_hash = fee_hasher.finalize();
             tx.hasher.update(fee_hash);
         }
-        Transaction::InvokeV1(_)  | Transaction::DeployAccountV1(_) | Transaction::None => {
+        Transaction::InvokeV1(_) | Transaction::DeployAccountV1(_) | Transaction::None => {
             panic!("Invalid transaction type")
         }
     }

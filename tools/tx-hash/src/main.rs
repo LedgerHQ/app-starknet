@@ -31,8 +31,8 @@ pub struct Fee {
 pub struct ResourceBounds {
     pub l2_gas: Fee,
     pub l1_gas: Fee,
-    pub l1_data_gas: Fee
-} 
+    pub l1_data_gas: Fee,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct TxV3 {
@@ -105,14 +105,67 @@ async fn main() {
 
     let execution = account
         .execute_v3(calls)
-        .l1_gas(u64::from_str_radix(&tx.resource_bounds.l1_gas.max_amount.trim_start_matches("0x"), 16).unwrap())
-        .l1_gas_price(u128::from_str_radix(&tx.resource_bounds.l1_gas.max_price_per_unit.trim_start_matches("0x"), 16).unwrap())
-        .l2_gas(u64::from_str_radix(&tx.resource_bounds.l2_gas.max_amount.trim_start_matches("0x"), 16).unwrap())
-        .l2_gas_price(u128::from_str_radix(&tx.resource_bounds.l2_gas.max_price_per_unit.trim_start_matches("0x"), 16).unwrap())
-        .l1_data_gas(u64::from_str_radix(&tx.resource_bounds.l1_data_gas.max_amount.trim_start_matches("0x"), 16).unwrap())
-        .l1_data_gas_price(u128::from_str_radix(&tx.resource_bounds.l1_data_gas.max_price_per_unit.trim_start_matches("0x"), 16).unwrap())
+        .l1_gas(
+            u64::from_str_radix(
+                &tx.resource_bounds
+                    .l1_gas
+                    .max_amount
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .unwrap(),
+        )
+        .l1_gas_price(
+            u128::from_str_radix(
+                &tx.resource_bounds
+                    .l1_gas
+                    .max_price_per_unit
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .unwrap(),
+        )
+        .l2_gas(
+            u64::from_str_radix(
+                &tx.resource_bounds
+                    .l2_gas
+                    .max_amount
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .unwrap(),
+        )
+        .l2_gas_price(
+            u128::from_str_radix(
+                &tx.resource_bounds
+                    .l2_gas
+                    .max_price_per_unit
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .unwrap(),
+        )
+        .l1_data_gas(
+            u64::from_str_radix(
+                &tx.resource_bounds
+                    .l1_data_gas
+                    .max_amount
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .unwrap(),
+        )
+        .l1_data_gas_price(
+            u128::from_str_radix(
+                &tx.resource_bounds
+                    .l1_data_gas
+                    .max_price_per_unit
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .unwrap(),
+        )
         .nonce(Felt::from_hex_unchecked(&tx.nonce));
-    
 
     let hash = execution.prepared().unwrap().transaction_hash(false);
     println!("Transaction hash: {}", hash.to_biguint());

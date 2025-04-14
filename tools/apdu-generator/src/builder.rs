@@ -1,5 +1,7 @@
 use crate::apdu::{Apdu, ApduHeader};
-use crate::types::{Call, DeployAccountV1, DeployAccountV3, Ins, InvokeV1, InvokeV3,ResourceBounds};
+use crate::types::{
+    Call, DeployAccountV1, DeployAccountV3, Ins, InvokeV1, InvokeV3, ResourceBounds,
+};
 use starknet_types_core::felt::Felt;
 
 pub enum ApduError {
@@ -16,7 +18,7 @@ pub fn data_to_apdu(data: Vec<Felt>, cla: u8, ins: u8, p1: u8, p2: u8) -> Apdu {
     let mut apdu = Apdu::new(apdu_header);
 
     for felt in data {
-        let arr= felt.to_bytes_be();
+        let arr = felt.to_bytes_be();
         apdu.append(&arr[..]).unwrap();
     }
     apdu
@@ -74,8 +76,8 @@ pub fn tx_fields_invoke_v1(tx: &InvokeV1, cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe= Felt::from_hex_unchecked(&tx.sender_address);
-    let mut data= fe.to_bytes_be();
+    let mut fe = Felt::from_hex_unchecked(&tx.sender_address);
+    let mut data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
     fe = Felt::from_hex_unchecked(&tx.max_fee);
@@ -86,7 +88,7 @@ pub fn tx_fields_invoke_v1(tx: &InvokeV1, cla: u8, ins: Ins, p1: u8) -> Apdu {
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.nonce); 
+    fe = Felt::from_hex_unchecked(&tx.nonce);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
@@ -102,15 +104,15 @@ pub fn tx_fields_invoke_v3(tx: &InvokeV3, cla: u8, ins: Ins, p1: u8) -> Apdu {
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe= Felt::from_hex_unchecked(&tx.sender_address);
-    let mut data= fe.to_bytes_be();
+    let mut fe = Felt::from_hex_unchecked(&tx.sender_address);
+    let mut data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
     fe = Felt::from_hex_unchecked(&tx.chain_id);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.nonce); 
+    fe = Felt::from_hex_unchecked(&tx.nonce);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
@@ -142,7 +144,7 @@ pub fn tx_fields_deploy_v3(tx: &DeployAccountV3, cla: u8, ins: Ins, p1: u8) -> A
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.data_availability_mode); 
+    fe = Felt::from_hex_unchecked(&tx.data_availability_mode);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
@@ -150,7 +152,7 @@ pub fn tx_fields_deploy_v3(tx: &DeployAccountV3, cla: u8, ins: Ins, p1: u8) -> A
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.contract_address_salt); 
+    fe = Felt::from_hex_unchecked(&tx.contract_address_salt);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
@@ -166,23 +168,23 @@ pub fn tx_fields_deploy_v1(tx: &DeployAccountV1, cla: u8, ins: Ins, p1: u8) -> A
     };
     let mut apdu = Apdu::new(apdu_header);
 
-    let mut fe = Felt::from_hex_unchecked(&tx.contract_address); 
+    let mut fe = Felt::from_hex_unchecked(&tx.contract_address);
     let mut data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.class_hash); 
+    fe = Felt::from_hex_unchecked(&tx.class_hash);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.contract_address_salt); 
+    fe = Felt::from_hex_unchecked(&tx.contract_address_salt);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.max_fee); 
+    fe = Felt::from_hex_unchecked(&tx.max_fee);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
-    fe = Felt::from_hex_unchecked(&tx.chain_id); 
+    fe = Felt::from_hex_unchecked(&tx.chain_id);
     data = fe.to_bytes_be();
     apdu.append(data.as_slice()).unwrap();
 
@@ -194,7 +196,6 @@ pub fn tx_fields_deploy_v1(tx: &DeployAccountV1, cla: u8, ins: Ins, p1: u8) -> A
 }
 
 pub fn tx_fees(tip: &str, resources: &ResourceBounds, cla: u8, ins: Ins, p1: u8) -> Apdu {
-    
     let apdu_header = ApduHeader {
         cla: cla,
         ins: ins.into(),
@@ -215,9 +216,12 @@ pub fn tx_fees(tip: &str, resources: &ResourceBounds, cla: u8, ins: Ins, p1: u8)
             .to_be_bytes(),
     );
     resource_buffer[16..].copy_from_slice(
-        &u128::from_str_radix(resources.l1_gas.max_price_per_unit.trim_start_matches("0x"), 16)
-            .unwrap()
-            .to_be_bytes(),
+        &u128::from_str_radix(
+            resources.l1_gas.max_price_per_unit.trim_start_matches("0x"),
+            16,
+        )
+        .unwrap()
+        .to_be_bytes(),
     );
     let _ = apdu.append(&resource_buffer).unwrap();
 
@@ -230,26 +234,38 @@ pub fn tx_fees(tip: &str, resources: &ResourceBounds, cla: u8, ins: Ins, p1: u8)
             .to_be_bytes(),
     );
     resource_buffer[16..].copy_from_slice(
-        &u128::from_str_radix(resources.l2_gas.max_price_per_unit.trim_start_matches("0x"), 16)
-            .unwrap()
-            .to_be_bytes(),
+        &u128::from_str_radix(
+            resources.l2_gas.max_price_per_unit.trim_start_matches("0x"),
+            16,
+        )
+        .unwrap()
+        .to_be_bytes(),
     );
-    let _ =apdu.append(&resource_buffer).unwrap();
+    let _ = apdu.append(&resource_buffer).unwrap();
 
     // L1 Data Gas
     let mut resource_buffer = [0; 32];
     resource_buffer[1..8].copy_from_slice(b"L1_DATA");
     resource_buffer[8..16].copy_from_slice(
-        &u64::from_str_radix(resources.l1_data_gas.max_amount.trim_start_matches("0x"), 16)
-            .unwrap()
-            .to_be_bytes(),
+        &u64::from_str_radix(
+            resources.l1_data_gas.max_amount.trim_start_matches("0x"),
+            16,
+        )
+        .unwrap()
+        .to_be_bytes(),
     );
     resource_buffer[16..].copy_from_slice(
-        &u128::from_str_radix(resources.l1_data_gas.max_price_per_unit.trim_start_matches("0x"), 16)
-            .unwrap()
-            .to_be_bytes(),
+        &u128::from_str_radix(
+            resources
+                .l1_data_gas
+                .max_price_per_unit
+                .trim_start_matches("0x"),
+            16,
+        )
+        .unwrap()
+        .to_be_bytes(),
     );
-    let _ =apdu.append(&resource_buffer).unwrap();
+    let _ = apdu.append(&resource_buffer).unwrap();
 
     apdu
 }
@@ -387,7 +403,9 @@ pub fn constructor_calldata(calldata: &[String], cla: u8, ins: Ins, p1: u8) -> V
                 };
                 let mut apdu = Apdu::new(apdu_header);
                 for d in s {
-                    let _ = apdu.append(&Felt::from_hex_unchecked(d).to_bytes_be()).unwrap();
+                    let _ = apdu
+                        .append(&Felt::from_hex_unchecked(d).to_bytes_be())
+                        .unwrap();
                 }
                 apdu_list.push(apdu);
             }
