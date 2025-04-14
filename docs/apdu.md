@@ -4,7 +4,7 @@ This document aims to provide a description of the APDU protocol supported by th
 
 ## General Structure
 
-The general structure of a reqeuest and response is as followed:
+The general structure of a request and response is as followed:
 
 ### Request / Command
 
@@ -21,7 +21,7 @@ The general structure of a reqeuest and response is as followed:
 
 | Field   | Type     | Content     | Note                     |
 | ------- | -------- | ----------- | ------------------------ |
-| ANSWER  | byte (?) | Answer      | depends on the command   |
+| ANSWER  | byte (N) | Answer      | depends on the command   |
 | SW1-SW2 | byte (2) | Return code | see list of return codes |
 
 #### Return codes
@@ -66,7 +66,7 @@ This command will return the app version
 
 ### GetPubKey
 
-This command returns the public key corresponding to the secret key found at the given [EIP-2645](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2645.md) path 
+This command returns the public key corresponding to the private key found at the given [EIP-2645](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2645.md) path 
 
 #### Command
 
@@ -78,23 +78,23 @@ This command returns the public key corresponding to the secret key found at the
 | P2      | byte (1) | Parameter 2               | ignored         |
 | L       | byte (1) | Bytes in payload          | 0x18            |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55      |
-| Path[1] | byte (4) | Derivation Path Data      | ?               |
-| Path[2] | byte (4) | Derivation Path Data      | ?               |
-| Path[3] | byte (4) | Derivation Path Data      | ?               |
-| Path[4] | byte (4) | Derivation Path Data      | ?               |
-| Path[5] | byte (4) | Derivation Path Data      | ?               |
+| Path[1] | byte (4) | Derivation Path Data      |                 |
+| Path[2] | byte (4) | Derivation Path Data      |                 |
+| Path[3] | byte (4) | Derivation Path Data      |                 |
+| Path[4] | byte (4) | Derivation Path Data      |                 |
+| Path[5] | byte (4) | Derivation Path Data      |                 |
 
 #### Response
 
 | Field      | Type      | Content           | Note                     |
 | ---------- | --------- | ----------------- | ------------------------ |
 | PK_LEN     | byte (1)  | Bytes in PKEY     | 64                       |
-| PKEY       | byte (??) | Public key bytes  | 32 (x) + 32 (y)          |
+| PKEY       | byte (64) | Public key bytes  | 32 (x) + 32 (y)          |
 | SW1-SW2    | byte (2)  | Return code       | see list of return codes |
 
 ### Sign Hash
 
-This command will return the signature of a Pedersen or Poseidon Hash
+This command will return the signature of a Pedersen or Poseidon hash
 
 #### Command #0: Set private key
 
@@ -106,11 +106,11 @@ This command will return the signature of a Pedersen or Poseidon Hash
 | P2    | byte (1) | ignored                     |                   |
 | L     | byte (1) | Bytes in payload            | (depends)         |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55        |
-| Path[1] | byte (4) | Derivation Path Data      | ?                 |
-| Path[2] | byte (4) | Derivation Path Data      | ?                 |
-| Path[3] | byte (4) | Derivation Path Data      | ?                 |
-| Path[4] | byte (4) | Derivation Path Data      | ?                 |
-| Path[5] | byte (4) | Derivation Path Data      | ?                 |
+| Path[1] | byte (4) | Derivation Path Data      |                   |
+| Path[2] | byte (4) | Derivation Path Data      |                   |
+| Path[3] | byte (4) | Derivation Path Data      |                   |
+| Path[4] | byte (4) | Derivation Path Data      |                   |
+| Path[5] | byte (4) | Derivation Path Data      |                   |
 
 #### Response
 
@@ -126,8 +126,8 @@ This command will return the signature of a Pedersen or Poseidon Hash
 | INS   | byte (1)   | Instruction ID              | 0x02              |
 | P1    | byte (1)   | Payload desc                | 0x01              |
 | P2    | byte (1)   | ignored                     |                   |
-| L     | byte (1)   | Bytes in payload            | 0x20              |
-| Hash  | bytes (32) | Hash bytes                  | (depends)         |
+| L     | byte (1)   | nb of bytes in payload      | 0x20              |
+| Hash  | bytes (32) | hash                        |                   |
 
 #### Response
 
@@ -140,7 +140,7 @@ This command will return the signature of a Pedersen or Poseidon Hash
 | SW1-SW2  | byte (2)  | Return code       | see list of return codes              |
 
 
-### Sign Invoke Tx (see [Starnet Tx v3](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v3_hash_calculation))
+### Sign INVOKE Tx v3 (see [Starnet Tx v3](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v3_hash_calculation))
 
 This command will return the hash and signature of a Starknet INVOKE Tx version 3
 
@@ -154,11 +154,11 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | P2    | byte (1) | ignored                     |                   |
 | L     | byte (1) | Bytes in payload            | (depends)         |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55        |
-| Path[1] | byte (4) | Derivation Path Data      | ?                 |
-| Path[2] | byte (4) | Derivation Path Data      | ?                 |
-| Path[3] | byte (4) | Derivation Path Data      | ?                 |
-| Path[4] | byte (4) | Derivation Path Data      | ?                 |
-| Path[5] | byte (4) | Derivation Path Data      | ?                 |
+| Path[1] | byte (4) | Derivation Path Data      |                   |
+| Path[2] | byte (4) | Derivation Path Data      |                   |
+| Path[3] | byte (4) | Derivation Path Data      |                   |
+| Path[4] | byte (4) | Derivation Path Data      |                   |
+| Path[5] | byte (4) | Derivation Path Data      |                   |
 
 #### Response
 
@@ -174,11 +174,11 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1) | Instruction ID              | 0x03              |
 | P1               | byte (1) | Payload desc                | 0x01              |
 | P2               | byte (1) | ignored                     |                   |
-| L                | byte (1) | Bytes in payload            | 0xE0 (7x32 = 224) |
-| Account Address  | byte (32)| sender address              | (depends)         |
-| ChainID          | byte (32)| chain_id                    | (depends)         |
-| Nonce            | byte (32)| nonce                       | (depends)         |
-| DA mode          | byte (32)| data_availability_mode      | (depends)         |
+| L                | byte (1) | Bytes in payload            | 0x80 (4x32 = 128) |
+| SENDER ADDR      | byte (32)| sender address              | (depends)         |
+| CHAIN_ID         | byte (32)| chain_id                    | (depends)         |
+| NONCE            | byte (32)| nonce                       | (depends)         |
+| DA MODE          | byte (32)| data_availability_mode      | (depends)         |
 
 #### Response
 
@@ -194,11 +194,11 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1) | Instruction ID              | 0x03              |
 | P1               | byte (1) | Payload desc                | 0x02              |
 | P2               | byte (1) | ignored                     | 0x00              |
-| L                | byte (1) | Bytes in payload            |                   |
-| Tip              | byte (32)| tip                         | (depends)         |
-| Fee L1           | byte (32)| l1_gas_bounds               | (depends)         |
-| Fee L2           | byte (32)| l2_gas_bounds               | (depends)         |
-| Data L1          | byte (32)| l1_data_gas_bounds          | (depends)         |
+| L                | byte (1) | Bytes in payload            | 0x80              |
+| TIP              | byte (32)| tip                         | (depends)         |
+| L1 FEE           | byte (32)| l1_gas_bounds               | (depends)         |
+| L2 FEE           | byte (32)| l2_gas_bounds               | (depends)         |
+| L1 DATA          | byte (32)| l1_data_gas_bounds          | (depends)         |
 
 #### Response
 
@@ -212,7 +212,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|----------|-----------------------------|-------------------|
 | CLA              | byte (1) | Application Identifier      | 0x5A              |
 | INS              | byte (1) | Instruction ID              | 0x03              |
-| P1               | byte (1) | Payload desc                | 0x02              |
+| P1               | byte (1) | Payload desc                | 0x03              |
 | P2               | byte (1) | ignored                     | 0x00              |
 | L                | byte (1) | Bytes in payload            | 0x00              |
 
@@ -244,7 +244,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|------------|-----------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier      | 0x5A              |
 | INS              | byte (1)   | Instruction ID              | 0x03              |
-| P1               | byte (1)   | Payload desc                | 0x04              |
+| P1               | byte (1)   | Payload desc                | 0x05              |
 | P2               | byte (1)   | ignored                     | 0x00              |
 | L                | byte (1)   | Bytes in payload            | 0x20              |
 | Num of calls     | bytes (32) | Bytes in payload            | (depends)         |
@@ -257,7 +257,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 
 #### Command #5: Call
 
-##### New
+##### New Call
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
@@ -268,7 +268,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | TO               | bytes (32) | to                                             | (depends)         |
 | SELECTOR         | bytes (32) | selector                                       | (depends)         |
-| NB               | bytes (32) | nb_calldata                                    | (depends)         |
+| NB CALLDATA      | bytes (32) | nb_calldata                                    | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
 | calldata         | bytes (32) | calldata #2                                    | (depends)         |
@@ -280,14 +280,14 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-##### Add
+##### Add calldata to the current Call
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
 | P1               | byte (1)   | Payload desc                                   | 0x05              |
-| P2               | byte (1)   | Next calldata                                  | 0x01              |
+| P2               | byte (1)   | Add calldata                                   | 0x01              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -303,14 +303,14 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-##### End
+##### End of calldata for the current Call
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
 | P1               | byte (1)   | Payload desc                                   | 0x05              |
-| P2               | byte (1)   | Next calldata                                  | 0x02              |
+| P2               | byte (1)   | Last calldata                                  | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -338,7 +338,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | V        | byte (1)  | Signature         | (R,S,V) encoded signature             |
 | SW1-SW2  | byte (2)  | Return code       | see list of return codes              |
 
-### Sign Deploy Account Tx (see [Starnet Deploy v3](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v3_hash_calculation_3))
+### Sign Deploy Account Tx v3 (see [Starnet Deploy v3](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v3_hash_calculation_3))
 
 This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx version 3
 
@@ -352,11 +352,11 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | P2    | byte (1) | ignored                     |                   |
 | L     | byte (1) | Bytes in payload            | (depends)         |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55        |
-| Path[1] | byte (4) | Derivation Path Data      | ?                 |
-| Path[2] | byte (4) | Derivation Path Data      | ?                 |
-| Path[3] | byte (4) | Derivation Path Data      | ?                 |
-| Path[4] | byte (4) | Derivation Path Data      | ?                 |
-| Path[5] | byte (4) | Derivation Path Data      | ?                 |
+| Path[1] | byte (4) | Derivation Path Data      |                   |
+| Path[2] | byte (4) | Derivation Path Data      |                   |
+| Path[3] | byte (4) | Derivation Path Data      |                   |
+| Path[4] | byte (4) | Derivation Path Data      |                   |
+| Path[5] | byte (4) | Derivation Path Data      |                   |
 
 #### Response
 
@@ -373,7 +373,7 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | INS              | byte (1) | Instruction ID              | 0x05              |
 | P1               | byte (1) | Payload desc                | 0x01              |
 | P2               | byte (1) | ignored                     |                   |
-| L                | byte (1) | Bytes in payload            |                   |
+| L                | byte (1) | Bytes in payload            | 0xC0              |
 | CONTRACT ADDR    | byte (32)| contract_address            | (depends)         |
 | CHAIN_ID         | byte (32)| chain_id                    | (depends)         |
 | NONCE            | byte (32)| nonce                       | (depends)         |
@@ -397,10 +397,10 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | P1               | byte (1) | Payload desc                | 0x02              |
 | P2               | byte (1) | ignored                     | 0x00              |
 | L                | byte (1) | Bytes in payload            |                   |
-| Tip              | byte (32)| tip                         | (depends)         |
-| Fee L1           | byte (32)| l1_gas_bounds               | (depends)         |
-| Fee L2           | byte (32)| l2_gas_bounds               | (depends)         |
-| Data L1          | byte (32)| l1_data_gas_bounds          | (depends)         |
+| TIP              | byte (32)| tip                         | (depends)         |
+| L1 FEE           | byte (32)| l1_gas_bounds               | (depends)         |
+| L2 FEE           | byte (32)| l2_gas_bounds               | (depends)         |
+| L1 DATA          | byte (32)| l1_data_gas_bounds          | (depends)         |
 
 #### Response
 
@@ -430,7 +430,7 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier      | 0x5A              |
-| INS              | byte (1)   | Instruction ID              | 0x03              |
+| INS              | byte (1)   | Instruction ID              | 0x05              |
 | P1               | byte (1)   | Payload desc                | 0x04              |
 | P2               | byte (1)   | ignored                     | 0x00              |
 | L                | byte (1)   | Bytes in payload            | 0x20              |
@@ -447,7 +447,7 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
-| INS              | byte (1)   | Instruction ID                                 | 0x03              |
+| INS              | byte (1)   | Instruction ID                                 | 0x05              |
 | P1               | byte (1)   | Payload desc                                   | 0x05              |
 | P2               | byte (1)   | ignored                                        |                   |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
@@ -476,7 +476,7 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | SW1-SW2  | byte (2)  | Return code       | see list of return codes              |
 
 
-### Sign TxV1 (see [Starnet Tx v1](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v1_deprecated_hash_calculation))
+### Sign INVOKE Tx v1 (see [Starnet Tx v1](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v1_deprecated_hash_calculation))
 
 This command will return the hash and signature of a Starknet INVOKE Tx version 1
 
@@ -490,11 +490,11 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | P2    | byte (1) | ignored                     |                   |
 | L     | byte (1) | Bytes in payload            | (depends)         |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55        |
-| Path[1] | byte (4) | Derivation Path Data      | ?                 |
-| Path[2] | byte (4) | Derivation Path Data      | ?                 |
-| Path[3] | byte (4) | Derivation Path Data      | ?                 |
-| Path[4] | byte (4) | Derivation Path Data      | ?                 |
-| Path[5] | byte (4) | Derivation Path Data      | ?                 |
+| Path[1] | byte (4) | Derivation Path Data      |                   |
+| Path[2] | byte (4) | Derivation Path Data      |                   |
+| Path[3] | byte (4) | Derivation Path Data      |                   |
+| Path[4] | byte (4) | Derivation Path Data      |                   |
+| Path[5] | byte (4) | Derivation Path Data      |                   |
 
 #### Response
 
@@ -510,7 +510,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1) | Instruction ID              | 0x04              |
 | P1               | byte (1) | Payload desc                | 0x01              |
 | P2               | byte (1) | ignored                     |                   |
-| L                | byte (1) | Bytes in payload            | 0xE0 (7x32 = 224) |
+| L                | byte (1) | Bytes in payload            | 0x80 (4x32 = 128) |
 | SENDER ADDR      | byte (32)| sender address              | (depends)         |
 | MAX FEE          | byte (32)| max fee                     | (depends)         |
 | CHAIN_ID         | byte (32)| chain_id                    | (depends)         |
@@ -542,7 +542,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 
 #### Command #3: Call
 
-##### New
+##### New Call
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
@@ -565,14 +565,14 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-##### Add
+##### Add call data to the current Call
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x04              |
 | P1               | byte (1)   | Payload desc                                   | 0x03              |
-| P2               | byte (1)   | Next calldata                                  | 0x01              |
+| P2               | byte (1)   | Add calldata                                   | 0x01              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -588,14 +588,14 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-##### End
+##### End of calldata for the current Call
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x04              |
 | P1               | byte (1)   | Payload desc                                   | 0x03              |
-| P2               | byte (1)   | Next calldata                                  | 0x02              |
+| P2               | byte (1)   | End of calldata                                | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -623,7 +623,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | V        | byte (1)  | Signature         | (R,S,V) encoded signature             |
 | SW1-SW2  | byte (2)  | Return code       | see list of return codes              |
 
-### Sign Deploy Account Tx v1 (see [Starnet Deploy v1](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v1_deprecated_hash_calculation_3))
+### Sign DEPLOY_ACCOUNT Tx v1 (see [Starnet Deploy v1](https://docs.starknet.io/architecture-and-concepts/network-architecture/transactions/#v1_deprecated_hash_calculation_3))
 
 This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx version 1
 
@@ -637,11 +637,11 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | P2    | byte (1) | ignored                     |                   |
 | L     | byte (1) | Bytes in payload            | (depends)         |
 | Path[0] | byte (4) | Derivation Path Data      | 0x80000A55        |
-| Path[1] | byte (4) | Derivation Path Data      | ?                 |
-| Path[2] | byte (4) | Derivation Path Data      | ?                 |
-| Path[3] | byte (4) | Derivation Path Data      | ?                 |
-| Path[4] | byte (4) | Derivation Path Data      | ?                 |
-| Path[5] | byte (4) | Derivation Path Data      | ?                 |
+| Path[1] | byte (4) | Derivation Path Data      |                   |
+| Path[2] | byte (4) | Derivation Path Data      |                   |
+| Path[3] | byte (4) | Derivation Path Data      |                   |
+| Path[4] | byte (4) | Derivation Path Data      |                   |
+| Path[5] | byte (4) | Derivation Path Data      |                   |
 
 #### Response
 
