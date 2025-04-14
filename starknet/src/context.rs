@@ -8,6 +8,8 @@ use alloc::vec::Vec;
 pub struct Call {
     pub to: FieldElement,
     pub selector: FieldElement,
+    pub nb_calldata: usize,
+    pub nb_rcv_calldata: usize,
     pub calldata: Vec<FieldElement>,
 }
 

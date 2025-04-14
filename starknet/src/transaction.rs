@@ -36,7 +36,7 @@ impl From<FieldElement> for TxVersion {
 pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
     match tx {
         Transaction::InvokeV3(tx) => {
-            if tx.nb_rcv_calls == tx.nb_calls {
+            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata) {
                 let hash_calldata = tx.hasher_calldata.finalize();
                 tx.hasher.update(hash_calldata);
                 return Some(tx.hasher.finalize());
@@ -44,7 +44,7 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::InvokeV1(tx) => {
-            if tx.nb_rcv_calls == tx.nb_calls {
+            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata) {
                 tx.hasher_calldata
                     .update(FieldElement::from(tx.hasher_calldata.get_nb_fe() as u8));
                 let hash_calldata = tx.hasher_calldata.finalize();
@@ -247,7 +247,6 @@ pub enum SetCallError {
 pub enum SetCallStep {
     New = 0x00,
     Add = 0x01,
-    End = 0x02,
 }
 
 impl From<u8> for SetCallStep {
@@ -255,7 +254,6 @@ impl From<u8> for SetCallStep {
         match value {
             0x00 => SetCallStep::New,
             0x01 => SetCallStep::Add,
-            0x02 => SetCallStep::End,
             _ => panic!("Invalid SetCallStep value"),
         }
     }
@@ -266,7 +264,6 @@ impl From<SetCallStep> for u8 {
         match value {
             SetCallStep::New => 0x00,
             SetCallStep::Add => 0x01,
-            SetCallStep::End => 0x02,
         }
     }
 }
@@ -352,17 +349,22 @@ fn set_calldata_invoke(
             hasher.update(call.selector);
             let calldata_len = iter.next().unwrap().into();
             hasher.update(calldata_len);
+            call.nb_calldata = calldata_len.into();
+            call.calldata = Vec::default();
+            call.nb_rcv_calldata = 0;
             for d in iter {
                 call.calldata.push(d.into());
                 hasher.update(d.into());
+                call.nb_rcv_calldata += 1;
             }
             *nb_rcv_calls += 1;
             Ok(())
         }
-        SetCallStep::Add | SetCallStep::End => {
+        SetCallStep::Add => {
             let iter = data.chunks(FIELD_ELEMENT_SIZE);
             for d in iter {
                 hasher.update(d.into());
+                call.nb_rcv_calldata += 1;
             }
             Ok(())
         }
