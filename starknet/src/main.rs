@@ -243,21 +243,26 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
             2 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_paymaster_data(data, p2, &mut ctx.tx);
+                transaction::set_tx_fees(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
+                transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
+                transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            5 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
-            5 => {
+            6 => {
                 let nb_rcv_calls = match p2 == transaction::SetCallStep::New.into() {
                     true => ctx.tx.get_nb_received_calls() + 1,
                     false => ctx.tx.get_nb_received_calls(),
@@ -278,67 +283,61 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
-                if p2 == transaction::SetCallStep::End.into() {
-                    match transaction::tx_complete(&mut ctx.tx) {
-                        None => {
-                            send_data(comm, Ok(None));
-                        }
-                        Some(hash) => {
-                            ctx.hash = hash;
-                            match display::show_tx(ctx) {
-                                Some(approved) => match approved {
-                                    true => {
-                                        rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                        crypto::sign_hash(ctx).unwrap();
-                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                        rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                        rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                        rdata.extend_from_slice([ctx.signature.v].as_slice());
-                                        display::show_status(true, true, ctx);
-                                        send_data(comm, Ok(Some(rdata)));
-                                    }
-                                    false => {
-                                        display::show_status(false, true, ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    }
-                                },
-                                None => {
-                                    let settings: Settings = Default::default();
-                                    if settings.get_element(0) == 0 {
-                                        display::blind_signing_enable_ui(ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    } else {
-                                        // Delay lock to prevent the device to pinlock
-                                        #[cfg(any(target_os = "stax", target_os = "flex"))]
-                                        uxapp::UxEvent::DelayLock.request();
-                                        match display::show_hash(ctx, true) {
-                                            true => {
-                                                rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                                crypto::sign_hash(ctx).unwrap();
-                                                rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                                rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                                rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                                rdata.extend_from_slice(
-                                                    [ctx.signature.v].as_slice(),
-                                                );
-                                                display::show_status(true, true, ctx);
-                                                send_data(comm, Ok(Some(rdata)));
-                                            }
-                                            false => {
-                                                display::show_status(false, true, ctx);
-                                                send_data(
-                                                    comm,
-                                                    Err(io::StatusWords::UserCancelled.into()),
-                                                );
-                                            }
+                match transaction::tx_complete(&mut ctx.tx) {
+                    None => {
+                        send_data(comm, Ok(None));
+                    }
+                    Some(hash) => {
+                        ctx.hash = hash;
+                        match display::show_tx(ctx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                    rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                    rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                    rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                    display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
+                                }
+                                false => {
+                                    display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                }
+                            },
+                            None => {
+                                let settings: Settings = Default::default();
+                                if settings.get_element(0) == 0 {
+                                    display::blind_signing_enable_ui(ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                } else {
+                                    // Delay lock to prevent the device to pinlock
+                                    #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                    uxapp::UxEvent::DelayLock.request();
+                                    match display::show_hash(ctx, true) {
+                                        true => {
+                                            rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                            crypto::sign_hash(ctx).unwrap();
+                                            rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                            rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                            rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                            rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                            display::show_status(true, true, ctx);
+                                            send_data(comm, Ok(Some(rdata)));
+                                        }
+                                        false => {
+                                            display::show_status(false, true, ctx);
+                                            send_data(
+                                                comm,
+                                                Err(io::StatusWords::UserCancelled.into()),
+                                            );
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                } else {
-                    send_data(comm, Ok(None));
                 }
             }
             _ => {
@@ -391,67 +390,61 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
-                if p2 == transaction::SetCallStep::End.into() {
-                    match transaction::tx_complete(&mut ctx.tx) {
-                        None => {
-                            send_data(comm, Ok(None));
-                        }
-                        Some(hash) => {
-                            ctx.hash = hash;
-                            match display::show_tx(ctx) {
-                                Some(approved) => match approved {
-                                    true => {
-                                        rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                        crypto::sign_hash(ctx).unwrap();
-                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                        rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                        rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                        rdata.extend_from_slice([ctx.signature.v].as_slice());
-                                        display::show_status(true, true, ctx);
-                                        send_data(comm, Ok(Some(rdata)));
-                                    }
-                                    false => {
-                                        display::show_status(false, true, ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    }
-                                },
-                                None => {
-                                    let settings: Settings = Default::default();
-                                    if settings.get_element(0) == 0 {
-                                        display::blind_signing_enable_ui(ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    } else {
-                                        // Delay lock to prevent the device to pinlock
-                                        #[cfg(any(target_os = "stax", target_os = "flex"))]
-                                        uxapp::UxEvent::DelayLock.request();
-                                        match display::show_hash(ctx, true) {
-                                            true => {
-                                                rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                                crypto::sign_hash(ctx).unwrap();
-                                                rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                                rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                                rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                                rdata.extend_from_slice(
-                                                    [ctx.signature.v].as_slice(),
-                                                );
-                                                display::show_status(true, true, ctx);
-                                                send_data(comm, Ok(Some(rdata)));
-                                            }
-                                            false => {
-                                                display::show_status(false, true, ctx);
-                                                send_data(
-                                                    comm,
-                                                    Err(io::StatusWords::UserCancelled.into()),
-                                                );
-                                            }
+                match transaction::tx_complete(&mut ctx.tx) {
+                    None => {
+                        send_data(comm, Ok(None));
+                    }
+                    Some(hash) => {
+                        ctx.hash = hash;
+                        match display::show_tx(ctx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                    rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                    rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                    rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                    display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
+                                }
+                                false => {
+                                    display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                }
+                            },
+                            None => {
+                                let settings: Settings = Default::default();
+                                if settings.get_element(0) == 0 {
+                                    display::blind_signing_enable_ui(ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                } else {
+                                    // Delay lock to prevent the device to pinlock
+                                    #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                    uxapp::UxEvent::DelayLock.request();
+                                    match display::show_hash(ctx, true) {
+                                        true => {
+                                            rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                            crypto::sign_hash(ctx).unwrap();
+                                            rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                            rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                            rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                            rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                            display::show_status(true, true, ctx);
+                                            send_data(comm, Ok(Some(rdata)));
+                                        }
+                                        false => {
+                                            display::show_status(false, true, ctx);
+                                            send_data(
+                                                comm,
+                                                Err(io::StatusWords::UserCancelled.into()),
+                                            );
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                } else {
-                    send_data(comm, Ok(None));
                 }
             }
             _ => {
@@ -553,16 +546,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
             2 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_tx_fees(data, &mut ctx.tx);
-                send_data(comm, Ok(None));
-            }
-            3 => {
-                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
-            4 => {
+            3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));

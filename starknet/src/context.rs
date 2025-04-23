@@ -8,6 +8,8 @@ use alloc::vec::Vec;
 pub struct Call {
     pub to: FieldElement,
     pub selector: FieldElement,
+    pub nb_calldata: usize,
+    pub nb_rcv_calldata: usize,
     pub calldata: Vec<FieldElement>,
 }
 
@@ -32,6 +34,7 @@ pub struct InvokeTransactionV3 {
     pub tip: FieldElement,
     pub l1_gas_bounds: FieldElement,
     pub l2_gas_bounds: FieldElement,
+    pub l1_data_gas_bounds: FieldElement,
     pub paymaster_data: Vec<FieldElement>,
     pub chain_id: FieldElement,
     pub nonce: FieldElement,
@@ -64,14 +67,17 @@ pub struct DeployAccountTransactionV3 {
     pub tip: FieldElement,
     pub l1_gas_bounds: FieldElement,
     pub l2_gas_bounds: FieldElement,
+    pub l1_data_gas_bounds: FieldElement,
     pub paymaster_data: Vec<FieldElement>,
     pub chain_id: FieldElement,
     pub nonce: FieldElement,
     pub data_availability_mode: FieldElement,
     pub class_hash: FieldElement,
     pub contract_address_salt: FieldElement,
-    pub constructor_calldata: Vec<FieldElement>,
+    pub nb_constructor_calldata: usize,
+    pub nb_rcv_constructor_calldata: usize,
     pub hasher: crypto::poseidon::PoseidonHasher,
+    pub hasher_calldata: crypto::poseidon::PoseidonHasher,
 }
 
 #[derive(Default, Debug)]

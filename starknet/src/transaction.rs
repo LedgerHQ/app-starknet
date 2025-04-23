@@ -36,7 +36,8 @@ impl From<FieldElement> for TxVersion {
 pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
     match tx {
         Transaction::InvokeV3(tx) => {
-            if tx.nb_rcv_calls == tx.nb_calls {
+            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata)
+            {
                 let hash_calldata = tx.hasher_calldata.finalize();
                 tx.hasher.update(hash_calldata);
                 return Some(tx.hasher.finalize());
@@ -44,7 +45,8 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::InvokeV1(tx) => {
-            if tx.nb_rcv_calls == tx.nb_calls {
+            if (tx.nb_rcv_calls == tx.nb_calls) && (tx.call.nb_rcv_calldata == tx.call.nb_calldata)
+            {
                 tx.hasher_calldata
                     .update(FieldElement::from(tx.hasher_calldata.get_nb_fe() as u8));
                 let hash_calldata = tx.hasher_calldata.finalize();
@@ -58,7 +60,8 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::DeployAccountV3(tx) => {
-            if tx.constructor_calldata.len() == tx.constructor_calldata.capacity() {
+            if tx.nb_rcv_constructor_calldata == tx.nb_constructor_calldata {
+                tx.hasher.update(tx.hasher_calldata.finalize());
                 tx.hasher.update(tx.class_hash);
                 tx.hasher.update(tx.contract_address_salt);
                 return Some(tx.hasher.finalize());
@@ -91,24 +94,46 @@ pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
 
 pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
     match tx {
-        Transaction::DeployAccountV1(tx) => {
-            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-            tx.max_fee = iter.next().unwrap().into();
-        }
         Transaction::DeployAccountV3(tx) => {
+            let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
             let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
             tx.tip = iter.next().unwrap().into();
+            fee_hasher.update(tx.tip);
             tx.l1_gas_bounds = iter.next().unwrap().into();
+            fee_hasher.update(tx.l1_gas_bounds);
             tx.l2_gas_bounds = iter.next().unwrap().into();
-
-            let fee_hash = crate::crypto::poseidon::PoseidonStark252::hash_many(&[
-                tx.tip,
-                tx.l1_gas_bounds,
-                tx.l2_gas_bounds,
-            ]);
+            fee_hasher.update(tx.l2_gas_bounds);
+            tx.l1_data_gas_bounds = match iter.next() {
+                Some(data) => {
+                    fee_hasher.update(data.into());
+                    data.into()
+                }
+                None => FieldElement::ZERO,
+            };
+            let fee_hash = fee_hasher.finalize();
             tx.hasher.update(fee_hash);
         }
-        Transaction::InvokeV1(_) | Transaction::InvokeV3(_) | Transaction::None => {
+        Transaction::InvokeV3(tx) => {
+            let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
+            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
+            tx.tip = iter.next().unwrap().into();
+            fee_hasher.update(tx.tip);
+            tx.l1_gas_bounds = iter.next().unwrap().into();
+            fee_hasher.update(tx.l1_gas_bounds);
+            tx.l2_gas_bounds = iter.next().unwrap().into();
+            fee_hasher.update(tx.l2_gas_bounds);
+            tx.l1_data_gas_bounds = match iter.next() {
+                Some(data) => {
+                    ledger_device_sdk::testing::debug_print("we have l1_data_gas filed\n");
+                    fee_hasher.update(data.into());
+                    data.into()
+                }
+                None => FieldElement::ZERO,
+            };
+            let fee_hash = fee_hasher.finalize();
+            tx.hasher.update(fee_hash);
+        }
+        Transaction::InvokeV1(_) | Transaction::DeployAccountV1(_) | Transaction::None => {
             panic!("Invalid transaction type")
         }
     }
@@ -118,9 +143,6 @@ fn set_invoke_fields_v3(data: &[u8], tx: &mut InvokeTransactionV3) {
     tx.version = FieldElement::from(TxVersion::V3 as u8);
     let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
     tx.sender_address = iter.next().unwrap().into();
-    tx.tip = iter.next().unwrap().into();
-    tx.l1_gas_bounds = iter.next().unwrap().into();
-    tx.l2_gas_bounds = iter.next().unwrap().into();
     tx.chain_id = iter.next().unwrap().into();
     tx.nonce = iter.next().unwrap().into();
     tx.data_availability_mode = iter.next().unwrap().into();
@@ -129,12 +151,6 @@ fn set_invoke_fields_v3(data: &[u8], tx: &mut InvokeTransactionV3) {
     tx.hasher.update(FieldElement::INVOKE);
     tx.hasher.update(tx.version);
     tx.hasher.update(tx.sender_address);
-    let fee_hash = crate::crypto::poseidon::PoseidonStark252::hash_many(&[
-        tx.tip,
-        tx.l1_gas_bounds,
-        tx.l2_gas_bounds,
-    ]);
-    tx.hasher.update(fee_hash);
 }
 
 fn set_invoke_fields_v1(data: &[u8], tx: &mut InvokeTransactionV1) {
@@ -212,6 +228,7 @@ fn set_deploy_account_fields_v1(data: &[u8], tx: &mut DeployAccountTransactionV1
     tx.contract_address = iter.next().unwrap().into();
     tx.class_hash = iter.next().unwrap().into();
     tx.contract_address_salt = iter.next().unwrap().into();
+    tx.max_fee = iter.next().unwrap().into();
     tx.chain_id = iter.next().unwrap().into();
     tx.nonce = iter.next().unwrap().into();
 
@@ -232,7 +249,6 @@ pub enum SetCallError {
 pub enum SetCallStep {
     New = 0x00,
     Add = 0x01,
-    End = 0x02,
 }
 
 impl From<u8> for SetCallStep {
@@ -240,7 +256,6 @@ impl From<u8> for SetCallStep {
         match value {
             0x00 => SetCallStep::New,
             0x01 => SetCallStep::Add,
-            0x02 => SetCallStep::End,
             _ => panic!("Invalid SetCallStep value"),
         }
     }
@@ -251,7 +266,6 @@ impl From<SetCallStep> for u8 {
         match value {
             SetCallStep::New => 0x00,
             SetCallStep::Add => 0x01,
-            SetCallStep::End => 0x02,
         }
     }
 }
@@ -267,7 +281,7 @@ pub fn set_calldata_nb(tx: &mut Transaction, nb: FieldElement) {
             tx.hasher_calldata.update(nb);
         }
         Transaction::DeployAccountV3(tx) => {
-            tx.constructor_calldata = Vec::with_capacity(nb.into());
+            tx.nb_constructor_calldata = nb.into();
         }
         Transaction::DeployAccountV1(tx) => {
             tx.constructor_calldata = Vec::with_capacity(nb.into());
@@ -297,9 +311,11 @@ pub fn set_calldata(
             &mut tx.nb_rcv_calls,
         ),
         Transaction::DeployAccountV3(tx) => {
-            let constructor_calldata_hash =
-                set_calldata_deploy_account_v3(data, &mut tx.constructor_calldata).unwrap();
-            tx.hasher.update(constructor_calldata_hash);
+            let iter = data.chunks(FIELD_ELEMENT_SIZE);
+            for d in iter {
+                tx.hasher_calldata.update(d.into());
+                tx.nb_rcv_constructor_calldata += 1;
+            }
             Ok(())
         }
         Transaction::DeployAccountV1(tx) => {
@@ -335,36 +351,26 @@ fn set_calldata_invoke(
             hasher.update(call.selector);
             let calldata_len = iter.next().unwrap().into();
             hasher.update(calldata_len);
+            call.nb_calldata = calldata_len.into();
+            call.calldata = Vec::default();
+            call.nb_rcv_calldata = 0;
             for d in iter {
                 call.calldata.push(d.into());
                 hasher.update(d.into());
+                call.nb_rcv_calldata += 1;
             }
             *nb_rcv_calls += 1;
             Ok(())
         }
-        SetCallStep::Add | SetCallStep::End => {
+        SetCallStep::Add => {
             let iter = data.chunks(FIELD_ELEMENT_SIZE);
             for d in iter {
                 hasher.update(d.into());
+                call.nb_rcv_calldata += 1;
             }
             Ok(())
         }
     }
-}
-
-fn set_calldata_deploy_account_v3(
-    data: &[u8],
-    constructor_calldata: &mut Vec<FieldElement>,
-) -> Result<FieldElement, SetCallError> {
-    let iter = data.chunks(FIELD_ELEMENT_SIZE);
-    for d in iter {
-        constructor_calldata.push(d.into());
-    }
-
-    let constructor_calldata_hash =
-        crypto::poseidon::PoseidonStark252::hash_many(constructor_calldata);
-
-    Ok(constructor_calldata_hash)
 }
 
 fn set_calldata_deploy_account_v1(

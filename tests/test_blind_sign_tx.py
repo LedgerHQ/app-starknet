@@ -27,7 +27,7 @@ def get_setting_position(firmware: Firmware, setting_idx: int, per_page: int) ->
 
 # In those tests we check the behavior of the device when asked to sign a Tx (blind signing)
 
-def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
+def test_tx_v1_approve_and_remove(firmware, backend, navigator, test_name):
 
     # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -56,7 +56,7 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
     # Send the sign tx device instruction.
     # As it requires on-screen validation, the function is asynchronous.
     # It will yield the result when the navigation is done
-    file_path = 'samples/apdu/tx_misc_0.dat'
+    file_path = 'samples/apdu/tx_v1_approve_and_remove.dat'
     all_apdus = read_lines_from_file(file_path)
 
     # send all apdus except last one
@@ -117,7 +117,7 @@ def test_blind_sign_tx_0(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
+def test_tx_v1_approve_and_swap(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -146,7 +146,7 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
     # Send the sign tx device instruction.
     # As it requires on-screen validation, the function is asynchronous.
     # It will yield the result when the navigation is done
-    file_path = 'samples/apdu/tx_misc_1.dat'
+    file_path = 'samples/apdu/tx_v1_approve_and_swap.dat'
     all_apdus = read_lines_from_file(file_path)
 
     # send all apdus except last one
@@ -207,7 +207,7 @@ def test_blind_sign_tx_1(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
+def test_tx_v1_explore(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -236,7 +236,7 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
     # Send the sign tx device instruction.
     # As it requires on-screen validation, the function is asynchronous.
     # It will yield the result when the navigation is done
-    file_path = 'samples/apdu/tx_misc_2.dat'
+    file_path = 'samples/apdu/tx_v1_explore.dat'
     all_apdus = read_lines_from_file(file_path)
 
     # send all apdus except last one
@@ -297,7 +297,7 @@ def test_blind_sign_tx_2(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
+def test_tx_v1_l2(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -326,7 +326,7 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
     # Send the sign tx device instruction.
     # As it requires on-screen validation, the function is asynchronous.
     # It will yield the result when the navigation is done
-    file_path = 'samples/apdu/tx_misc_3.dat'
+    file_path = 'samples/apdu/tx_v1_l2.dat'
     all_apdus = read_lines_from_file(file_path)
 
     # send all apdus except last one
@@ -387,7 +387,7 @@ def test_blind_sign_tx_3(firmware, backend, navigator, test_name):
         print(stderr)
         assert(False)
 
-def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
+def test_tx_v3_l1_data_gas_swap(firmware, backend, navigator, test_name):
 
      # Enable blind siging in settings
     if firmware.device.startswith("nano"):
@@ -416,7 +416,97 @@ def test_blind_sign_tx_4(firmware, backend, navigator, test_name):
     # Send the sign tx device instruction.
     # As it requires on-screen validation, the function is asynchronous.
     # It will yield the result when the navigation is done
-    file_path = 'samples/apdu/tx_misc_4.dat'
+    file_path = 'samples/apdu/tx_v3_l1_data_gas_swap.dat'
+    all_apdus = read_lines_from_file(file_path)
+
+    # send all apdus except last one
+    for apdu in all_apdus[:-1]:
+        backend.exchange_raw(bytes.fromhex(apdu))
+
+    # send last apdu and yield the response
+    with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
+        if firmware.device.startswith("nano"):
+                navigator.navigate_until_text_and_compare(
+                    NavIns(NavInsID.WAIT, (0,)),
+                    [
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.RIGHT_CLICK,
+                        NavInsID.BOTH_CLICK
+                    ],
+                    "Blind",
+                    path=ROOT_SCREENSHOT_PATH,
+                    test_case_name=test_name
+                )
+        else:
+            navigator.navigate_until_text_and_compare(
+                NavIns(NavInsID.WAIT, (0,)),
+                [
+                    NavInsID.CENTERED_FOOTER_TAP,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.SWIPE_CENTER_TO_LEFT,
+                    NavInsID.USE_CASE_REVIEW_CONFIRM,
+                    NavInsID.USE_CASE_STATUS_DISMISS
+                ],
+                "Blind signing ahead",
+                path=ROOT_SCREENSHOT_PATH,
+                test_case_name=test_name
+            )
+    
+    response = backend.last_async_response.data
+    
+    hash, r, s, _ = unpack_sign_tx_response(response)
+
+    # Call the external binary with the signature and the public key
+    binary_path = CHECK_SIGNATURE_BINARY_PATH
+    args = ["-t", hash.hex(),
+            "-p", public_key_x.hex(),
+            "-r", r.hex(),
+            "-s", s.hex()]
+    stdout, stderr = call_external_binary(binary_path, *args)
+
+    if stdout:
+        # Convert the output to a boolean value
+        result = stdout.lower() == "true"
+        print(f"Result as boolean: {result}")
+        assert(result)
+    if stderr:
+        print("Standard Error:")
+        print(stderr)
+        assert(False)
+
+def test_tx_v3_mint(firmware, backend, navigator, test_name):
+
+     # Enable blind siging in settings
+    if firmware.device.startswith("nano"):
+
+        instructions = [
+            NavInsID.RIGHT_CLICK,
+            NavInsID.RIGHT_CLICK,
+            NavInsID.BOTH_CLICK,
+            NavInsID.BOTH_CLICK
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    else:
+        settings_per_page = 3 if firmware == Firmware.STAX else 2
+        instructions = [
+            NavInsID.USE_CASE_HOME_SETTINGS,
+            NavIns(NavInsID.TOUCH, get_setting_position(firmware, 0, settings_per_page)),
+        ]
+        navigator.navigate(instructions, screen_change_before_first_instruction=False)
+    
+     # First we need to get the public key of the device in order to build the transaction    
+    file_path = 'samples/apdu/dpath_0.dat'
+    apdus = read_lines_from_file(file_path)
+    response = backend.exchange_raw(bytes.fromhex(apdus[0])).data
+    public_key_x, _ = unpack_get_public_key_response(response)
+
+    # Send the sign tx device instruction.
+    # As it requires on-screen validation, the function is asynchronous.
+    # It will yield the result when the navigation is done
+    file_path = 'samples/apdu/tx_v3_mint.dat'
     all_apdus = read_lines_from_file(file_path)
 
     # send all apdus except last one
