@@ -83,7 +83,7 @@ pub struct Fee {
 pub struct ResourceBounds {
     pub l2_gas: Fee,
     pub l1_gas: Fee,
-    pub l1_data_gas: Fee,
+    pub l1_data_gas: Option<Fee>,
 }
 
 #[derive(Deserialize, Debug)]

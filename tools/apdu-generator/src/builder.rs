@@ -244,29 +244,23 @@ pub fn tx_fees(tip: &str, resources: &ResourceBounds, cla: u8, ins: Ins, p1: u8)
     let _ = apdu.append(&resource_buffer).unwrap();
 
     // L1 Data Gas
-    let mut resource_buffer = [0; 32];
-    resource_buffer[1..8].copy_from_slice(b"L1_DATA");
-    resource_buffer[8..16].copy_from_slice(
-        &u64::from_str_radix(
-            resources.l1_data_gas.max_amount.trim_start_matches("0x"),
-            16,
-        )
-        .unwrap()
-        .to_be_bytes(),
-    );
-    resource_buffer[16..].copy_from_slice(
-        &u128::from_str_radix(
-            resources
-                .l1_data_gas
-                .max_price_per_unit
-                .trim_start_matches("0x"),
-            16,
-        )
-        .unwrap()
-        .to_be_bytes(),
-    );
-    let _ = apdu.append(&resource_buffer).unwrap();
-
+    match &resources.l1_data_gas {
+        Some(fee) => {
+            resource_buffer[2..8].copy_from_slice(b"L1_DATA");
+            resource_buffer[8..16].copy_from_slice(
+                &u64::from_str_radix(fee.max_amount.trim_start_matches("0x"), 16)
+                    .unwrap()
+                    .to_be_bytes(),
+            );
+            resource_buffer[16..].copy_from_slice(
+                &u128::from_str_radix(fee.max_price_per_unit.trim_start_matches("0x"), 16)
+                    .unwrap()
+                    .to_be_bytes(),
+            );
+            let _ = apdu.append(&resource_buffer).unwrap();
+        }
+        None => (),
+    }
     apdu
 }
 
