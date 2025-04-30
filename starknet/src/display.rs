@@ -60,9 +60,13 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
             to.insert_str(0, "0x");
             let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[idx].decimals));
 
-            let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
-            let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
-            let max_fees = max_amount * max_price_per_unit;
+            let max_fees = FieldElement::from(&tx.l1_gas_bounds.value[8..16])
+                * FieldElement::from(&tx.l1_gas_bounds.value[16..32])
+                + FieldElement::from(&tx.l2_gas_bounds.value[8..16])
+                    * FieldElement::from(&tx.l2_gas_bounds.value[16..32])
+                + FieldElement::from(&tx.l1_data_gas_bounds.value[8..16])
+                    * FieldElement::from(&tx.l1_data_gas_bounds.value[16..32]);
+
             let mut max_fees_str = max_fees.to_dec_string(Some(18));
             max_fees_str.push_str(" STRK");
 
@@ -199,9 +203,13 @@ fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
     let mut class_hash = tx.class_hash.to_hex_string();
     class_hash.insert_str(0, "0x");
 
-    let max_amount = FieldElement::from(&tx.l1_gas_bounds.value[8..16]);
-    let max_price_per_unit = FieldElement::from(&tx.l1_gas_bounds.value[16..32]);
-    let max_fees = max_amount * max_price_per_unit;
+    let max_fees = FieldElement::from(&tx.l1_gas_bounds.value[8..16])
+        * FieldElement::from(&tx.l1_gas_bounds.value[16..32])
+        + FieldElement::from(&tx.l2_gas_bounds.value[8..16])
+            * FieldElement::from(&tx.l2_gas_bounds.value[16..32])
+        + FieldElement::from(&tx.l1_data_gas_bounds.value[8..16])
+            * FieldElement::from(&tx.l1_data_gas_bounds.value[16..32]);
+
     let mut fees = max_fees.to_dec_string(Some(18));
     fees.push_str(" STRK");
 
