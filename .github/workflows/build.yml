@@ -30,9 +30,13 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Build
+        working-directory: tools/check-signature
         run: |
-          cargo build -p check-signature
+          target=$(rustup target list --installed | grep linux-gnu)
+          cargo build --target $target
+          cp target/$target/debug/check-signature target/debug/check-signature 
       - name: Upload app binary
+        working-directory: tools/check-signature
         uses: actions/upload-artifact@v4
         with:
           name: check-signature

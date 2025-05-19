@@ -1,8 +1,8 @@
-[target.nanosplus]
-runner = "speculos -a=1 --model=nanosp"
+[target.flex]
+runner = "speculos -a=1 --model=flex"
 
 [build]
-target = "nanosplus"
+target = "flex"
 
 [unstable]
 build-std = ["core", "alloc"]
