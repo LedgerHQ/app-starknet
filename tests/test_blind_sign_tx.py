@@ -5,7 +5,7 @@ from ragger.navigator import NavInsID, NavIns
 from utils import ROOT_SCREENSHOT_PATH, read_lines_from_file, call_external_binary
 from ragger.firmware import Firmware
 
-CHECK_SIGNATURE_BINARY_PATH = "./target/debug/check-signature"
+CHECK_SIGNATURE_BINARY_PATH = "tools/check-signature/target/debug/check-signature"
 
 def get_setting_position(firmware: Firmware, setting_idx: int, per_page: int) -> tuple[int, int]:
     if firmware == Firmware.STAX:
