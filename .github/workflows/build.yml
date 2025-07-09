@@ -30,13 +30,15 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
       - name: Build
+        working-directory: tools/check-signature
         run: |
-          cargo build -p check-signature
+          cargo build
       - name: Upload app binary
+        working-directory: tools/check-signature
         uses: actions/upload-artifact@v4
         with:
           name: check-signature
-          path: target/debug/check-signature
+          path: tools/check-signature/target/debug/check-signature
           if-no-files-found: error
 
   ragger_tests:
@@ -46,4 +48,4 @@ jobs:
     with:
       download_app_binaries_artifact: "compiled_app_binaries"
       additional_app_binaries_artifact: "check-signature"
-      additional_app_binaries_artifact_dir: "target/debug"
+      additional_app_binaries_artifact_dir: "tools/check-signature/target/debug"

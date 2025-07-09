@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.22.5"}
-ledger_secure_sdk_sys = { version = "1.8.1", features = ["heap"]}
+ledger_device_sdk = {version = "1.22.11"}
+ledger_secure_sdk_sys = { version = "1.8.2", features = ["heap"]}
 include_gif = "1.2.0"
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
@@ -37,3 +37,11 @@ icon = "starknet_40x40.gif"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))'] }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = 'z' 
+lto = true

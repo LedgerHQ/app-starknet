@@ -4,7 +4,7 @@ from application_client.response_unpacker import unpack_get_public_key_response,
 from ragger.navigator import NavInsID, NavIns
 from utils import ROOT_SCREENSHOT_PATH, read_lines_from_file, call_external_binary
 
-CHECK_SIGNATURE_BINARY_PATH = "./target/debug/check-signature"
+CHECK_SIGNATURE_BINARY_PATH = "tools/check-signature/target/debug/check-signature"
 
 # In those tests we check the behavior of the device when asked to sign a Tx (clear signing)
 
