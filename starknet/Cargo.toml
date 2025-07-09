@@ -5,9 +5,9 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.22.11"}
-ledger_secure_sdk_sys = { version = "1.8.2", features = ["heap"]}
-include_gif = "1.2.0"
+ledger_device_sdk = {git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "pr-io-revamp"}
+ledger_secure_sdk_sys = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "pr-io-revamp", features = ["heap"]}
+include_gif = { git = "https://github.com/LedgerHQ/ledger-device-rust-sdk.git", branch = "pr-io-revamp" }
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
