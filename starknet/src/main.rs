@@ -17,7 +17,7 @@ use context::{
     InvokeTransactionV3, RequestType, Transaction,
 };
 use ledger_device_sdk::io;
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 use ledger_device_sdk::uxapp;
 use types::FieldElement;
 
@@ -25,7 +25,7 @@ use settings::Settings;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 use ledger_device_sdk::nbgl::init_comm;
 
 const PARSING_STEP_TX_WORDING: &str = "Parsing transaction...";
@@ -39,7 +39,7 @@ extern "C" fn sample_main() {
 
     let mut ctx = Ctx::new();
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         loop {
             // Wait for either a specific button push to exit the app
@@ -50,7 +50,7 @@ extern "C" fn sample_main() {
         }
     }
 
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         // Initialize reference to Comm instance for NBGL
         // API calls.
@@ -278,7 +278,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     ctx,
                 );
                 // Delay lock to prevent the device to pinlock
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                 uxapp::UxEvent::DelayLock.request();
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
@@ -313,7 +313,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 } else {
                                     // Delay lock to prevent the device to pinlock
-                                    #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                                     uxapp::UxEvent::DelayLock.request();
                                     match display::show_hash(ctx, true) {
                                         true => {
@@ -385,7 +385,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     ctx,
                 );
                 // Delay lock to prevent the device to pinlock
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                 uxapp::UxEvent::DelayLock.request();
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
@@ -420,7 +420,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 } else {
                                     // Delay lock to prevent the device to pinlock
-                                    #[cfg(any(target_os = "stax", target_os = "flex"))]
+                                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
                                     uxapp::UxEvent::DelayLock.request();
                                     match display::show_hash(ctx, true) {
                                         true => {

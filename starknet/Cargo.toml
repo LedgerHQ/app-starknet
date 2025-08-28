@@ -1,13 +1,13 @@
 [package]
 name = "starknet"
-version = "2.3.1"
+version = "2.3.2"
 edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.22.11"}
-ledger_secure_sdk_sys = { version = "1.8.2", features = ["heap"]}
-include_gif = "1.2.0"
+ledger_device_sdk = {version = "1.24.5"}
+ledger_secure_sdk_sys = { version = "1.11.1", features = ["heap"]}
+include_gif = "1.2.3"
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
@@ -35,8 +35,11 @@ icon = "starknet_32x32.gif"
 [package.metadata.ledger.flex]
 icon = "starknet_40x40.gif"
 
+[package.metadata.ledger.apex_p]
+icon = "starknet_32x32.png"
+
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("stax", "flex", "nanox", "nanosplus"))'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("apex_p", "stax", "flex", "nanox", "nanosplus"))'] }
 
 [profile.dev]
 panic = "abort"

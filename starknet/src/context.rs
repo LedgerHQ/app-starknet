@@ -130,7 +130,7 @@ pub struct Signature {
     pub v: u8,
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 use ledger_device_sdk::nbgl::{NbglHomeAndSettings, NbglSpinner};
 
 pub struct Ctx {
@@ -139,9 +139,9 @@ pub struct Ctx {
     pub hash: FieldElement,
     pub signature: Signature,
     pub bip32_path: [u32; 6],
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     pub home: NbglHomeAndSettings,
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     pub spinner: NbglSpinner,
 }
 
@@ -153,9 +153,9 @@ impl Ctx {
             hash: FieldElement::default(),
             signature: Signature::default(),
             bip32_path: [0u32; 6],
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             home: NbglHomeAndSettings::new(),
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             spinner: NbglSpinner::new(),
         }
     }
