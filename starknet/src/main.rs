@@ -313,7 +313,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 } else {
                                     // Delay lock to prevent the device to pinlock
-                                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                                    #[cfg(any(
+                                        target_os = "stax",
+                                        target_os = "flex",
+                                        target_os = "apex_p"
+                                    ))]
                                     uxapp::UxEvent::DelayLock.request();
                                     match display::show_hash(ctx, true) {
                                         true => {
@@ -420,7 +424,11 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 } else {
                                     // Delay lock to prevent the device to pinlock
-                                    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                                    #[cfg(any(
+                                        target_os = "stax",
+                                        target_os = "flex",
+                                        target_os = "apex_p"
+                                    ))]
                                     uxapp::UxEvent::DelayLock.request();
                                     match display::show_hash(ctx, true) {
                                         true => {
