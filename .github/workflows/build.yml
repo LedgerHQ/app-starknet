@@ -1,4 +1,4 @@
-name: Build through reusable workflow
+name: Build and Test through reusable workflows
 
 # This workflow will build the app.
 # It calls a reusable workflow developed by Ledger's internal developer team to build the application and upload the
@@ -34,7 +34,6 @@ jobs:
         run: |
           cargo build
       - name: Upload app binary
-        working-directory: tools/check-signature
         uses: actions/upload-artifact@v4
         with:
           name: check-signature

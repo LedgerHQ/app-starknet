@@ -10,12 +10,12 @@ use crate::{
 
 use include_gif::include_gif;
 use ledger_device_sdk::io::Comm;
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 use ledger_device_sdk::ui::gadgets::Validator;
 
 use crate::context::{Ctx, Transaction};
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 use ledger_device_sdk::ui::{
     bitmaps::{Glyph, BACK, CERTIFICATE, CROSSMARK, DASHBOARD_X, EYE, VALIDATE_14},
     gadgets::{
@@ -23,11 +23,11 @@ use ledger_device_sdk::ui::{
     },
 };
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 use crate::Ins;
 
 use crate::settings::Settings;
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 use ledger_device_sdk::nbgl::{
     Field, NbglChoice, NbglGenericReview, NbglGlyph, NbglHomeAndSettings, NbglPageContent,
     NbglReview, NbglReviewStatus, NbglStatus, PageIndex, StatusType, TagValueConfirm, TagValueList,
@@ -93,7 +93,7 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
                 },
             ];
 
-            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
             {
                 let my_review = MultiFieldReview::new(
                     &my_fields,
@@ -106,7 +106,7 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
                 );
                 Some(my_review.show())
             }
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             {
                 // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
                 const APP_ICON: NbglGlyph =
@@ -165,7 +165,7 @@ fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
                 },
             ];
 
-            #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+            #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
             {
                 let my_review = MultiFieldReview::new(
                     &my_fields,
@@ -178,7 +178,7 @@ fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
                 );
                 Some(my_review.show())
             }
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             {
                 // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
                 const APP_ICON: NbglGlyph =
@@ -228,7 +228,7 @@ fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
         },
     ];
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         let my_review = MultiFieldReview::new(
             &my_fields,
@@ -241,7 +241,7 @@ fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
         );
         Some(my_review.show())
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
@@ -282,7 +282,7 @@ fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Option<bool> {
         },
     ];
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         let my_review = MultiFieldReview::new(
             &my_fields,
@@ -295,7 +295,7 @@ fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Option<bool> {
         );
         Some(my_review.show())
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
@@ -322,7 +322,7 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
         value: hash.as_str(),
     }];
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         let validator = Validator::new("Blind Signing");
         match validator.ask() {
@@ -341,7 +341,7 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
         );
         my_review.show()
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
         const APP_ICON: NbglGlyph =
@@ -376,7 +376,7 @@ pub fn show_step(text: &str, ctx: &mut Ctx) {
         page_0.place();
     }
 
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         ctx.spinner.show(text);
     }
@@ -384,7 +384,7 @@ pub fn show_step(text: &str, ctx: &mut Ctx) {
 
 #[allow(unused_variables)]
 pub fn show_status(flag: bool, is_tx: bool, ctx: &mut Ctx) {
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         let msg = match is_tx {
             true => "Transaction ",
@@ -398,7 +398,7 @@ pub fn show_status(flag: bool, is_tx: bool, ctx: &mut Ctx) {
         clear_screen();
         page_0.place();
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         let status = match is_tx {
             true => NbglReviewStatus::new().status_type(StatusType::Transaction),
@@ -421,7 +421,7 @@ pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
         value: m,
     }];
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         let my_review = MultiFieldReview::new(
             &my_field,
@@ -435,7 +435,7 @@ pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
 
         my_review.show()
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         let tvl = TagValueList::new(&my_field, 4, false, true);
         let tvc = TagValueConfirm::new(&tvl, TuneIndex::LookAtMe, "Approve", "");
@@ -460,10 +460,10 @@ pub fn pkey_ui(key: &[u8], ctx: &mut Ctx) -> bool {
     }
 }
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 use ledger_device_sdk::io::Event;
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 fn about_ui(comm: &mut Comm) -> Event<Ins> {
     {
         let pages = [
@@ -480,7 +480,7 @@ fn about_ui(comm: &mut Comm) -> Event<Ins> {
     }
 }
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 fn settings_ui(comm: &mut Comm) -> Event<Ins> {
     {
         let settings: Settings = Default::default();
@@ -514,7 +514,7 @@ fn settings_ui(comm: &mut Comm) -> Event<Ins> {
     }
 }
 
-#[cfg(not(any(target_os = "stax", target_os = "flex")))]
+#[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
     const APP_ICON: Glyph = Glyph::from_include(include_gif!("starknet_small.gif"));
     let pages = [
@@ -537,10 +537,13 @@ pub fn main_ui(comm: &mut Comm) -> Event<Ins> {
     }
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
-    // Load glyph from 64x64 4bpp gif file with include_gif macro. Creates an NBGL compatible glyph.
+    // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
+    #[cfg(any(target_os = "stax", target_os = "flex"))]
     const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+    #[cfg(target_os = "apex_p")]
+    const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
 
     let settings_strings = [["Blind signing", "Enable transaction blind signing"]];
     let mut settings: Settings = Default::default();
@@ -558,7 +561,7 @@ pub fn main_ui_nbgl(_comm: &mut Comm) -> NbglHomeAndSettings {
 
 #[allow(unused_variables)]
 pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         let page = Page::new(
             PageStyle::PictureNormal,
@@ -569,7 +572,7 @@ pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
         clear_screen();
         page.place_and_wait();
     }
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         let choice = NbglChoice::new().show(
             "This transaction cannot be clear-signed",

@@ -13,10 +13,15 @@ def get_setting_position(firmware: Firmware, setting_idx: int, per_page: int) ->
         screen_width = 400  # px
         header_height = 88  # px
         footer_height = 92  # px
-    else:
+    elif firmware == Firmware.FLEX:
         screen_height = 600  # px
         screen_width = 480  # px
         header_height = 96  # px
+        footer_height = 96  # px
+    elif firmware == Firmware.APEX_P:
+        screen_height = 400  # px
+        screen_width = 300  # px
+        header_height = 60  # px
         footer_height = 96  # px
 
     index_in_page = setting_idx % per_page
