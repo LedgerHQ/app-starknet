@@ -110,9 +110,11 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
             {
                 // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
-                const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
                 #[cfg(target_os = "apex_p")]
-                const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
 
                 let review = NbglReview::new()
                     .tx_type(TransactionType::Transaction)
@@ -184,9 +186,11 @@ fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
             {
                 // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
                 #[cfg(any(target_os = "stax", target_os = "flex"))]
-                const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
                 #[cfg(target_os = "apex_p")]
-                const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
+                const APP_ICON: NbglGlyph =
+                    NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
 
                 let review = NbglReview::new()
                     .tx_type(TransactionType::Transaction)
@@ -249,9 +253,11 @@ fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
     {
         // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
         #[cfg(any(target_os = "stax", target_os = "flex"))]
-        const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
         #[cfg(target_os = "apex_p")]
-        const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
 
         let review = NbglReview::new()
             .tx_type(TransactionType::Transaction)
@@ -305,9 +311,11 @@ fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Option<bool> {
     {
         // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
         #[cfg(any(target_os = "stax", target_os = "flex"))]
-        const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
         #[cfg(target_os = "apex_p")]
-        const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
 
         let review = NbglReview::new()
             .tx_type(TransactionType::Transaction)
@@ -353,9 +361,11 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
     {
         // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
         #[cfg(any(target_os = "stax", target_os = "flex"))]
-        const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
         #[cfg(target_os = "apex_p")]
-        const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
+        const APP_ICON: NbglGlyph =
+            NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
 
         let mut review = NbglReview::new().glyph(&APP_ICON);
 
