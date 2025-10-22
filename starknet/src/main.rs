@@ -39,6 +39,11 @@ extern "C" fn sample_main() {
 
     let mut ctx = Ctx::new();
 
+    let mut tab = [0xab, 0xcd, 0xef, 0xab, 0xcd, 0xef, 0xab, 0xcd];
+    tab.iter_mut().for_each(|b| {
+        *b += 1;
+    });
+
     #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         loop {
