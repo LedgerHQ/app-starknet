@@ -8,6 +8,8 @@ use alloc::vec::Vec;
 pub struct Call {
     pub to: FieldElement,
     pub selector: FieldElement,
+    pub nb_calldata: usize,
+    pub nb_rcv_calldata: usize,
     pub calldata: Vec<FieldElement>,
 }
 
@@ -18,7 +20,9 @@ pub struct InvokeTransactionV1 {
     pub max_fee: FieldElement,
     pub chain_id: FieldElement,
     pub nonce: FieldElement,
-    pub calls: Vec<Call>,
+    pub nb_calls: usize,
+    pub nb_rcv_calls: usize,
+    pub call: Call,
     pub hasher: crypto::pedersen::PedersenHasher,
     pub hasher_calldata: crypto::pedersen::PedersenHasher,
 }
@@ -30,12 +34,15 @@ pub struct InvokeTransactionV3 {
     pub tip: FieldElement,
     pub l1_gas_bounds: FieldElement,
     pub l2_gas_bounds: FieldElement,
+    pub l1_data_gas_bounds: FieldElement,
     pub paymaster_data: Vec<FieldElement>,
     pub chain_id: FieldElement,
     pub nonce: FieldElement,
     pub data_availability_mode: FieldElement,
     pub account_deployment_data: Vec<FieldElement>,
-    pub calls: Vec<Call>,
+    pub nb_calls: usize,
+    pub nb_rcv_calls: usize,
+    pub call: Call,
     pub hasher: crypto::poseidon::PoseidonHasher,
     pub hasher_calldata: crypto::poseidon::PoseidonHasher,
 }
@@ -60,14 +67,17 @@ pub struct DeployAccountTransactionV3 {
     pub tip: FieldElement,
     pub l1_gas_bounds: FieldElement,
     pub l2_gas_bounds: FieldElement,
+    pub l1_data_gas_bounds: FieldElement,
     pub paymaster_data: Vec<FieldElement>,
     pub chain_id: FieldElement,
     pub nonce: FieldElement,
     pub data_availability_mode: FieldElement,
     pub class_hash: FieldElement,
     pub contract_address_salt: FieldElement,
-    pub constructor_calldata: Vec<FieldElement>,
+    pub nb_constructor_calldata: usize,
+    pub nb_rcv_constructor_calldata: usize,
     pub hasher: crypto::poseidon::PoseidonHasher,
+    pub hasher_calldata: crypto::poseidon::PoseidonHasher,
 }
 
 #[derive(Default, Debug)]
@@ -83,8 +93,8 @@ pub enum Transaction {
 impl Transaction {
     pub fn get_nb_received_calls(&self) -> usize {
         match self {
-            Transaction::InvokeV1(tx) => tx.calls.len(),
-            Transaction::InvokeV3(tx) => tx.calls.len(),
+            Transaction::InvokeV1(tx) => tx.nb_rcv_calls,
+            Transaction::InvokeV3(tx) => tx.nb_rcv_calls,
             Transaction::DeployAccountV1(_tx) => 1usize,
             Transaction::DeployAccountV3(_tx) => 1usize,
             Transaction::None => 0usize,
@@ -93,8 +103,8 @@ impl Transaction {
 
     pub fn get_nb_calls(&self) -> usize {
         match self {
-            Transaction::InvokeV1(tx) => tx.calls.capacity(),
-            Transaction::InvokeV3(tx) => tx.calls.capacity(),
+            Transaction::InvokeV1(tx) => tx.nb_calls,
+            Transaction::InvokeV3(tx) => tx.nb_calls,
             Transaction::DeployAccountV1(_tx) => 1usize,
             Transaction::DeployAccountV3(_tx) => 1usize,
             Transaction::None => 0usize,
@@ -120,7 +130,7 @@ pub struct Signature {
     pub v: u8,
 }
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 use ledger_device_sdk::nbgl::{NbglHomeAndSettings, NbglSpinner};
 
 pub struct Ctx {
@@ -129,9 +139,9 @@ pub struct Ctx {
     pub hash: FieldElement,
     pub signature: Signature,
     pub bip32_path: [u32; 6],
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     pub home: NbglHomeAndSettings,
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     pub spinner: NbglSpinner,
 }
 
@@ -143,9 +153,9 @@ impl Ctx {
             hash: FieldElement::default(),
             signature: Signature::default(),
             bip32_path: [0u32; 6],
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             home: NbglHomeAndSettings::new(),
-            #[cfg(any(target_os = "stax", target_os = "flex"))]
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
             spinner: NbglSpinner::new(),
         }
     }

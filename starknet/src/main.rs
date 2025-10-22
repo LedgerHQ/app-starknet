@@ -17,21 +17,18 @@ use context::{
     InvokeTransactionV3, RequestType, Transaction,
 };
 use ledger_device_sdk::io;
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+use ledger_device_sdk::uxapp;
 use types::FieldElement;
 
 use settings::Settings;
-use transaction::SetCallStep;
 
 ledger_device_sdk::set_panic!(ledger_device_sdk::exiting_panic);
 
-#[cfg(any(target_os = "stax", target_os = "flex"))]
+#[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
 use ledger_device_sdk::nbgl::init_comm;
 
-#[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-const PARSING_STEP_TX_WORDING: &str = "Parsing transaction";
-
-#[cfg(any(target_os = "stax", target_os = "flex"))]
-const PARSING_STEP_TX_WORDING: &str = "Start parsing the transaction...";
+const PARSING_STEP_TX_WORDING: &str = "Parsing transaction...";
 
 const PARSING_STEP_CALL_WORDING: &str = "Parsing call ";
 
@@ -42,7 +39,7 @@ extern "C" fn sample_main() {
 
     let mut ctx = Ctx::new();
 
-    #[cfg(not(any(target_os = "stax", target_os = "flex")))]
+    #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
     {
         loop {
             // Wait for either a specific button push to exit the app
@@ -53,7 +50,7 @@ extern "C" fn sample_main() {
         }
     }
 
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
+    #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
     {
         // Initialize reference to Comm instance for NBGL
         // API calls.
@@ -245,116 +242,106 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             2 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
+                transaction::set_tx_fees(data, &mut ctx.tx);
+                send_data(comm, Ok(None));
+            }
+            3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
-            3 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            4 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_account_deployment_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
-            4 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
+            5 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                let nb_calls: u8 = FieldElement::from(data).into();
+                let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
-            5 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                {
-                    if p2 == SetCallStep::End.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls(),
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                {
-                    if p2 == SetCallStep::New.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}...",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
+            6 => {
+                let nb_rcv_calls = match p2 == transaction::SetCallStep::New.into() {
+                    true => ctx.tx.get_nb_received_calls() + 1,
+                    false => ctx.tx.get_nb_received_calls(),
+                };
+                display::show_step(
+                    format!(
+                        "{}{}/{}...",
+                        PARSING_STEP_CALL_WORDING,
+                        nb_rcv_calls,
+                        ctx.tx.get_nb_calls(),
+                    )
+                    .as_str(),
+                    ctx,
+                );
+                // Delay lock to prevent the device to pinlock
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                uxapp::UxEvent::DelayLock.request();
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
-                if p2 == transaction::SetCallStep::End.into() {
-                    match transaction::tx_complete(&mut ctx.tx) {
-                        None => {
-                            send_data(comm, Ok(None));
-                        }
-                        Some(hash) => {
-                            ctx.hash = hash;
-                            match display::show_tx(ctx) {
-                                Some(approved) => match approved {
-                                    true => {
-                                        rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                        crypto::sign_hash(ctx).unwrap();
-                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                        rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                        rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                        rdata.extend_from_slice([ctx.signature.v].as_slice());
-                                        display::show_status(true, true, ctx);
-                                        send_data(comm, Ok(Some(rdata)));
-                                    }
-                                    false => {
-                                        display::show_status(false, true, ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    }
-                                },
-                                None => {
-                                    let settings: Settings = Default::default();
-                                    if settings.get_element(0) == 0 {
-                                        display::blind_signing_enable_ui(ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    } else {
-                                        match display::show_hash(ctx, true) {
-                                            true => {
-                                                rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                                crypto::sign_hash(ctx).unwrap();
-                                                rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                                rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                                rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                                rdata.extend_from_slice(
-                                                    [ctx.signature.v].as_slice(),
-                                                );
-                                                display::show_status(true, true, ctx);
-                                                send_data(comm, Ok(Some(rdata)));
-                                            }
-                                            false => {
-                                                display::show_status(false, true, ctx);
-                                                send_data(
-                                                    comm,
-                                                    Err(io::StatusWords::UserCancelled.into()),
-                                                );
-                                            }
+                match transaction::tx_complete(&mut ctx.tx) {
+                    None => {
+                        send_data(comm, Ok(None));
+                    }
+                    Some(hash) => {
+                        ctx.hash = hash;
+                        match display::show_tx(ctx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                    rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                    rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                    rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                    display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
+                                }
+                                false => {
+                                    display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                }
+                            },
+                            None => {
+                                let settings: Settings = Default::default();
+                                if settings.get_element(0) == 0 {
+                                    display::blind_signing_enable_ui(ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                } else {
+                                    // Delay lock to prevent the device to pinlock
+                                    #[cfg(any(
+                                        target_os = "stax",
+                                        target_os = "flex",
+                                        target_os = "apex_p"
+                                    ))]
+                                    uxapp::UxEvent::DelayLock.request();
+                                    match display::show_hash(ctx, true) {
+                                        true => {
+                                            rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                            crypto::sign_hash(ctx).unwrap();
+                                            rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                            rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                            rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                            rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                            display::show_status(true, true, ctx);
+                                            send_data(comm, Ok(Some(rdata)));
+                                        }
+                                        false => {
+                                            display::show_status(false, true, ctx);
+                                            send_data(
+                                                comm,
+                                                Err(io::StatusWords::UserCancelled.into()),
+                                            );
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                } else {
-                    send_data(comm, Ok(None));
                 }
             }
             _ => {
@@ -381,104 +368,91 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 send_data(comm, Ok(None));
             }
             2 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                let nb_calls: u8 = FieldElement::from(data).into();
+                let nb_calls = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, nb_calls);
                 send_data(comm, Ok(None));
             }
             3 => {
-                #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-                {
-                    if p2 == SetCallStep::End.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls(),
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
-                #[cfg(any(target_os = "stax", target_os = "flex"))]
-                {
-                    if p2 == SetCallStep::New.into() {
-                        display::show_step(
-                            format!(
-                                "{}{}/{}...",
-                                PARSING_STEP_CALL_WORDING,
-                                ctx.tx.get_nb_received_calls() + 1,
-                                ctx.tx.get_nb_calls()
-                            )
-                            .as_str(),
-                            ctx,
-                        );
-                    }
-                }
+                let nb_rcv_calls = match p2 == transaction::SetCallStep::New.into() {
+                    true => ctx.tx.get_nb_received_calls() + 1,
+                    false => ctx.tx.get_nb_received_calls(),
+                };
+                display::show_step(
+                    format!(
+                        "{}{}/{}...",
+                        PARSING_STEP_CALL_WORDING,
+                        nb_rcv_calls,
+                        ctx.tx.get_nb_calls(),
+                    )
+                    .as_str(),
+                    ctx,
+                );
+                // Delay lock to prevent the device to pinlock
+                #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+                uxapp::UxEvent::DelayLock.request();
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
-                if p2 == transaction::SetCallStep::End.into() {
-                    match transaction::tx_complete(&mut ctx.tx) {
-                        None => {
-                            send_data(comm, Ok(None));
-                        }
-                        Some(hash) => {
-                            ctx.hash = hash;
-                            match display::show_tx(ctx) {
-                                Some(approved) => match approved {
-                                    true => {
-                                        rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                        crypto::sign_hash(ctx).unwrap();
-                                        rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                        rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                        rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                        rdata.extend_from_slice([ctx.signature.v].as_slice());
-                                        display::show_status(true, true, ctx);
-                                        send_data(comm, Ok(Some(rdata)));
-                                    }
-                                    false => {
-                                        display::show_status(false, true, ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    }
-                                },
-                                None => {
-                                    let settings: Settings = Default::default();
-                                    if settings.get_element(0) == 0 {
-                                        display::blind_signing_enable_ui(ctx);
-                                        send_data(comm, Err(io::StatusWords::UserCancelled.into()));
-                                    } else {
-                                        match display::show_hash(ctx, true) {
-                                            true => {
-                                                rdata.extend_from_slice(ctx.hash.value.as_ref());
-                                                crypto::sign_hash(ctx).unwrap();
-                                                rdata.extend_from_slice([SIG_LENGTH].as_slice());
-                                                rdata.extend_from_slice(ctx.signature.r.as_ref());
-                                                rdata.extend_from_slice(ctx.signature.s.as_ref());
-                                                rdata.extend_from_slice(
-                                                    [ctx.signature.v].as_slice(),
-                                                );
-                                                display::show_status(true, true, ctx);
-                                                send_data(comm, Ok(Some(rdata)));
-                                            }
-                                            false => {
-                                                display::show_status(false, true, ctx);
-                                                send_data(
-                                                    comm,
-                                                    Err(io::StatusWords::UserCancelled.into()),
-                                                );
-                                            }
+                match transaction::tx_complete(&mut ctx.tx) {
+                    None => {
+                        send_data(comm, Ok(None));
+                    }
+                    Some(hash) => {
+                        ctx.hash = hash;
+                        match display::show_tx(ctx) {
+                            Some(approved) => match approved {
+                                true => {
+                                    rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                    crypto::sign_hash(ctx).unwrap();
+                                    rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                    rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                    rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                    rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                    display::show_status(true, true, ctx);
+                                    send_data(comm, Ok(Some(rdata)));
+                                }
+                                false => {
+                                    display::show_status(false, true, ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                }
+                            },
+                            None => {
+                                let settings: Settings = Default::default();
+                                if settings.get_element(0) == 0 {
+                                    display::blind_signing_enable_ui(ctx);
+                                    send_data(comm, Err(io::StatusWords::UserCancelled.into()));
+                                } else {
+                                    // Delay lock to prevent the device to pinlock
+                                    #[cfg(any(
+                                        target_os = "stax",
+                                        target_os = "flex",
+                                        target_os = "apex_p"
+                                    ))]
+                                    uxapp::UxEvent::DelayLock.request();
+                                    match display::show_hash(ctx, true) {
+                                        true => {
+                                            rdata.extend_from_slice(ctx.hash.value.as_ref());
+                                            crypto::sign_hash(ctx).unwrap();
+                                            rdata.extend_from_slice([SIG_LENGTH].as_slice());
+                                            rdata.extend_from_slice(ctx.signature.r.as_ref());
+                                            rdata.extend_from_slice(ctx.signature.s.as_ref());
+                                            rdata.extend_from_slice([ctx.signature.v].as_slice());
+                                            display::show_status(true, true, ctx);
+                                            send_data(comm, Ok(Some(rdata)));
+                                        }
+                                        false => {
+                                            display::show_status(false, true, ctx);
+                                            send_data(
+                                                comm,
+                                                Err(io::StatusWords::UserCancelled.into()),
+                                            );
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                } else {
-                    send_data(comm, Ok(None));
                 }
             }
             _ => {
@@ -500,23 +474,28 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fees(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             3 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_paymaster_data(data, p2, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             4 => {
-                let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
+                let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
             5 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }
@@ -569,19 +548,18 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                 }
             }
             1 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 transaction::set_tx_fields(data, &mut ctx.tx);
                 send_data(comm, Ok(None));
             }
             2 => {
-                transaction::set_tx_fees(data, &mut ctx.tx);
-                send_data(comm, Ok(None));
-            }
-            3 => {
-                let constructor_calldata_length: u8 = FieldElement::from(data).into();
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
+                let constructor_calldata_length = FieldElement::from(data);
                 transaction::set_calldata_nb(&mut ctx.tx, constructor_calldata_length);
                 send_data(comm, Ok(None));
             }
-            4 => {
+            3 => {
+                display::show_step(PARSING_STEP_TX_WORDING, ctx);
                 if let Some(err) = transaction::set_calldata(data, p2.into(), &mut ctx.tx).err() {
                     send_data(comm, Err(Reply(err as u16)));
                 }

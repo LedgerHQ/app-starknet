@@ -1,0 +1,18 @@
+{
+    "version": "0x1",
+    "sender_address": "0x02a05a30c80ca2237cdedf3bd724f67069df3e429ef5cef903741a8a3d4a0865",
+    "max_fee": "0x12e5403b9a007",
+    "chain_id": "0x534e5f4d41494e",
+    "nonce": "0x4",
+    "calls": [
+        {
+            "to": "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+            "entrypoint": "transfer",
+            "calldata": [
+                "0x213c67ed78bc280887234fe5ed5e77272465317978ae86c25a71531d9332a2d",
+                "0x2b9970c7f9b4d61400",
+                "0x0"
+            ]
+        }
+    ]
+}
