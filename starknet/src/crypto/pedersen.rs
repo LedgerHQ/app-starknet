@@ -1,5 +1,5 @@
 use crate::types::{FieldElement, P};
-use ledger_secure_sdk_sys::*;
+use ledger_device_sdk::sys::*;
 
 /* EC points */
 struct ECPoint {

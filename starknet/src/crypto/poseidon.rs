@@ -6,7 +6,7 @@ extern crate alloc;
 use crate::types::P;
 use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
-use ledger_secure_sdk_sys::*;
+use ledger_device_sdk::sys::*;
 
 const RATE: usize = 2;
 const CAPACITY: usize = 1;

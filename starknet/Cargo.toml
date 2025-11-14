@@ -5,9 +5,7 @@ edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.27.2"}
-ledger_secure_sdk_sys = { version = "1.11.4", features = ["heap"]}
-include_gif = "1.2.4"
+ledger_device_sdk = {version = "1.28.0", features=["sys"]}
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
@@ -48,3 +46,6 @@ panic = "abort"
 panic = "abort"
 opt-level = 'z' 
 lto = true
+
+[patch.crates-io]
+ledger_device_sdk = {path = "../../ledger-device-rust-sdk/ledger_device_sdk" }
