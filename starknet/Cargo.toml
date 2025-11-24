@@ -1,11 +1,11 @@
 [package]
 name = "starknet"
-version = "2.3.2"
+version = "2.3.3"
 edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.28.0", features=["sys"]}
+ledger_device_sdk = {version = "1.29.0", features=["sys"]}
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
@@ -46,6 +46,3 @@ panic = "abort"
 panic = "abort"
 opt-level = 'z' 
 lto = true
-
-[patch.crates-io]
-ledger_device_sdk = {path = "../../ledger-device-rust-sdk/ledger_device_sdk" }
