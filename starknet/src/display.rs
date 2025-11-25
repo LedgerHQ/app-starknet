@@ -8,7 +8,7 @@ use crate::{
     types::FieldElement,
 };
 
-use include_gif::include_gif;
+use ledger_device_sdk::include_gif;
 use ledger_device_sdk::io::Comm;
 #[cfg(any(target_os = "nanox", target_os = "nanosplus"))]
 use ledger_device_sdk::ui::gadgets::Validator;
