@@ -1,11 +1,11 @@
 [package]
 name = "starknet"
-version = "2.3.3"
+version = "2.3.4"
 edition = "2021"
 authors = ["Ledger"]
 
 [dependencies]
-ledger_device_sdk = {version = "1.29.0", features=["sys"]}
+ledger_device_sdk = {version = "1.30.0", features=["sys"]}
 hex = { version = "0.4", default-features = false, features = ["alloc"]}
 num-bigint = { version = "0.4", default-features = false }
 
