@@ -2,7 +2,7 @@ use crate::apdu::{Apdu, ApduHeader};
 use crate::types::{
     Call, DeployAccountV1, DeployAccountV3, Ins, InvokeV1, InvokeV3, ResourceBounds,
 };
-use starknet_types_core::felt::Felt;
+use starknet::core::types::Felt;
 
 pub enum ApduError {
     InternalError,

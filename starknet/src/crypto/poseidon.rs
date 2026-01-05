@@ -402,7 +402,7 @@ impl PoseidonStark252 {
         values.push(FieldElement::from(1u8));
         values.resize(values.len().div_ceil(r) * r, FieldElement::ZERO);
 
-        assert!(values.len() % r == 0);
+        assert!(values.len().is_multiple_of(r));
         let mut state: Vec<FieldElement> = Vec::from([FieldElement::ZERO; STATE_SIZE]);
 
         // Process each block
