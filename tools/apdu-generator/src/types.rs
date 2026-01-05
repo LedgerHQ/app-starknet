@@ -1,6 +1,6 @@
 use serde::Deserialize;
-use starknet::core::utils::get_selector_from_name;
 use starknet::core::types::Felt;
+use starknet::core::utils::get_selector_from_name;
 use std::vec::Vec;
 
 #[derive(Copy, Clone)]
