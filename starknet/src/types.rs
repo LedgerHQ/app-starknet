@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::string::{String, ToString};
 use core::ops::{Add, AddAssign, Div, Mul, Rem, Sub};
-use ledger_secure_sdk_sys::*;
+use ledger_device_sdk::sys::*;
 use num_bigint::BigUint;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default, PartialOrd)]
@@ -80,7 +80,7 @@ impl FieldElement {
                 32,
             );
             match err {
-                ledger_secure_sdk_sys::CX_OK => res,
+                CX_OK => res,
                 _ => panic!("Error inverting FieldElement with error code: {}", err),
             }
         }
@@ -145,7 +145,7 @@ impl Add for FieldElement {
                 32,
             );
             match err {
-                ledger_secure_sdk_sys::CX_OK => res,
+                CX_OK => res,
                 _ => panic!("Error adding FieldElement with error code: {}", err),
             }
         }
@@ -167,7 +167,7 @@ impl Mul for FieldElement {
                 32,
             );
             match err {
-                ledger_secure_sdk_sys::CX_OK => res,
+                CX_OK => res,
                 _ => panic!("Error multiplying FieldElement with error code: {}", err),
             }
         }
@@ -189,7 +189,7 @@ impl Sub for FieldElement {
                 32,
             );
             match err {
-                ledger_secure_sdk_sys::CX_OK => res,
+                CX_OK => res,
                 _ => panic!("Error subtracting FieldElement with error code: {}", err),
             }
         }
@@ -203,7 +203,7 @@ impl Rem for FieldElement {
         unsafe {
             let err = cx_math_modm_no_throw(self.value.as_mut_ptr(), 32, other.value.as_ptr(), 32);
             match err {
-                ledger_secure_sdk_sys::CX_OK => self,
+                CX_OK => self,
                 _ => panic!(
                     "Error taking remainder of FieldElement with error code: {}",
                     err
@@ -237,7 +237,7 @@ impl AddAssign for FieldElement {
                 32,
             );
             match err {
-                ledger_secure_sdk_sys::CX_OK => (),
+                CX_OK => (),
                 _ => panic!("Error adding FieldElement with error code: {}", err),
             }
         }

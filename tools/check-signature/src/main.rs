@@ -1,6 +1,5 @@
 use clap::Parser;
-use starknet::{core::crypto::Signature, signers::VerifyingKey};
-use starknet_types_core::felt::Felt;
+use starknet::{core::crypto::Signature, core::types::Felt, signers::VerifyingKey};
 //use ledger_lib::Transport;
 
 #[derive(Parser, Debug)]
