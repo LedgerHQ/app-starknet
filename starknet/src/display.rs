@@ -260,7 +260,7 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
     let my_field = [Field {
         name: match is_tx_hash {
-            true => "Transaction Hash",
+            true => "Tx Hash",
             false => "Hash",
         },
         value: hash.as_str(),
