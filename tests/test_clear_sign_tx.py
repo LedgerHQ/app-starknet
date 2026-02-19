@@ -43,7 +43,7 @@ def test_tx_v1_transfer_ETH_0(firmware, backend, navigator, test_name):
                                                   NavInsID.RIGHT_CLICK,
                                                   NavInsID.BOTH_CLICK
                                               ],
-                                              "Confirm Tx to sign",
+                                              "Review transaction",
                                               path=ROOT_SCREENSHOT_PATH,
                                               test_case_name=test_name)
         else:
@@ -114,7 +114,7 @@ def test_tx_v1_transfer_ETH_1(firmware, backend, navigator, test_name):
                                                   NavInsID.RIGHT_CLICK,
                                                   NavInsID.BOTH_CLICK
                                               ],
-                                              "Confirm Tx to sign",
+                                              "Review transaction",
                                               path=ROOT_SCREENSHOT_PATH,
                                               test_case_name=test_name)
         else:
@@ -185,7 +185,7 @@ def test_tx_v1_transfer_STRK_0(firmware, backend, navigator, test_name):
                                                   NavInsID.RIGHT_CLICK,
                                                   NavInsID.BOTH_CLICK
                                               ],
-                                              "Confirm Tx to sign",
+                                              "Review transaction",
                                               path=ROOT_SCREENSHOT_PATH,
                                               test_case_name=test_name)
         else:
@@ -257,7 +257,7 @@ def test_tx_v3_transfer_ETH(firmware, backend, navigator, test_name):
                                                   NavInsID.RIGHT_CLICK,
                                                   NavInsID.BOTH_CLICK
                                               ],
-                                              "Confirm Tx to sign",
+                                              "Review transaction",
                                               path=ROOT_SCREENSHOT_PATH,
                                               test_case_name=test_name)
         else:
@@ -328,7 +328,7 @@ def test_tx_v3_l1_data_gas_transfer(firmware, backend, navigator, test_name):
                                                   NavInsID.RIGHT_CLICK,
                                                   NavInsID.BOTH_CLICK
                                               ],
-                                              "Confirm Tx to sign",
+                                              "Review transaction",
                                               path=ROOT_SCREENSHOT_PATH,
                                               test_case_name=test_name)
         else:
