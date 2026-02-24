@@ -260,6 +260,9 @@ pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
 
     let my_field = [Field {
         name: match is_tx_hash {
+            #[cfg(any(target_os = "stax", target_os = "flex", target_os = "apex_p"))]
+            true => "Transaction Hash",
+            #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
             true => "Tx Hash",
             false => "Hash",
         },
