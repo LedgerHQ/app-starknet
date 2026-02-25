@@ -33,7 +33,7 @@ def test_tx_v3_deploy_account(firmware, backend, navigator, test_name):
         if firmware.device.startswith("nano"):
             navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
                                                     [NavInsID.BOTH_CLICK],
-                                                    "Approve",
+                                                    "Sign Transaction ?",
                                                     ROOT_SCREENSHOT_PATH,
                                                     test_name)
         else:
@@ -93,7 +93,7 @@ def test_tx_v1_deploy_account(firmware, backend, navigator, test_name):
         if firmware.device.startswith("nano"):
             navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
                                                     [NavInsID.BOTH_CLICK],
-                                                    "Approve",
+                                                    "Sign Transaction ?",
                                                     ROOT_SCREENSHOT_PATH,
                                                     test_name)
         else:
@@ -161,7 +161,7 @@ def test_tx_v3_l1_data_gas_deploy_account(firmware, backend, navigator, test_nam
         if firmware.device.startswith("nano"):
             navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
                                                     [NavInsID.BOTH_CLICK],
-                                                    "Approve",
+                                                    "Sign Transaction ?",
                                                     ROOT_SCREENSHOT_PATH,
                                                     test_name)
         else:

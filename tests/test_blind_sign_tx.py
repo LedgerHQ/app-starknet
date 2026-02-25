@@ -39,7 +39,6 @@ def test_tx_v1_approve_and_remove(firmware, backend, navigator, test_name):
 
         instructions = [
             NavInsID.RIGHT_CLICK,
-            NavInsID.RIGHT_CLICK,
             NavInsID.BOTH_CLICK,
             NavInsID.BOTH_CLICK
         ]
@@ -74,7 +73,6 @@ def test_tx_v1_approve_and_remove(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
-                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -129,7 +127,6 @@ def test_tx_v1_approve_and_swap(firmware, backend, navigator, test_name):
 
         instructions = [
             NavInsID.RIGHT_CLICK,
-            NavInsID.RIGHT_CLICK,
             NavInsID.BOTH_CLICK,
             NavInsID.BOTH_CLICK
         ]
@@ -164,7 +161,6 @@ def test_tx_v1_approve_and_swap(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
-                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -219,7 +215,6 @@ def test_tx_v1_explore(firmware, backend, navigator, test_name):
 
         instructions = [
             NavInsID.RIGHT_CLICK,
-            NavInsID.RIGHT_CLICK,
             NavInsID.BOTH_CLICK,
             NavInsID.BOTH_CLICK
         ]
@@ -254,7 +249,6 @@ def test_tx_v1_explore(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
-                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -309,7 +303,6 @@ def test_tx_v1_l2(firmware, backend, navigator, test_name):
 
         instructions = [
             NavInsID.RIGHT_CLICK,
-            NavInsID.RIGHT_CLICK,
             NavInsID.BOTH_CLICK,
             NavInsID.BOTH_CLICK
         ]
@@ -344,7 +337,6 @@ def test_tx_v1_l2(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
-                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -399,7 +391,6 @@ def test_tx_v3_l1_data_gas_swap(firmware, backend, navigator, test_name):
 
         instructions = [
             NavInsID.RIGHT_CLICK,
-            NavInsID.RIGHT_CLICK,
             NavInsID.BOTH_CLICK,
             NavInsID.BOTH_CLICK
         ]
@@ -434,7 +425,6 @@ def test_tx_v3_l1_data_gas_swap(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
-                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
@@ -489,7 +479,6 @@ def test_tx_v3_mint(firmware, backend, navigator, test_name):
 
         instructions = [
             NavInsID.RIGHT_CLICK,
-            NavInsID.RIGHT_CLICK,
             NavInsID.BOTH_CLICK,
             NavInsID.BOTH_CLICK
         ]
@@ -524,7 +513,6 @@ def test_tx_v3_mint(firmware, backend, navigator, test_name):
                 navigator.navigate_until_text_and_compare(
                     NavIns(NavInsID.WAIT, (0,)),
                     [
-                        NavInsID.RIGHT_CLICK,
                         NavInsID.BOTH_CLICK,
                         NavInsID.RIGHT_CLICK,
                         NavInsID.RIGHT_CLICK,
