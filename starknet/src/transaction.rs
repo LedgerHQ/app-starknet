@@ -124,7 +124,6 @@ pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
             fee_hasher.update(tx.l2_gas_bounds);
             tx.l1_data_gas_bounds = match iter.next() {
                 Some(data) => {
-                    ledger_device_sdk::testing::debug_print("we have l1_data_gas filed\n");
                     fee_hasher.update(data.into());
                     data.into()
                 }
