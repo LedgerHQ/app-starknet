@@ -1,6 +1,7 @@
 import pytest
 
 from application_client.response_unpacker import unpack_get_public_key_response, unpack_sign_tx_response, Errors
+from ragger.backend import RaisePolicy
 from ragger.navigator import NavInsID, NavIns
 from utils import ROOT_SCREENSHOT_PATH, read_lines_from_file, call_external_binary
 
@@ -365,3 +366,78 @@ def test_tx_v3_l1_data_gas_transfer(firmware, backend, navigator, test_name):
         print("Standard Error:")
         print(stderr)
         assert(False)
+
+# A Starknet ERC20 transfer(recipient, amount: u256) is exactly 3 calldata felts:
+# recipient, amount low word, amount high word. The clear-sign review only shows
+# calldata[0] and calldata[1], so any other calldata shape would sign fields the
+# screen never displayed.
+#
+# The two failure modes are handled differently. A wrong calldata length cannot
+# deserialize into the transfer entrypoint on chain, and the app knows that, so
+# it refuses the transaction outright. A non-zero high word is a well formed
+# transfer the UI simply cannot render, so it falls back to blind signing.
+def send_tx_apdus(backend, sample_name):
+    # Get the public key first, as the regular clear-sign tests do
+    apdus = read_lines_from_file('samples/apdu/dpath_0.dat')
+    backend.exchange_raw(bytes.fromhex(apdus[0]))
+
+    all_apdus = read_lines_from_file(f'samples/apdu/{sample_name}.dat')
+
+    # send all apdus except last one
+    for apdu in all_apdus[:-1]:
+        backend.exchange_raw(bytes.fromhex(apdu))
+
+    return all_apdus[-1]
+
+
+def assert_refused(backend, sample_name):
+    # Nothing to confirm and no blind-signing prompt offered: the device shows a
+    # rejection status on its own and returns the dedicated status word.
+    last_apdu = send_tx_apdus(backend, sample_name)
+
+    backend.raise_policy = RaisePolicy.RAISE_NOTHING
+    with backend.exchange_async_raw(bytes.fromhex(last_apdu)):
+        backend.wait_for_screen_change()
+
+    assert backend.last_async_response.status == Errors.SW_MALFORMED_TRANSFER_CALLDATA
+
+
+def assert_not_clear_signed(firmware, backend, navigator, sample_name):
+    # Blind signing is left disabled here (the default), so the app is expected
+    # to offer the "cannot be clear-signed" choice and reject. Navigating until
+    # the button text appears keeps this independent of how many pages the
+    # prompt spans.
+    last_apdu = send_tx_apdus(backend, sample_name)
+
+    backend.raise_policy = RaisePolicy.RAISE_NOTHING
+    with backend.exchange_async_raw(bytes.fromhex(last_apdu)):
+        if firmware.device.startswith("nano"):
+            navigator.navigate_until_text(NavInsID.RIGHT_CLICK,
+                                          [NavInsID.BOTH_CLICK],
+                                          "Reject transaction")
+        else:
+            navigator.navigate_until_text(NavIns(NavInsID.WAIT, (0,)),
+                                          [NavInsID.USE_CASE_CHOICE_REJECT],
+                                          "Reject transaction")
+
+    assert backend.last_async_response.status == Errors.SW_DENY
+
+
+# A non-zero u256 high word would be signed but never displayed: the review
+# would show the low word only, understating the amount by at least 2^128. The
+# call is still a valid transfer, so blind signing remains the fallback.
+def test_tx_v3_transfer_ETH_high_word_not_clear_signed(firmware, backend, navigator):
+    assert_not_clear_signed(firmware, backend, navigator,
+                            'tx_v3_transfer_ETH_high_word')
+
+
+# Extra calldata beyond the 3 expected felts is hashed and signed but never
+# shown, and cannot deserialize into transfer() on chain.
+def test_tx_v3_transfer_ETH_extra_calldata_refused(backend):
+    assert_refused(backend, 'tx_v3_transfer_ETH_extra_calldata')
+
+
+# Truncated calldata must be caught before the display indexes calldata[1],
+# which would otherwise panic the app.
+def test_tx_v3_transfer_ETH_short_calldata_refused(backend):
+    assert_refused(backend, 'tx_v3_transfer_ETH_short_calldata')

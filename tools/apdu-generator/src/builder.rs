@@ -246,7 +246,10 @@ pub fn tx_fees(tip: &str, resources: &ResourceBounds, cla: u8, ins: Ins, p1: u8)
     // L1 Data Gas
     match &resources.l1_data_gas {
         Some(fee) => {
-            resource_buffer[2..8].copy_from_slice(b"L1_DATA");
+            // The resource name is right-aligned in the top 8 bytes, so the
+            // 7-byte "L1_DATA" starts at 1 where the 6-byte gas names start at 2.
+            let mut resource_buffer = [0; 32];
+            resource_buffer[1..8].copy_from_slice(b"L1_DATA");
             resource_buffer[8..16].copy_from_slice(
                 &u64::from_str_radix(fee.max_amount.trim_start_matches("0x"), 16)
                     .unwrap()

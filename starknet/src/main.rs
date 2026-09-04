@@ -273,7 +273,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     Some(hash) => {
                         ctx.hash = hash;
                         match display::show_tx(ctx) {
-                            Some(approved) => match approved {
+                            // The app understood the call and knows it is not
+                            // signable. Refuse it outright rather than offering
+                            // it for blind signing.
+                            Err(e) => {
+                                display::show_status(false, true, ctx);
+                                send_data(comm, Err(Reply(e as u16)));
+                            }
+                            Ok(Some(approved)) => match approved {
                                 true => {
                                     rdata.extend_from_slice(ctx.hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -289,7 +296,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
-                            None => {
+                            Ok(None) => {
                                 let settings: Settings = Default::default();
                                 if settings.get_element(0) == 0 {
                                     display::blind_signing_enable_ui(ctx);
@@ -378,7 +385,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     Some(hash) => {
                         ctx.hash = hash;
                         match display::show_tx(ctx) {
-                            Some(approved) => match approved {
+                            // The app understood the call and knows it is not
+                            // signable. Refuse it outright rather than offering
+                            // it for blind signing.
+                            Err(e) => {
+                                display::show_status(false, true, ctx);
+                                send_data(comm, Err(Reply(e as u16)));
+                            }
+                            Ok(Some(approved)) => match approved {
                                 true => {
                                     rdata.extend_from_slice(ctx.hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -394,7 +408,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
-                            None => {
+                            Ok(None) => {
                                 let settings: Settings = Default::default();
                                 if settings.get_element(0) == 0 {
                                     display::blind_signing_enable_ui(ctx);
@@ -478,7 +492,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     Some(hash) => {
                         ctx.hash = hash;
                         match display::show_tx(ctx) {
-                            Some(approved) => match approved {
+                            // The app understood the call and knows it is not
+                            // signable. Refuse it outright rather than offering
+                            // it for blind signing.
+                            Err(e) => {
+                                display::show_status(false, true, ctx);
+                                send_data(comm, Err(Reply(e as u16)));
+                            }
+                            Ok(Some(approved)) => match approved {
                                 true => {
                                     rdata.extend_from_slice(ctx.hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -494,7 +515,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
-                            None => {
+                            Ok(None) => {
                                 send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                             }
                         }
@@ -543,7 +564,14 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                     Some(hash) => {
                         ctx.hash = hash;
                         match display::show_tx(ctx) {
-                            Some(approved) => match approved {
+                            // The app understood the call and knows it is not
+                            // signable. Refuse it outright rather than offering
+                            // it for blind signing.
+                            Err(e) => {
+                                display::show_status(false, true, ctx);
+                                send_data(comm, Err(Reply(e as u16)));
+                            }
+                            Ok(Some(approved)) => match approved {
                                 true => {
                                     rdata.extend_from_slice(ctx.hash.value.as_ref());
                                     crypto::sign_hash(ctx).unwrap();
@@ -559,7 +587,7 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
                                     send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                                 }
                             },
-                            None => {
+                            Ok(None) => {
                                 send_data(comm, Err(io::StatusWords::UserCancelled.into()));
                             }
                         }
