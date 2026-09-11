@@ -99,3 +99,5 @@ class Errors(IntEnum):
     SW_TX_HASH_FAIL            = 0xB006
     SW_BAD_STATE               = 0xB007
     SW_SIGNATURE_FAIL          = 0xB008
+    # Refused outright, as opposed to routed to blind signing.
+    SW_MALFORMED_TRANSFER_CALLDATA = 0xFF02

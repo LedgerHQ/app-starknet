@@ -20,23 +20,44 @@ use ledger_device_sdk::nbgl::{
     TransactionType, TuneIndex,
 };
 
-pub fn show_tx(ctx: &mut Ctx) -> Option<bool> {
+/// Status word for a transaction the app refuses outright, as opposed to one
+/// it merely cannot display and routes to blind signing.
+/// 0xFF01 is taken by transaction::SetCallError::TooManyCalls.
+#[derive(Clone, Copy)]
+pub enum TxError {
+    MalformedTransferCalldata = 0xFF02,
+}
+
+/// What the review UI can do with a call.
+enum ClearSign {
+    /// Reviewable field by field; index into ERC20_TOKENS.
+    Supported(usize),
+    /// Not something this app knows how to display. Blind signing may apply.
+    Unsupported,
+    /// A known ERC20 `transfer` whose calldata cannot be a valid transfer.
+    /// Not a candidate for blind signing: it cannot execute on chain, and the
+    /// app knows that, so offering it as an opaque hash would misrepresent
+    /// what the device actually understood.
+    Invalid,
+}
+
+pub fn show_tx(ctx: &mut Ctx) -> Result<Option<bool>, TxError> {
     let tx = &mut ctx.tx;
     match tx {
-        Transaction::None => None,
-        Transaction::DeployAccountV3(tx) => show_tx_deploy_account_v3(tx),
-        Transaction::DeployAccountV1(tx) => show_tx_deploy_account_v1(tx),
+        Transaction::None => Ok(None),
+        Transaction::DeployAccountV3(tx) => Ok(show_tx_deploy_account_v3(tx)),
+        Transaction::DeployAccountV1(tx) => Ok(show_tx_deploy_account_v1(tx)),
         Transaction::InvokeV3(tx) => show_tx_invoke_v3(tx),
         Transaction::InvokeV1(tx) => show_tx_invoke_v1(tx),
     }
 }
 
-fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
+fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Result<Option<bool>, TxError> {
     if tx.nb_calls > 1 {
-        return None;
+        return Ok(None);
     }
     match support_clear_sign(&tx.call) {
-        Some(idx) => {
+        ClearSign::Supported(idx) => {
             let call = &tx.call;
 
             let mut sender = tx.sender_address.to_hex_string();
@@ -95,18 +116,19 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Option<bool> {
                 .titles("Review transaction", "", "Sign Transaction ?")
                 .glyph(&APP_ICON);
 
-            Some(review.show(&my_fields))
+            Ok(Some(review.show(&my_fields)))
         }
-        None => None,
+        ClearSign::Unsupported => Ok(None),
+        ClearSign::Invalid => Err(TxError::MalformedTransferCalldata),
     }
 }
 
-fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
+fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Result<Option<bool>, TxError> {
     if tx.nb_calls > 1 {
-        return None;
+        return Ok(None);
     }
     match support_clear_sign(&tx.call) {
-        Some(idx) => {
+        ClearSign::Supported(idx) => {
             let call = &tx.call;
 
             let mut sender = tx.sender_address.to_hex_string();
@@ -158,9 +180,10 @@ fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Option<bool> {
                 .titles("Review transaction", "", "Sign Transaction ?")
                 .glyph(&APP_ICON);
 
-            Some(review.show(&my_fields))
+            Ok(Some(review.show(&my_fields)))
         }
-        None => None,
+        ClearSign::Unsupported => Ok(None),
+        ClearSign::Invalid => Err(TxError::MalformedTransferCalldata),
     }
 }
 
@@ -382,12 +405,37 @@ pub fn blind_signing_enable_ui(ctx: &mut Ctx) {
     }
 }
 
-fn support_clear_sign(call: &Call) -> Option<usize> {
+fn support_clear_sign(call: &Call) -> ClearSign {
+    // Identify the call first: only a transfer to a token we know is held to
+    // the ERC20 ABI below. Anything else is simply undisplayable, not invalid.
+    let mut token = None;
     for (idx, t) in ERC20_TOKENS.iter().enumerate() {
         if call.to == FieldElement::from(t.address) && call.selector == FieldElement::from(TRANSFER)
         {
-            return Some(idx);
+            token = Some(idx);
+            break;
         }
     }
-    None
+    let Some(idx) = token else {
+        return ClearSign::Unsupported;
+    };
+
+    // transfer(recipient, amount: u256) serializes to exactly 3 felts. Check
+    // both the announced length and what was actually stored: calldata sent in
+    // a SetCallStep::Add chunk is hashed but never pushed to call.calldata, so
+    // the two can differ. Any other length cannot deserialize into the
+    // entrypoint on chain, so the transaction is refused rather than signed.
+    if call.nb_calldata != 3 || call.calldata.len() != 3 {
+        return ClearSign::Invalid;
+    }
+
+    // The amount is displayed from the low word only. Any real balance fits in
+    // it, so a non-zero high word means the screen would understate the amount.
+    // The call is still well formed, so it falls back to blind signing rather
+    // than being refused.
+    if call.calldata[2] != FieldElement::ZERO {
+        return ClearSign::Unsupported;
+    }
+
+    ClearSign::Supported(idx)
 }
