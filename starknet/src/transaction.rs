@@ -4,7 +4,7 @@ use crate::{
         InvokeTransactionV3, Transaction,
     },
     crypto::{self, HasherTrait},
-    types::FieldElement,
+    types::{FieldElement, P},
 };
 
 extern crate alloc;
@@ -19,6 +19,23 @@ pub enum ParseError {
     /// The APDU is out of sequence, or its payload contradicts what the
     /// transaction announced so far.
     BadState = 0xFF03,
+    /// A call beyond the announced number of calls.
+    TooManyCalls = 0xFF07,
+}
+
+/// Splits an APDU payload into felts, refusing a partial or non-canonical one.
+/// A felt >= P hashes like its reduced value but reads differently wherever
+/// the app interprets it, so the review could describe another transaction
+/// than the one signed.
+fn parse_felts(data: &[u8]) -> Result<Vec<FieldElement>, ParseError> {
+    if !data.len().is_multiple_of(FIELD_ELEMENT_SIZE) {
+        return Err(ParseError::BadState);
+    }
+    let felts: Vec<FieldElement> = data.chunks(FIELD_ELEMENT_SIZE).map(|d| d.into()).collect();
+    if felts.iter().any(|f| *f >= P) {
+        return Err(ParseError::BadState);
+    }
+    Ok(felts)
 }
 
 /// Reads a count carried in a felt. The whole felt is hashed, so it has to be
@@ -263,12 +280,13 @@ pub enum SetCallStep {
     Add = 0x01,
 }
 
-impl From<u8> for SetCallStep {
-    fn from(value: u8) -> Self {
+impl TryFrom<u8> for SetCallStep {
+    type Error = ParseError;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x00 => SetCallStep::New,
-            0x01 => SetCallStep::Add,
-            _ => panic!("Invalid SetCallStep value"),
+            0x00 => Ok(SetCallStep::New),
+            0x01 => Ok(SetCallStep::Add),
+            _ => Err(ParseError::BadState),
         }
     }
 }
@@ -283,10 +301,10 @@ impl From<SetCallStep> for u8 {
 }
 
 pub fn set_calldata_nb(data: &[u8], tx: &mut Transaction) -> Result<(), ParseError> {
-    if data.len() != FIELD_ELEMENT_SIZE {
+    let felts = parse_felts(data)?;
+    let [nb] = felts[..] else {
         return Err(ParseError::BadState);
-    }
-    let nb = FieldElement::from(data);
+    };
     let count = felt_to_count(nb)?;
     match tx {
         Transaction::InvokeV3(tx) => {
@@ -312,16 +330,18 @@ pub fn set_calldata(data: &[u8], p2: u8, tx: &mut Transaction) -> Result<(), Par
     match tx {
         Transaction::InvokeV3(tx) => set_calldata_invoke(
             data,
-            p2.into(),
+            p2.try_into()?,
             &mut tx.call,
             &mut tx.hasher_calldata,
+            tx.nb_calls,
             &mut tx.nb_rcv_calls,
         ),
         Transaction::InvokeV1(tx) => set_calldata_invoke(
             data,
-            p2.into(),
+            p2.try_into()?,
             &mut tx.call,
             &mut tx.hasher_calldata,
+            tx.nb_calls,
             &mut tx.nb_rcv_calls,
         ),
         Transaction::DeployAccountV3(tx) => {
@@ -349,42 +369,57 @@ pub fn set_calldata(data: &[u8], p2: u8, tx: &mut Transaction) -> Result<(), Par
     }
 }
 
+/// Streams one Invoke call, or a continuation of it, into the calldata hash.
+/// The review is built from `call`, so every felt hashed has to be accounted
+/// for there: a call's calldata is complete before the next call starts,
+/// continuation chunks only extend a call already started, and neither calls
+/// nor calldata go past what was announced. Everything is checked before the
+/// hasher sees a single felt.
 fn set_calldata_invoke(
     data: &[u8],
     p2: SetCallStep,
     call: &mut Call,
     hasher: &mut impl HasherTrait,
+    nb_calls: usize,
     nb_rcv_calls: &mut usize,
 ) -> Result<(), ParseError> {
+    let felts = parse_felts(data)?;
+    let call_open = call.nb_rcv_calldata < call.nb_calldata;
     match p2 {
         SetCallStep::New => {
-            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-            call.to = iter.next().unwrap().into();
-            hasher.update(call.to);
-            call.selector = iter.next().unwrap().into();
-            hasher.update(call.selector);
-            let calldata_len = iter.next().unwrap().into();
-            hasher.update(calldata_len);
-            call.nb_calldata = calldata_len.into();
-            call.calldata = Vec::default();
-            call.nb_rcv_calldata = 0;
-            for d in iter {
-                call.calldata.push(d.into());
-                hasher.update(d.into());
-                call.nb_rcv_calldata += 1;
+            if call_open || felts.len() < 3 {
+                return Err(ParseError::BadState);
             }
+            if *nb_rcv_calls >= nb_calls {
+                return Err(ParseError::TooManyCalls);
+            }
+            let nb_calldata = felt_to_count(felts[2])?;
+            if felts.len() - 3 > nb_calldata {
+                return Err(ParseError::BadState);
+            }
+            *call = Call {
+                to: felts[0],
+                selector: felts[1],
+                nb_calldata,
+                nb_rcv_calldata: felts.len() - 3,
+                calldata: felts[3..].to_vec(),
+            };
             *nb_rcv_calls += 1;
-            Ok(())
         }
         SetCallStep::Add => {
-            let iter = data.chunks(FIELD_ELEMENT_SIZE);
-            for d in iter {
-                hasher.update(d.into());
-                call.nb_rcv_calldata += 1;
+            if !call_open
+                || felts.is_empty()
+                || felts.len() > call.nb_calldata - call.nb_rcv_calldata
+            {
+                return Err(ParseError::BadState);
             }
-            Ok(())
+            call.nb_rcv_calldata += felts.len();
         }
     }
+    for d in felts {
+        hasher.update(d);
+    }
+    Ok(())
 }
 
 fn set_calldata_deploy_account_v1(

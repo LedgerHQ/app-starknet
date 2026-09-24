@@ -38,6 +38,7 @@ The general structure of a request and response is as followed:
 | 0x6e04      | User Cancelled          |
 | 0xe000      | Panic                   |
 | 0xff03      | Bad state: APDU out of sequence, or inconsistent with the transaction sent so far. The signing request is dropped |
+| 0xff07      | Too many calls: a call beyond the announced number of calls. The signing request is dropped |
 
 ### Transaction signing sequence
 
@@ -268,6 +269,15 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 
 #### Command #6: Call
 
+Each call is sent as a `New Call` APDU (`P2 = 0x00`), followed by as many `Add calldata` APDUs (`P2 = 0x01`) as its calldata needs. The app refuses with `0xff03`:
+
+- an `Add calldata` APDU when no call is in progress, or when the current call already has all its announced calldata;
+- a `New Call` APDU while the current call still expects calldata;
+- more calldata than announced in `NB CALLDATA`, a felt that is not canonical (`>= P`), or a payload that is not a whole number of felts;
+- any other `P2` value.
+
+A call beyond the announced number of calls is refused with `0xff07`.
+
 ##### New Call
 
 | Field            | Type       | Content                                        | Expected          |
@@ -299,29 +309,6 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
 | P1               | byte (1)   | Payload desc                                   | 0x06              |
 | P2               | byte (1)   | Add calldata                                   | 0x01              |
-| L                | byte (1)   | Bytes in payload                               | (depends)         |
-| calldata         | bytes (32) | calldata #0                                    | (depends)         |
-| calldata         | bytes (32) | calldata #1                                    | (depends)         |
-| calldata         | bytes (32) | calldata #2                                    | (depends)         |
-| calldata         | bytes (32) | calldata #3                                    | (depends)         |
-| calldata         | bytes (32) | calldata #4                                    | (depends)         |
-| calldata         | bytes (32) | calldata #5                                    | (depends)         |
-| calldata         | bytes (32) | calldata #6                                    | (depends)         |
-
-#### Response
-
-| Field    | Type      | Content     | Note                                  |
-|----------|-----------|-------------|---------------------------------------|
-| SW1-SW2  | byte (2)  | Return code | see list of return codes              |
-
-##### End of calldata for the current Call
-
-| Field            | Type       | Content                                        | Expected          |
-|------------------|------------|------------------------------------------------|-------------------|
-| CLA              | byte (1)   | Application Identifier                         | 0x5A              |
-| INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x06              |
-| P2               | byte (1)   | Last calldata                                  | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -553,6 +540,15 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 
 #### Command #3: Call
 
+Each call is sent as a `New Call` APDU (`P2 = 0x00`), followed by as many `Add calldata` APDUs (`P2 = 0x01`) as its calldata needs. The app refuses with `0xff03`:
+
+- an `Add calldata` APDU when no call is in progress, or when the current call already has all its announced calldata;
+- a `New Call` APDU while the current call still expects calldata;
+- more calldata than announced in `NB CALLDATA`, a felt that is not canonical (`>= P`), or a payload that is not a whole number of felts;
+- any other `P2` value.
+
+A call beyond the announced number of calls is refused with `0xff07`.
+
 ##### New Call
 
 | Field            | Type       | Content                                        | Expected          |
@@ -584,29 +580,6 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1)   | Instruction ID                                 | 0x04              |
 | P1               | byte (1)   | Payload desc                                   | 0x03              |
 | P2               | byte (1)   | Add calldata                                   | 0x01              |
-| L                | byte (1)   | Bytes in payload                               | (depends)         |
-| calldata         | bytes (32) | calldata #0                                    | (depends)         |
-| calldata         | bytes (32) | calldata #1                                    | (depends)         |
-| calldata         | bytes (32) | calldata #2                                    | (depends)         |
-| calldata         | bytes (32) | calldata #3                                    | (depends)         |
-| calldata         | bytes (32) | calldata #4                                    | (depends)         |
-| calldata         | bytes (32) | calldata #5                                    | (depends)         |
-| calldata         | bytes (32) | calldata #6                                    | (depends)         |
-
-#### Response
-
-| Field    | Type      | Content     | Note                                  |
-|----------|-----------|-------------|---------------------------------------|
-| SW1-SW2  | byte (2)  | Return code | see list of return codes              |
-
-##### End of calldata for the current Call
-
-| Field            | Type       | Content                                        | Expected          |
-|------------------|------------|------------------------------------------------|-------------------|
-| CLA              | byte (1)   | Application Identifier                         | 0x5A              |
-| INS              | byte (1)   | Instruction ID                                 | 0x04              |
-| P1               | byte (1)   | Payload desc                                   | 0x03              |
-| P2               | byte (1)   | End of calldata                                | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |

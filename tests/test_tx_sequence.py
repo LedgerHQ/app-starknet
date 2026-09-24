@@ -14,6 +14,13 @@ CLA = 0x5A
 INS_SIGN_TX = 0x03
 INS_SIGN_TX_V1 = 0x04
 
+# Stark field prime
+P = 0x800000000000011000000000000000000000000000000000000000000000001
+
+# Felts a malicious host would slip into the signed calldata: a call target,
+# a selector and a calldata length, none of which the review would show.
+HIDDEN_CALL = (bytes.fromhex("0" * 63 + "1") * 2) + (3).to_bytes(32, "big")
+
 
 def load(sample_name):
     return [bytes.fromhex(a) for a in read_lines_from_file(f'samples/apdu/{sample_name}.dat')]
@@ -39,6 +46,50 @@ def assert_dropped(backend, raw, status=Errors.SW_TX_BAD_STATE):
 def start(backend):
     backend.raise_policy = RaisePolicy.RAISE_NOTHING
     send_all(backend, load('dpath_0')[:1])
+
+
+# A continuation chunk (P2=1) before any call has started would be hashed
+# without belonging to the call the review is built from.
+def test_invoke_v3_add_before_new_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:6])
+    assert_dropped(backend, apdu(INS_SIGN_TX, 6, 1, HIDDEN_CALL))
+    # The request is gone: the benign call that would follow is refused too.
+    assert_dropped(backend, apdus[6])
+
+
+def test_invoke_v1_add_before_new_refused(backend):
+    start(backend)
+    apdus = load('tx_v1_transfer_ETH_0')
+    send_all(backend, apdus[:3])
+    assert_dropped(backend, apdu(INS_SIGN_TX_V1, 3, 1, HIDDEN_CALL))
+    assert_dropped(backend, apdus[3])
+
+
+# A new call cannot start while the previous one still expects calldata.
+def test_invoke_v3_new_call_before_previous_complete_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:6])
+    call = apdus[6]
+    # to, selector, calldata length 3, then only the first calldata felt
+    partial = call[5:5 + 4 * 32]
+    assert send(backend, apdu(INS_SIGN_TX, 6, 0, partial)) == 0x9000
+    assert_dropped(backend, call)
+
+
+# A non-canonical felt (>= P) hashes like its reduced value but would be read
+# as another value wherever the app interprets it.
+def test_invoke_v3_non_canonical_calldata_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:6])
+    call = bytearray(apdus[6][5:])
+    # recipient + P
+    recipient = int.from_bytes(call[96:128], "big") + P
+    call[96:128] = recipient.to_bytes(32, "big")
+    assert_dropped(backend, apdu(INS_SIGN_TX, 6, 0, bytes(call)))
 
 
 # Replaying the call-count stage would hash an extra felt per replay

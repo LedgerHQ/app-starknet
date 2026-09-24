@@ -22,7 +22,7 @@ use ledger_device_sdk::nbgl::{
 
 /// Status word for a transaction the app refuses outright, as opposed to one
 /// it merely cannot display and routes to blind signing.
-/// 0xFF03 is taken by transaction::ParseError.
+/// 0xFF03 and 0xFF07 are taken by transaction::ParseError.
 #[derive(Clone, Copy)]
 pub enum TxError {
     MalformedTransferCalldata = 0xFF02,
@@ -422,8 +422,8 @@ fn support_clear_sign(call: &Call) -> ClearSign {
 
     // transfer(recipient, amount: u256) serializes to exactly 3 felts. Check
     // both the announced length and what was actually stored: calldata sent in
-    // a SetCallStep::Add chunk is hashed but never pushed to call.calldata, so
-    // the two can differ. Any other length cannot deserialize into the
+    // a SetCallStep::Add chunk is counted and hashed but not kept in
+    // call.calldata, so the two can differ. Any other length cannot deserialize into the
     // entrypoint on chain, so the transaction is refused rather than signed.
     if call.nb_calldata != 3 || call.calldata.len() != 3 {
         return ClearSign::Invalid;
