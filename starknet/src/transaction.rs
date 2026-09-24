@@ -12,6 +12,25 @@ use alloc::vec::Vec;
 
 const FIELD_ELEMENT_SIZE: usize = 32;
 
+/// Why the app refuses an APDU while it parses a transaction. Each of these
+/// drops the signing request: the host has to start again from P1=0.
+#[derive(Clone, Copy, Debug)]
+pub enum ParseError {
+    /// The APDU is out of sequence, or its payload contradicts what the
+    /// transaction announced so far.
+    BadState = 0xFF03,
+}
+
+/// Reads a count carried in a felt. The whole felt is hashed, so it has to be
+/// read back whole: a value past u32 would be truncated, and the app would
+/// parse a different transaction from the one signed.
+fn felt_to_count(fe: FieldElement) -> Result<usize, ParseError> {
+    if fe.value[..28].iter().any(|&b| b != 0) {
+        return Err(ParseError::BadState);
+    }
+    Ok(u32::from_be_bytes(fe.value[28..].try_into().unwrap()) as usize)
+}
+
 pub enum TxVersion {
     V1 = 1,
     V3 = 3,
@@ -238,12 +257,6 @@ fn set_deploy_account_fields_v1(data: &[u8], tx: &mut DeployAccountTransactionV1
     tx.hasher.update(FieldElement::ZERO);
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-pub enum SetCallError {
-    TooManyCalls = 0xFF01,
-}
-
 #[derive(PartialEq)]
 pub enum SetCallStep {
     New = 0x00,
@@ -269,42 +282,44 @@ impl From<SetCallStep> for u8 {
     }
 }
 
-pub fn set_calldata_nb(tx: &mut Transaction, nb: FieldElement) {
+pub fn set_calldata_nb(data: &[u8], tx: &mut Transaction) -> Result<(), ParseError> {
+    if data.len() != FIELD_ELEMENT_SIZE {
+        return Err(ParseError::BadState);
+    }
+    let nb = FieldElement::from(data);
+    let count = felt_to_count(nb)?;
     match tx {
         Transaction::InvokeV3(tx) => {
-            tx.nb_calls = nb.into();
+            tx.nb_calls = count;
             tx.hasher_calldata.update(nb);
         }
         Transaction::InvokeV1(tx) => {
-            tx.nb_calls = nb.into();
+            tx.nb_calls = count;
             tx.hasher_calldata.update(nb);
         }
         Transaction::DeployAccountV3(tx) => {
-            tx.nb_constructor_calldata = nb.into();
+            tx.nb_constructor_calldata = count;
         }
         Transaction::DeployAccountV1(tx) => {
-            tx.constructor_calldata = Vec::with_capacity(nb.into());
+            tx.constructor_calldata = Vec::with_capacity(count);
         }
         Transaction::None => panic!("Invalid transaction type"),
     }
+    Ok(())
 }
 
-pub fn set_calldata(
-    data: &[u8],
-    p2: SetCallStep,
-    tx: &mut Transaction,
-) -> Result<(), SetCallError> {
+pub fn set_calldata(data: &[u8], p2: u8, tx: &mut Transaction) -> Result<(), ParseError> {
     match tx {
         Transaction::InvokeV3(tx) => set_calldata_invoke(
             data,
-            p2,
+            p2.into(),
             &mut tx.call,
             &mut tx.hasher_calldata,
             &mut tx.nb_rcv_calls,
         ),
         Transaction::InvokeV1(tx) => set_calldata_invoke(
             data,
-            p2,
+            p2.into(),
             &mut tx.call,
             &mut tx.hasher_calldata,
             &mut tx.nb_rcv_calls,
@@ -340,7 +355,7 @@ fn set_calldata_invoke(
     call: &mut Call,
     hasher: &mut impl HasherTrait,
     nb_rcv_calls: &mut usize,
-) -> Result<(), SetCallError> {
+) -> Result<(), ParseError> {
     match p2 {
         SetCallStep::New => {
             let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
@@ -375,7 +390,7 @@ fn set_calldata_invoke(
 fn set_calldata_deploy_account_v1(
     data: &[u8],
     constructor_calldata: &mut Vec<FieldElement>,
-) -> Result<(), SetCallError> {
+) -> Result<(), ParseError> {
     let iter = data.chunks(FIELD_ELEMENT_SIZE);
     for d in iter {
         constructor_calldata.push(d.into());

@@ -112,6 +112,7 @@ impl Transaction {
     }
 }
 
+#[derive(PartialEq)]
 pub enum RequestType {
     Unknown,
     GetPubkey,
@@ -134,6 +135,8 @@ use ledger_device_sdk::nbgl::{NbglHomeAndSettings, NbglSpinner};
 
 pub struct Ctx {
     pub req_type: RequestType,
+    /// Last P1 stage accepted for the signing request in progress.
+    pub tx_stage: u8,
     pub tx: Transaction,
     pub hash: FieldElement,
     pub signature: Signature,
@@ -146,6 +149,7 @@ impl Ctx {
     pub fn new() -> Self {
         Self {
             req_type: RequestType::Unknown,
+            tx_stage: 0,
             tx: Transaction::default(),
             hash: FieldElement::default(),
             signature: Signature::default(),
@@ -157,6 +161,7 @@ impl Ctx {
 
     pub fn reset(&mut self) {
         self.req_type = RequestType::Unknown;
+        self.tx_stage = 0;
         self.tx = Transaction::default();
         self.hash = FieldElement::default();
         self.signature = Signature::default();

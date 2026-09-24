@@ -22,7 +22,7 @@ use ledger_device_sdk::nbgl::{
 
 /// Status word for a transaction the app refuses outright, as opposed to one
 /// it merely cannot display and routes to blind signing.
-/// 0xFF01 is taken by transaction::SetCallError::TooManyCalls.
+/// 0xFF03 is taken by transaction::ParseError.
 #[derive(Clone, Copy)]
 pub enum TxError {
     MalformedTransferCalldata = 0xFF02,

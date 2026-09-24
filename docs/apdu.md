@@ -37,6 +37,17 @@ The general structure of a request and response is as followed:
 | 0x6e03      | Bad Len                 |
 | 0x6e04      | User Cancelled          |
 | 0xe000      | Panic                   |
+| 0xff03      | Bad state: APDU out of sequence, or inconsistent with the transaction sent so far. The signing request is dropped |
+
+### Transaction signing sequence
+
+The four transaction-signing instructions (INS 0x03 to 0x06) stream a transaction over several APDUs:
+
+- `P1 = 0x00` starts a new request and resets any request in progress.
+- Every following P1 is sent **once and in order** (`0x01`, `0x02`, ...). Only the last P1 of the instruction repeats, for as long as it streams calls or constructor calldata.
+- Any other APDU (a skipped or replayed stage, or a stage of another instruction) is refused with `0xff03`, and so is any payload the app cannot accept. Either way the request is dropped: the host has to start again from `P1 = 0x00`.
+- A request produces at most one signature. Once the transaction has been reviewed, whatever the outcome, the request is over.
+- Counts (number of calls, number of calldata) are sent as a felt but must fit in 32 bits.
 
 
 ## Commands definitions
@@ -238,7 +249,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #4: Number of Calls
+#### Command #5: Number of Calls
 
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
@@ -255,7 +266,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #5: Call
+#### Command #6: Call
 
 ##### New Call
 
@@ -263,7 +274,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x05              |
+| P1               | byte (1)   | Payload desc                                   | 0x06              |
 | P2               | byte (1)   | New call                                       | 0x00              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | TO               | bytes (32) | to                                             | (depends)         |
@@ -286,7 +297,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x05              |
+| P1               | byte (1)   | Payload desc                                   | 0x06              |
 | P2               | byte (1)   | Add calldata                                   | 0x01              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
@@ -309,7 +320,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x05              |
+| P1               | byte (1)   | Payload desc                                   | 0x06              |
 | P2               | byte (1)   | Last calldata                                  | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
@@ -672,7 +683,7 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #4: Number of constructor calldata
+#### Command #2: Number of constructor calldata
 
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
@@ -689,7 +700,7 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #5: Constructor calldata
+#### Command #3: Constructor calldata
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
