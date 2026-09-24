@@ -7,6 +7,8 @@ use crate::{
     erc20::{ERC20_TOKENS, TRANSFER},
     types::FieldElement,
 };
+use alloc::{string::String, vec::Vec};
+use num_bigint::BigUint;
 
 use ledger_device_sdk::include_gif;
 use ledger_device_sdk::io::Comm;
@@ -26,6 +28,49 @@ use ledger_device_sdk::nbgl::{
 #[derive(Clone, Copy)]
 pub enum TxError {
     MalformedTransferCalldata = 0xFF02,
+}
+
+fn max_amount(bound: &FieldElement) -> BigUint {
+    BigUint::from_bytes_be(&bound.value[8..16])
+}
+
+/// A FRI amount as STRK. Everything computed from V3 bounds and tip stays
+/// below 3 * 2^192 + 2^128, well within a felt.
+fn strk(fri: BigUint) -> String {
+    let mut s = FieldElement::from(fri.to_bytes_be().as_slice()).to_dec_string(Some(18));
+    s.push_str(" STRK");
+    s
+}
+
+/// The most the tip can add to the fee. The tip is a price per unit of L2
+/// gas, paid on every unit the transaction may use.
+fn max_tip_v3(tip: &FieldElement, l2_gas_bounds: &FieldElement) -> BigUint {
+    BigUint::from_bytes_be(&tip.value) * max_amount(l2_gas_bounds)
+}
+
+/// Worst-case STRK debit of a V3 transaction, in integer arithmetic: each
+/// resource's max_amount * max_price_per_unit, plus the maximum tip. The tip
+/// is signed along with the bounds, so it counts towards what the user
+/// approves; adding it on top bounds the charge whether or not the network
+/// takes it within max_price_per_unit.
+fn max_fees_v3(tip: &FieldElement, bounds: [&FieldElement; 3]) -> String {
+    let price = |b: &FieldElement| BigUint::from_bytes_be(&b.value[16..32]);
+
+    // bounds[1] is L2 gas.
+    let mut total = max_tip_v3(tip, bounds[1]);
+    for b in bounds {
+        total += max_amount(b) * price(b);
+    }
+    strk(total)
+}
+
+/// The tip gets a line of its own when there is one, as the most it can add
+/// to the fee. It is shown whenever it is non-zero, even when no L2 gas is
+/// allowed and it cannot cost anything, so that a signed tip always shows on
+/// screen. Transactions without a tip, which is most of them, review exactly
+/// as they did before.
+fn tip_v3(tip: &FieldElement, l2_gas_bounds: &FieldElement) -> Option<String> {
+    (*tip != FieldElement::ZERO).then(|| strk(max_tip_v3(tip, l2_gas_bounds)))
 }
 
 /// What the review UI can do with a call.
@@ -67,17 +112,13 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Result<Option<bool>, TxError> 
             to.insert_str(0, "0x");
             let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[idx].decimals));
 
-            let max_fees = FieldElement::from(&tx.l1_gas_bounds.value[8..16])
-                * FieldElement::from(&tx.l1_gas_bounds.value[16..32])
-                + FieldElement::from(&tx.l2_gas_bounds.value[8..16])
-                    * FieldElement::from(&tx.l2_gas_bounds.value[16..32])
-                + FieldElement::from(&tx.l1_data_gas_bounds.value[8..16])
-                    * FieldElement::from(&tx.l1_data_gas_bounds.value[16..32]);
+            let max_fees_str = max_fees_v3(
+                &tx.tip,
+                [&tx.l1_gas_bounds, &tx.l2_gas_bounds, &tx.l1_data_gas_bounds],
+            );
+            let tip = tip_v3(&tx.tip, &tx.l2_gas_bounds);
 
-            let mut max_fees_str = max_fees.to_dec_string(Some(18));
-            max_fees_str.push_str(" STRK");
-
-            let my_fields = [
+            let mut my_fields = Vec::from([
                 Field {
                     name: "From",
                     value: sender.as_str(),
@@ -98,7 +139,13 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Result<Option<bool>, TxError> 
                     name: "Max Fees",
                     value: max_fees_str.as_str(),
                 },
-            ];
+            ]);
+            if let Some(tip) = &tip {
+                my_fields.push(Field {
+                    name: "Max Tip",
+                    value: tip.as_str(),
+                });
+            }
 
             // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
             #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
@@ -194,17 +241,13 @@ fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
     let mut class_hash = tx.class_hash.to_hex_string();
     class_hash.insert_str(0, "0x");
 
-    let max_fees = FieldElement::from(&tx.l1_gas_bounds.value[8..16])
-        * FieldElement::from(&tx.l1_gas_bounds.value[16..32])
-        + FieldElement::from(&tx.l2_gas_bounds.value[8..16])
-            * FieldElement::from(&tx.l2_gas_bounds.value[16..32])
-        + FieldElement::from(&tx.l1_data_gas_bounds.value[8..16])
-            * FieldElement::from(&tx.l1_data_gas_bounds.value[16..32]);
+    let fees = max_fees_v3(
+        &tx.tip,
+        [&tx.l1_gas_bounds, &tx.l2_gas_bounds, &tx.l1_data_gas_bounds],
+    );
+    let tip = tip_v3(&tx.tip, &tx.l2_gas_bounds);
 
-    let mut fees = max_fees.to_dec_string(Some(18));
-    fees.push_str(" STRK");
-
-    let my_fields = [
+    let mut my_fields = Vec::from([
         Field {
             name: "Deploy account",
             value: contract_address.as_str(),
@@ -213,11 +256,17 @@ fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
             name: "Max Fees",
             value: fees.as_str(),
         },
-        Field {
-            name: "Class Hash",
-            value: class_hash.as_str(),
-        },
-    ];
+    ]);
+    if let Some(tip) = &tip {
+        my_fields.push(Field {
+            name: "Max Tip",
+            value: tip.as_str(),
+        });
+    }
+    my_fields.push(Field {
+        name: "Class Hash",
+        value: class_hash.as_str(),
+    });
 
     // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]

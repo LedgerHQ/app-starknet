@@ -197,3 +197,38 @@ def test_tx_v3_l1_data_gas_deploy_account(firmware, backend, navigator, test_nam
         print("Standard Error:")
         print(stderr)
         assert(False)
+
+# The tip is signed along with the resource bounds of a V3 deployment too: the
+# review shows it on its own line and counts it towards Max Fees.
+def test_tx_v3_deploy_account_tip(firmware, backend, navigator, test_name):
+    apdus = read_lines_from_file('samples/apdu/dpath_0.dat')
+    response = backend.exchange_raw(bytes.fromhex(apdus[0])).data
+    public_key_x, _ = unpack_get_public_key_response(response)
+
+    all_apdus = read_lines_from_file('samples/apdu/tx_v3_deploy_account_tip.dat')
+    for apdu in all_apdus[:-1]:
+        backend.exchange_raw(bytes.fromhex(apdu))
+
+    with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
+        if firmware.device.startswith("nano"):
+            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
+                                                      [NavInsID.BOTH_CLICK],
+                                                      "Sign Transaction ?",
+                                                      ROOT_SCREENSHOT_PATH,
+                                                      test_name)
+        else:
+            navigator.navigate_until_text_and_compare(NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                      [NavInsID.USE_CASE_REVIEW_CONFIRM,
+                                                       NavInsID.USE_CASE_STATUS_DISMISS],
+                                                      "Sign Transaction ?",
+                                                      ROOT_SCREENSHOT_PATH,
+                                                      test_name)
+
+    hash, r, s, _ = unpack_sign_tx_response(backend.last_async_response.data)
+    stdout, stderr = call_external_binary(CHECK_SIGNATURE_BINARY_PATH,
+                                          "-t", hash.hex(),
+                                          "-p", public_key_x.hex(),
+                                          "-r", r.hex(),
+                                          "-s", s.hex())
+    assert not stderr, stderr
+    assert stdout.lower() == "true"
