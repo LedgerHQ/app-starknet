@@ -385,6 +385,19 @@ pub fn constructor_calldata(calldata: &[String], cla: u8, ins: Ins, p1: u8) -> V
     p1 += 1;
     apdu_list.push(apdu);
 
+    // A constructor without arguments is sent as one empty calldata apdu: the
+    // app only completes the transaction on a calldata apdu.
+    if calldata.is_empty() {
+        let apdu_header = ApduHeader {
+            cla,
+            ins: ins.into(),
+            p1,
+            p2: 0x00,
+        };
+        apdu_list.push(Apdu::new(apdu_header));
+        return apdu_list;
+    }
+
     // calldata apdu
     let mut iter = calldata.chunks(7);
 

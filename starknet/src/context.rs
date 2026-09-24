@@ -56,6 +56,7 @@ pub struct DeployAccountTransactionV1 {
     pub nonce: FieldElement,
     pub class_hash: FieldElement,
     pub contract_address_salt: FieldElement,
+    pub nb_constructor_calldata: usize,
     pub constructor_calldata: Vec<FieldElement>,
     pub hasher: crypto::pedersen::PedersenHasher,
 }
@@ -75,7 +76,7 @@ pub struct DeployAccountTransactionV3 {
     pub class_hash: FieldElement,
     pub contract_address_salt: FieldElement,
     pub nb_constructor_calldata: usize,
-    pub nb_rcv_constructor_calldata: usize,
+    pub constructor_calldata: Vec<FieldElement>,
     pub hasher: crypto::poseidon::PoseidonHasher,
     pub hasher_calldata: crypto::poseidon::PoseidonHasher,
 }

@@ -105,3 +105,5 @@ class Errors(IntEnum):
     # The signing request is dropped.
     SW_TX_BAD_STATE                = 0xFF03
     SW_INVALID_FEES                = 0xFF04
+    SW_CONTRACT_ADDRESS_MISMATCH   = 0xFF05
+    SW_TOO_MANY_CONSTRUCTOR_ARGS   = 0xFF06

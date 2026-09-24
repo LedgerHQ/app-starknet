@@ -190,6 +190,54 @@ def test_deploy_account_fees_non_canonical_bound_refused(backend):
     assert_dropped(backend, fee_apdu(INS_SIGN_DEPLOY_ACCOUNT, words), Errors.SW_INVALID_FEES)
 
 
+# Every constructor argument is shown on screen, so their number is capped.
+def test_deploy_account_too_many_constructor_args_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_deploy_account')
+    send_all(backend, apdus[:4])
+    assert_dropped(backend, apdu(INS_SIGN_DEPLOY_ACCOUNT, 4, 0, (9).to_bytes(32, "big")),
+                   Errors.SW_TOO_MANY_CONSTRUCTOR_ARGS)
+
+
+# Constructor calldata is shown felt by felt, so none can reach the hash
+# beyond the announced count, in non-canonical form, or in an empty chunk
+# while arguments are still expected.
+def test_deploy_account_constructor_overflow_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_deploy_account')
+    send_all(backend, apdus[:4])
+    assert send(backend, apdu(INS_SIGN_DEPLOY_ACCOUNT, 4, 0, (2).to_bytes(32, "big"))) == 0x9000
+    three_felts = b"".join(i.to_bytes(32, "big") for i in (1, 2, 3))
+    assert_dropped(backend, apdu(INS_SIGN_DEPLOY_ACCOUNT, 5, 0, three_felts))
+
+
+def test_deploy_account_non_canonical_constructor_arg_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_deploy_account')
+    send_all(backend, apdus[:5])
+    calldata = bytearray(apdus[5][5:])
+    calldata[0:32] = (int.from_bytes(calldata[0:32], "big") + P).to_bytes(32, "big")
+    assert_dropped(backend, apdu(INS_SIGN_DEPLOY_ACCOUNT, 5, 0, bytes(calldata)))
+
+
+def test_deploy_account_empty_chunk_with_args_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_deploy_account')
+    send_all(backend, apdus[:5])
+    assert_dropped(backend, apdu(INS_SIGN_DEPLOY_ACCOUNT, 5, 0, b""))
+
+
+# The Deploy Account fields feed the on-device address check and the review:
+# a non-canonical salt is refused when it arrives.
+def test_deploy_account_non_canonical_salt_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_deploy_account')
+    send_all(backend, apdus[:1])
+    fields = bytearray(apdus[1][5:])
+    fields[160:192] = (int.from_bytes(fields[160:192], "big") + P).to_bytes(32, "big")
+    assert_dropped(backend, apdu(INS_SIGN_DEPLOY_ACCOUNT, 1, 0, bytes(fields)))
+
+
 # Once a transaction has been reviewed, whatever the outcome, its last APDU
 # cannot bring the review back.
 def test_completed_request_cannot_be_replayed(backend):

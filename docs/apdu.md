@@ -39,6 +39,8 @@ The general structure of a request and response is as followed:
 | 0xe000      | Panic                   |
 | 0xff03      | Bad state: APDU out of sequence, or inconsistent with the transaction sent so far. The signing request is dropped |
 | 0xff04      | Invalid fees: the fee APDU does not hold a tip and resource bounds in their wire format. The signing request is dropped |
+| 0xff05      | Contract address mismatch: the Deploy Account address is not the one derived from the class hash, salt and constructor calldata. The signing request is dropped |
+| 0xff06      | Too many constructor arguments: more than 8 constructor calldata. The signing request is dropped |
 | 0xff07      | Too many calls: a call beyond the announced number of calls. The signing request is dropped |
 
 ### Transaction signing sequence
@@ -375,6 +377,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 
 #### Command #1: Send DEPLOY_ACCOUNT Tx fields
 
+All six fields must be canonical felts (`< P`); anything else is refused with `0xff03`. `CONTRACT ADDR` must be the address Starknet derives from `CLASS HASH`, `SALT` and the constructor calldata with the zero deployer: the app recomputes it once the transaction is complete and refuses a mismatch with `0xff05`. The review shows the address, the fees, the class hash, the salt and every constructor argument.
+
 
 | Field            | Type     | Content                     | Expected          |
 |------------------|----------|-----------------------------|-------------------|
@@ -446,6 +450,8 @@ Any other payload is refused with `0xff04`.
 
 #### Command #4: Number of constructor calldata
 
+At most 8 constructor calldata are accepted, since every one of them is shown on screen; more is refused with `0xff06`.
+
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier      | 0x5A              |
@@ -462,6 +468,8 @@ Any other payload is refused with `0xff04`.
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
 #### Command #5: Constructor calldata
+
+Chunks of at most 7 felts, until the announced number of calldata is reached. A constructor without arguments is sent as a single empty chunk (`L` = 0). The app refuses with `0xff03` more calldata than announced, a non-canonical felt, or an empty chunk while calldata is still expected.
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
@@ -656,6 +664,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 
 #### Command #1: Send DEPLOY_ACCOUNT Tx fields
 
+All six fields must be canonical felts (`< P`); anything else is refused with `0xff03`. `CONTRACT ADDR` must be the address Starknet derives from `CLASS HASH`, `SALT` and the constructor calldata with the zero deployer: the app recomputes it once the transaction is complete and refuses a mismatch with `0xff05`. The review shows the address, the fees, the class hash, the salt and every constructor argument.
+
 | Field            | Type     | Content                     | Expected          |
 |------------------|----------|-----------------------------|-------------------|
 | CLA              | byte (1) | Application Identifier      | 0x5A              |
@@ -679,6 +689,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 
 #### Command #2: Number of constructor calldata
 
+At most 8 constructor calldata are accepted, since every one of them is shown on screen; more is refused with `0xff06`.
+
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier      | 0x5A              |
@@ -695,6 +707,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
 #### Command #3: Constructor calldata
+
+Chunks of at most 7 felts, until the announced number of calldata is reached. A constructor without arguments is sent as a single empty chunk (`L` = 0). The app refuses with `0xff03` more calldata than announced, a non-canonical felt, or an empty chunk while calldata is still expected.
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|

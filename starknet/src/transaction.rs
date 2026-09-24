@@ -12,6 +12,10 @@ use alloc::vec::Vec;
 
 const FIELD_ELEMENT_SIZE: usize = 32;
 
+/// Constructor arguments are all shown on screen, so their number is capped.
+/// Common account constructors take one to three.
+pub const MAX_CONSTRUCTOR_CALLDATA: usize = 8;
+
 /// Why the app refuses an APDU while it parses a transaction. Each of these
 /// drops the signing request: the host has to start again from P1=0.
 #[derive(Clone, Copy, Debug)]
@@ -21,6 +25,7 @@ pub enum ParseError {
     BadState = 0xFF03,
     /// The fee APDU does not hold a tip and resource bounds in their wire format.
     InvalidFees = 0xFF04,
+    TooManyConstructorArgs = 0xFF06,
     /// A call beyond the announced number of calls.
     TooManyCalls = 0xFF07,
 }
@@ -98,7 +103,7 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::DeployAccountV3(tx) => {
-            if tx.nb_rcv_constructor_calldata == tx.nb_constructor_calldata {
+            if tx.constructor_calldata.len() == tx.nb_constructor_calldata {
                 tx.hasher.update(tx.hasher_calldata.finalize());
                 tx.hasher.update(tx.class_hash);
                 tx.hasher.update(tx.contract_address_salt);
@@ -107,7 +112,15 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
             None
         }
         Transaction::DeployAccountV1(tx) => {
-            if tx.constructor_calldata.len() == tx.constructor_calldata.capacity() {
+            if tx.constructor_calldata.len() == tx.nb_constructor_calldata {
+                let mut hasher = crypto::pedersen::PedersenHasher::default();
+                hasher.update(tx.class_hash);
+                hasher.update(tx.contract_address_salt);
+                for d in &tx.constructor_calldata {
+                    hasher.update(*d);
+                }
+                hasher.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
+                tx.hasher.update(hasher.finalize());
                 tx.hasher.update(tx.max_fee);
                 tx.hasher.update(tx.chain_id);
                 tx.hasher.update(tx.nonce);
@@ -120,14 +133,24 @@ pub fn tx_complete(tx: &mut Transaction) -> Option<FieldElement> {
     }
 }
 
-pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
+pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) -> Result<(), ParseError> {
     match tx {
         Transaction::InvokeV3(tx) => set_invoke_fields_v3(data, tx),
         Transaction::InvokeV1(tx) => set_invoke_fields_v1(data, tx),
-        Transaction::DeployAccountV3(tx) => set_deploy_account_fields_v3(data, tx),
-        Transaction::DeployAccountV1(tx) => set_deploy_account_fields_v1(data, tx),
+        Transaction::DeployAccountV3(tx) => return set_deploy_account_fields_v3(data, tx),
+        Transaction::DeployAccountV1(tx) => return set_deploy_account_fields_v1(data, tx),
         Transaction::None => panic!("Invalid transaction type"),
     }
+    Ok(())
+}
+
+/// The six Deploy Account fields. They feed the on-device address check and
+/// the review, so they are held to the same rule as calldata: whole, canonical
+/// felts, exactly as many as expected.
+fn parse_deploy_account_fields(data: &[u8]) -> Result<[FieldElement; 6], ParseError> {
+    parse_felts(data)?
+        .try_into()
+        .map_err(|_| ParseError::BadState)
 }
 
 /// V3 tip and resource bounds, as signed.
@@ -268,37 +291,47 @@ pub fn set_account_deployment_data(_data: &[u8], _p2: u8, tx: &mut Transaction) 
     }
 }
 
-fn set_deploy_account_fields_v3(data: &[u8], tx: &mut DeployAccountTransactionV3) {
+fn set_deploy_account_fields_v3(
+    data: &[u8],
+    tx: &mut DeployAccountTransactionV3,
+) -> Result<(), ParseError> {
+    let [contract_address, chain_id, nonce, data_availability_mode, class_hash, salt] =
+        parse_deploy_account_fields(data)?;
     tx.version = FieldElement::from(TxVersion::V3 as u8);
-    let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-    tx.contract_address = iter.next().unwrap().into();
-    tx.chain_id = iter.next().unwrap().into();
-    tx.nonce = iter.next().unwrap().into();
-    tx.data_availability_mode = iter.next().unwrap().into();
-    tx.class_hash = iter.next().unwrap().into();
-    tx.contract_address_salt = iter.next().unwrap().into();
+    tx.contract_address = contract_address;
+    tx.chain_id = chain_id;
+    tx.nonce = nonce;
+    tx.data_availability_mode = data_availability_mode;
+    tx.class_hash = class_hash;
+    tx.contract_address_salt = salt;
 
     // Update hasher
     tx.hasher.update(FieldElement::DEPLOY_ACCOUNT);
     tx.hasher.update(tx.version);
     tx.hasher.update(tx.contract_address);
+    Ok(())
 }
 
-fn set_deploy_account_fields_v1(data: &[u8], tx: &mut DeployAccountTransactionV1) {
+fn set_deploy_account_fields_v1(
+    data: &[u8],
+    tx: &mut DeployAccountTransactionV1,
+) -> Result<(), ParseError> {
+    let [contract_address, class_hash, salt, max_fee, chain_id, nonce] =
+        parse_deploy_account_fields(data)?;
     tx.version = FieldElement::from(TxVersion::V1);
-    let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-    tx.contract_address = iter.next().unwrap().into();
-    tx.class_hash = iter.next().unwrap().into();
-    tx.contract_address_salt = iter.next().unwrap().into();
-    tx.max_fee = iter.next().unwrap().into();
-    tx.chain_id = iter.next().unwrap().into();
-    tx.nonce = iter.next().unwrap().into();
+    tx.contract_address = contract_address;
+    tx.class_hash = class_hash;
+    tx.contract_address_salt = salt;
+    tx.max_fee = max_fee;
+    tx.chain_id = chain_id;
+    tx.nonce = nonce;
 
     // Update hasher
     tx.hasher.update(FieldElement::DEPLOY_ACCOUNT);
     tx.hasher.update(tx.version);
     tx.hasher.update(tx.contract_address);
     tx.hasher.update(FieldElement::ZERO);
+    Ok(())
 }
 
 #[derive(PartialEq)]
@@ -342,11 +375,21 @@ pub fn set_calldata_nb(data: &[u8], tx: &mut Transaction) -> Result<(), ParseErr
             tx.nb_calls = count;
             tx.hasher_calldata.update(nb);
         }
-        Transaction::DeployAccountV3(tx) => {
-            tx.nb_constructor_calldata = count;
-        }
-        Transaction::DeployAccountV1(tx) => {
-            tx.constructor_calldata = Vec::with_capacity(count);
+        Transaction::DeployAccountV3(DeployAccountTransactionV3 {
+            nb_constructor_calldata,
+            constructor_calldata,
+            ..
+        })
+        | Transaction::DeployAccountV1(DeployAccountTransactionV1 {
+            nb_constructor_calldata,
+            constructor_calldata,
+            ..
+        }) => {
+            if count > MAX_CONSTRUCTOR_CALLDATA {
+                return Err(ParseError::TooManyConstructorArgs);
+            }
+            *nb_constructor_calldata = count;
+            *constructor_calldata = Vec::with_capacity(count);
         }
         Transaction::None => panic!("Invalid transaction type"),
     }
@@ -372,26 +415,22 @@ pub fn set_calldata(data: &[u8], p2: u8, tx: &mut Transaction) -> Result<(), Par
             &mut tx.nb_rcv_calls,
         ),
         Transaction::DeployAccountV3(tx) => {
-            let iter = data.chunks(FIELD_ELEMENT_SIZE);
-            for d in iter {
-                tx.hasher_calldata.update(d.into());
-                tx.nb_rcv_constructor_calldata += 1;
+            let felts = add_constructor_calldata(
+                data,
+                tx.nb_constructor_calldata,
+                &mut tx.constructor_calldata,
+            )?;
+            for d in felts {
+                tx.hasher_calldata.update(d);
             }
             Ok(())
         }
-        Transaction::DeployAccountV1(tx) => {
-            let _ = set_calldata_deploy_account_v1(data, &mut tx.constructor_calldata);
-
-            let mut hasher = crypto::pedersen::PedersenHasher::default();
-            hasher.update(tx.class_hash);
-            hasher.update(tx.contract_address_salt);
-            for d in &tx.constructor_calldata {
-                hasher.update(*d);
-            }
-            hasher.update(FieldElement::from(2usize + tx.constructor_calldata.len()));
-            tx.hasher.update(hasher.finalize());
-            Ok(())
-        }
+        Transaction::DeployAccountV1(tx) => add_constructor_calldata(
+            data,
+            tx.nb_constructor_calldata,
+            &mut tx.constructor_calldata,
+        )
+        .map(|_| ()),
         Transaction::None => panic!("Invalid transaction type"),
     }
 }
@@ -449,13 +488,57 @@ fn set_calldata_invoke(
     Ok(())
 }
 
-fn set_calldata_deploy_account_v1(
+/// Appends a chunk of constructor calldata, never past the announced length.
+/// A constructor without arguments is sent as a single empty chunk; otherwise
+/// every chunk carries calldata.
+fn add_constructor_calldata(
     data: &[u8],
+    nb_constructor_calldata: usize,
     constructor_calldata: &mut Vec<FieldElement>,
-) -> Result<(), ParseError> {
-    let iter = data.chunks(FIELD_ELEMENT_SIZE);
-    for d in iter {
-        constructor_calldata.push(d.into());
+) -> Result<Vec<FieldElement>, ParseError> {
+    let felts = parse_felts(data)?;
+    if (felts.is_empty() && nb_constructor_calldata != 0)
+        || constructor_calldata.len() + felts.len() > nb_constructor_calldata
+    {
+        return Err(ParseError::BadState);
     }
-    Ok(())
+    constructor_calldata.extend_from_slice(&felts);
+    Ok(felts)
+}
+
+/// The address Starknet deploys an account to, from the zero deployer:
+/// compute_hash_on_elements(["STARKNET_CONTRACT_ADDRESS", 0, salt, class_hash,
+/// compute_hash_on_elements(constructor_calldata)]) mod 2^251 - 256.
+pub fn contract_address(
+    class_hash: FieldElement,
+    salt: FieldElement,
+    constructor_calldata: &[FieldElement],
+) -> FieldElement {
+    // 2^251 - 256
+    const ADDR_BOUND: FieldElement = {
+        let mut value = [0xffu8; 32];
+        value[0] = 0x07;
+        value[31] = 0x00;
+        FieldElement { value }
+    };
+
+    let mut calldata_hasher = crypto::pedersen::PedersenHasher::default();
+    for d in constructor_calldata {
+        calldata_hasher.update(*d);
+    }
+    calldata_hasher.update(FieldElement::from(constructor_calldata.len()));
+
+    let mut hasher = crypto::pedersen::PedersenHasher::default();
+    hasher.update(FieldElement::from(&b"STARKNET_CONTRACT_ADDRESS"[..]));
+    hasher.update(FieldElement::ZERO);
+    hasher.update(salt);
+    hasher.update(class_hash);
+    hasher.update(calldata_hasher.finalize());
+    hasher.update(FieldElement::from(5usize));
+
+    let address = hasher.finalize();
+    match address >= ADDR_BOUND {
+        true => address - ADDR_BOUND,
+        false => address,
+    }
 }
