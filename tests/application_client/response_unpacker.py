@@ -104,3 +104,4 @@ class Errors(IntEnum):
     # Out-of-sequence APDU, or payload inconsistent with the transaction so far.
     # The signing request is dropped.
     SW_TX_BAD_STATE                = 0xFF03
+    SW_INVALID_FEES                = 0xFF04

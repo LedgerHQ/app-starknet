@@ -19,6 +19,8 @@ pub enum ParseError {
     /// The APDU is out of sequence, or its payload contradicts what the
     /// transaction announced so far.
     BadState = 0xFF03,
+    /// The fee APDU does not hold a tip and resource bounds in their wire format.
+    InvalidFees = 0xFF04,
     /// A call beyond the announced number of calls.
     TooManyCalls = 0xFF07,
 }
@@ -128,50 +130,75 @@ pub fn set_tx_fields(data: &[u8], tx: &mut Transaction) {
     }
 }
 
-pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) {
+/// V3 tip and resource bounds, as signed.
+pub struct Fees {
+    pub tip: FieldElement,
+    pub l1_gas_bounds: FieldElement,
+    pub l2_gas_bounds: FieldElement,
+    pub l1_data_gas_bounds: FieldElement,
+    pub hash: FieldElement,
+}
+
+/// Parses the V3 fee APDU: tip, then the L1 gas, L2 gas and optional L1 data
+/// gas bounds. Each bound packs, big-endian, the resource name right-aligned
+/// in 8 bytes, max_amount (u64) and max_price_per_unit (u128). The review
+/// decodes amount and price from those bytes while Poseidon absorbs the word
+/// modulo P, so any word off that layout could hash as one bound and display
+/// as another. Checking the name also keeps the word below 2^248, hence
+/// canonical.
+fn parse_fees(data: &[u8]) -> Result<Fees, ParseError> {
+    const TAGS: [&[u8; 8]; 3] = [b"\0\0L1_GAS", b"\0\0L2_GAS", b"\0L1_DATA"];
+
+    if data.len() != 3 * FIELD_ELEMENT_SIZE && data.len() != 4 * FIELD_ELEMENT_SIZE {
+        return Err(ParseError::InvalidFees);
+    }
+    let words: Vec<FieldElement> = data.chunks(FIELD_ELEMENT_SIZE).map(|d| d.into()).collect();
+
+    // The tip is a u64 on the wire.
+    if words[0].value[..24].iter().any(|&b| b != 0) {
+        return Err(ParseError::InvalidFees);
+    }
+    for (word, tag) in words[1..].iter().zip(TAGS) {
+        if &word.value[..8] != tag {
+            return Err(ParseError::InvalidFees);
+        }
+    }
+
+    let mut hasher = crypto::poseidon::PoseidonHasher::default();
+    for w in &words {
+        hasher.update(*w);
+    }
+    Ok(Fees {
+        tip: words[0],
+        l1_gas_bounds: words[1],
+        l2_gas_bounds: words[2],
+        l1_data_gas_bounds: words.get(3).copied().unwrap_or(FieldElement::ZERO),
+        hash: hasher.finalize(),
+    })
+}
+
+pub fn set_tx_fees(data: &[u8], tx: &mut Transaction) -> Result<(), ParseError> {
+    let fees = parse_fees(data)?;
     match tx {
         Transaction::DeployAccountV3(tx) => {
-            let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
-            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-            tx.tip = iter.next().unwrap().into();
-            fee_hasher.update(tx.tip);
-            tx.l1_gas_bounds = iter.next().unwrap().into();
-            fee_hasher.update(tx.l1_gas_bounds);
-            tx.l2_gas_bounds = iter.next().unwrap().into();
-            fee_hasher.update(tx.l2_gas_bounds);
-            tx.l1_data_gas_bounds = match iter.next() {
-                Some(data) => {
-                    fee_hasher.update(data.into());
-                    data.into()
-                }
-                None => FieldElement::ZERO,
-            };
-            let fee_hash = fee_hasher.finalize();
-            tx.hasher.update(fee_hash);
+            tx.tip = fees.tip;
+            tx.l1_gas_bounds = fees.l1_gas_bounds;
+            tx.l2_gas_bounds = fees.l2_gas_bounds;
+            tx.l1_data_gas_bounds = fees.l1_data_gas_bounds;
+            tx.hasher.update(fees.hash);
         }
         Transaction::InvokeV3(tx) => {
-            let mut fee_hasher = crypto::poseidon::PoseidonHasher::default();
-            let mut iter = data.chunks(FIELD_ELEMENT_SIZE);
-            tx.tip = iter.next().unwrap().into();
-            fee_hasher.update(tx.tip);
-            tx.l1_gas_bounds = iter.next().unwrap().into();
-            fee_hasher.update(tx.l1_gas_bounds);
-            tx.l2_gas_bounds = iter.next().unwrap().into();
-            fee_hasher.update(tx.l2_gas_bounds);
-            tx.l1_data_gas_bounds = match iter.next() {
-                Some(data) => {
-                    fee_hasher.update(data.into());
-                    data.into()
-                }
-                None => FieldElement::ZERO,
-            };
-            let fee_hash = fee_hasher.finalize();
-            tx.hasher.update(fee_hash);
+            tx.tip = fees.tip;
+            tx.l1_gas_bounds = fees.l1_gas_bounds;
+            tx.l2_gas_bounds = fees.l2_gas_bounds;
+            tx.l1_data_gas_bounds = fees.l1_data_gas_bounds;
+            tx.hasher.update(fees.hash);
         }
         Transaction::InvokeV1(_) | Transaction::DeployAccountV1(_) | Transaction::None => {
             panic!("Invalid transaction type")
         }
     }
+    Ok(())
 }
 
 fn set_invoke_fields_v3(data: &[u8], tx: &mut InvokeTransactionV3) {

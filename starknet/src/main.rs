@@ -244,8 +244,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
             2 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_tx_fees(data, &mut ctx.tx);
-                send_data(comm, Ok(None));
+                let res = transaction::set_tx_fees(data, &mut ctx.tx);
+                ack_stage(comm, ctx, res);
             }
             3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
@@ -311,8 +311,8 @@ fn handle_apdu(comm: &mut io::Comm, ins: &Ins, ctx: &mut Ctx) {
             }
             2 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);
-                transaction::set_tx_fees(data, &mut ctx.tx);
-                send_data(comm, Ok(None));
+                let res = transaction::set_tx_fees(data, &mut ctx.tx);
+                ack_stage(comm, ctx, res);
             }
             3 => {
                 display::show_step(PARSING_STEP_TX_WORDING, ctx);

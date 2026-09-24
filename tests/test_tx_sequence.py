@@ -13,6 +13,7 @@ from utils import read_lines_from_file
 CLA = 0x5A
 INS_SIGN_TX = 0x03
 INS_SIGN_TX_V1 = 0x04
+INS_SIGN_DEPLOY_ACCOUNT = 0x05
 
 # Stark field prime
 P = 0x800000000000011000000000000000000000000000000000000000000000001
@@ -132,6 +133,61 @@ def test_cross_ins_continuation_refused(backend):
     send_all(backend, load('tx_v3_transfer_ETH')[:2])
     # an Invoke V1 stage on top of an Invoke V3 request
     assert_dropped(backend, load('tx_v1_transfer_ETH_0')[2])
+
+
+def fee_words(fee_apdu):
+    data = fee_apdu[5:]
+    return [data[i:i + 32] for i in range(0, len(data), 32)]
+
+
+def fee_apdu(ins, words):
+    return apdu(ins, 2, 0, b"".join(words))
+
+
+# A non-canonical bound x + P hashes as x but its bytes decode to other
+# amounts and prices, so the review would show a fee unrelated to the signed one.
+def test_fees_non_canonical_bound_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:2])
+    words = fee_words(apdus[2])
+    words[2] = (int.from_bytes(words[2], "big") + P).to_bytes(32, "big")
+    assert_dropped(backend, fee_apdu(INS_SIGN_TX, words), Errors.SW_INVALID_FEES)
+
+
+def test_fees_wrong_resource_order_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:2])
+    words = fee_words(apdus[2])
+    words[1], words[2] = words[2], words[1]
+    assert_dropped(backend, fee_apdu(INS_SIGN_TX, words), Errors.SW_INVALID_FEES)
+
+
+def test_fees_oversized_tip_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:2])
+    words = fee_words(apdus[2])
+    words[0] = (1 << 64).to_bytes(32, "big")
+    assert_dropped(backend, fee_apdu(INS_SIGN_TX, words), Errors.SW_INVALID_FEES)
+
+
+def test_fees_truncated_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_transfer_ETH')
+    send_all(backend, apdus[:2])
+    assert_dropped(backend, fee_apdu(INS_SIGN_TX, fee_words(apdus[2])[:2]),
+                   Errors.SW_INVALID_FEES)
+
+
+def test_deploy_account_fees_non_canonical_bound_refused(backend):
+    start(backend)
+    apdus = load('tx_v3_deploy_account')
+    send_all(backend, apdus[:2])
+    words = fee_words(apdus[2])
+    words[1] = (int.from_bytes(words[1], "big") + P).to_bytes(32, "big")
+    assert_dropped(backend, fee_apdu(INS_SIGN_DEPLOY_ACCOUNT, words), Errors.SW_INVALID_FEES)
 
 
 # Once a transaction has been reviewed, whatever the outcome, its last APDU

@@ -38,6 +38,7 @@ The general structure of a request and response is as followed:
 | 0x6e04      | User Cancelled          |
 | 0xe000      | Panic                   |
 | 0xff03      | Bad state: APDU out of sequence, or inconsistent with the transaction sent so far. The signing request is dropped |
+| 0xff04      | Invalid fees: the fee APDU does not hold a tip and resource bounds in their wire format. The signing request is dropped |
 | 0xff07      | Too many calls: a call beyond the announced number of calls. The signing request is dropped |
 
 ### Transaction signing sequence
@@ -206,11 +207,21 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1) | Instruction ID              | 0x03              |
 | P1               | byte (1) | Payload desc                | 0x02              |
 | P2               | byte (1) | ignored                     | 0x00              |
-| L                | byte (1) | Bytes in payload            | 0x80              |
+| L                | byte (1) | Bytes in payload            | 0x60 or 0x80      |
 | TIP              | byte (32)| tip                         | (depends)         |
 | L1 FEE           | byte (32)| l1_gas_bounds               | (depends)         |
 | L2 FEE           | byte (32)| l2_gas_bounds               | (depends)         |
-| L1 DATA          | byte (32)| l1_data_gas_bounds          | (depends)         |
+| L1 DATA          | byte (32)| l1_data_gas_bounds (optional) | (depends)       |
+
+The payload is 3 or 4 felts (`L` = 0x60 or 0x80): the tip, then the L1 gas, L2 gas and optional L1 data gas resource bounds. The tip must fit in a `u64`. Each resource bound packs, big-endian:
+
+| Bytes  | Content                                                              |
+|--------|----------------------------------------------------------------------|
+| 0..8   | resource name, right-aligned: `L1_GAS`, `L2_GAS`, `L1_DATA`, in that order |
+| 8..16  | max_amount (`u64`)                                                   |
+| 16..32 | max_price_per_unit (`u128`)                                          |
+
+Any other payload is refused with `0xff04`.
 
 #### Response
 
@@ -394,11 +405,21 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | INS              | byte (1) | Instruction ID              | 0x05              |
 | P1               | byte (1) | Payload desc                | 0x02              |
 | P2               | byte (1) | ignored                     | 0x00              |
-| L                | byte (1) | Bytes in payload            |                   |
+| L                | byte (1) | Bytes in payload            | 0x60 or 0x80      |
 | TIP              | byte (32)| tip                         | (depends)         |
 | L1 FEE           | byte (32)| l1_gas_bounds               | (depends)         |
 | L2 FEE           | byte (32)| l2_gas_bounds               | (depends)         |
-| L1 DATA          | byte (32)| l1_data_gas_bounds          | (depends)         |
+| L1 DATA          | byte (32)| l1_data_gas_bounds (optional) | (depends)       |
+
+The payload is 3 or 4 felts (`L` = 0x60 or 0x80): the tip, then the L1 gas, L2 gas and optional L1 data gas resource bounds. The tip must fit in a `u64`. Each resource bound packs, big-endian:
+
+| Bytes  | Content                                                              |
+|--------|----------------------------------------------------------------------|
+| 0..8   | resource name, right-aligned: `L1_GAS`, `L2_GAS`, `L1_DATA`, in that order |
+| 8..16  | max_amount (`u64`)                                                   |
+| 16..32 | max_price_per_unit (`u128`)                                          |
+
+Any other payload is refused with `0xff04`.
 
 #### Response
 
