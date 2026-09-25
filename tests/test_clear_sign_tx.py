@@ -441,3 +441,39 @@ def test_tx_v3_transfer_ETH_extra_calldata_refused(backend):
 # which would otherwise panic the app.
 def test_tx_v3_transfer_ETH_short_calldata_refused(backend):
     assert_refused(backend, 'tx_v3_transfer_ETH_short_calldata')
+
+# The tip is signed along with the resource bounds. With a non-zero tip the
+# review shows it on a line of its own, and counts it towards Max Fees on every
+# unit of L2 gas, so the fee the user approves is never lower than the charge.
+def test_tx_v3_transfer_ETH_tip(firmware, backend, navigator, test_name):
+    apdus = read_lines_from_file('samples/apdu/dpath_0.dat')
+    response = backend.exchange_raw(bytes.fromhex(apdus[0])).data
+    public_key_x, _ = unpack_get_public_key_response(response)
+
+    all_apdus = read_lines_from_file('samples/apdu/tx_v3_transfer_ETH_tip.dat')
+    for apdu in all_apdus[:-1]:
+        backend.exchange_raw(bytes.fromhex(apdu))
+
+    with backend.exchange_async_raw(bytes.fromhex(all_apdus[-1])):
+        if firmware.device.startswith("nano"):
+            navigator.navigate_until_text_and_compare(NavInsID.RIGHT_CLICK,
+                                                      [NavInsID.BOTH_CLICK],
+                                                      "Sign Transaction ?",
+                                                      ROOT_SCREENSHOT_PATH,
+                                                      test_name)
+        else:
+            navigator.navigate_until_text_and_compare(NavInsID.SWIPE_CENTER_TO_LEFT,
+                                                      [NavInsID.USE_CASE_REVIEW_CONFIRM,
+                                                       NavInsID.USE_CASE_STATUS_DISMISS],
+                                                      "Sign Transaction ?",
+                                                      ROOT_SCREENSHOT_PATH,
+                                                      test_name)
+
+    hash, r, s, _ = unpack_sign_tx_response(backend.last_async_response.data)
+    stdout, stderr = call_external_binary(CHECK_SIGNATURE_BINARY_PATH,
+                                          "-t", hash.hex(),
+                                          "-p", public_key_x.hex(),
+                                          "-r", r.hex(),
+                                          "-s", s.hex())
+    assert not stderr, stderr
+    assert stdout.lower() == "true"

@@ -101,3 +101,9 @@ class Errors(IntEnum):
     SW_SIGNATURE_FAIL          = 0xB008
     # Refused outright, as opposed to routed to blind signing.
     SW_MALFORMED_TRANSFER_CALLDATA = 0xFF02
+    # Out-of-sequence APDU, or payload inconsistent with the transaction so far.
+    # The signing request is dropped.
+    SW_TX_BAD_STATE                = 0xFF03
+    SW_INVALID_FEES                = 0xFF04
+    SW_CONTRACT_ADDRESS_MISMATCH   = 0xFF05
+    SW_TOO_MANY_CONSTRUCTOR_ARGS   = 0xFF06
