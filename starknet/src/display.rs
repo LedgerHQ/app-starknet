@@ -5,8 +5,11 @@ use crate::{
         InvokeTransactionV3,
     },
     erc20::{ERC20_TOKENS, TRANSFER},
+    transaction,
     types::FieldElement,
 };
+use alloc::{format, string::String, vec::Vec};
+use num_bigint::BigUint;
 
 use ledger_device_sdk::include_gif;
 use ledger_device_sdk::io::Comm;
@@ -22,10 +25,62 @@ use ledger_device_sdk::nbgl::{
 
 /// Status word for a transaction the app refuses outright, as opposed to one
 /// it merely cannot display and routes to blind signing.
-/// 0xFF01 is taken by transaction::SetCallError::TooManyCalls.
+/// 0xFF03, 0xFF04, 0xFF06 and 0xFF07 are taken by transaction::ParseError.
 #[derive(Clone, Copy)]
 pub enum TxError {
     MalformedTransferCalldata = 0xFF02,
+    /// The host's Deploy Account address is not the one the signed class
+    /// hash, salt and constructor calldata deploy to.
+    ContractAddressMismatch = 0xFF05,
+}
+
+fn hex(fe: &FieldElement) -> String {
+    let mut s = fe.to_hex_string();
+    s.insert_str(0, "0x");
+    s
+}
+
+fn max_amount(bound: &FieldElement) -> BigUint {
+    BigUint::from_bytes_be(&bound.value[8..16])
+}
+
+/// A FRI amount as STRK. Everything computed from V3 bounds and tip stays
+/// below 3 * 2^192 + 2^128, well within a felt.
+fn strk(fri: BigUint) -> String {
+    let mut s = FieldElement::from(fri.to_bytes_be().as_slice()).to_dec_string(Some(18));
+    s.push_str(" STRK");
+    s
+}
+
+/// The most the tip can add to the fee. The tip is a price per unit of L2
+/// gas, paid on every unit the transaction may use.
+fn max_tip_v3(tip: &FieldElement, l2_gas_bounds: &FieldElement) -> BigUint {
+    BigUint::from_bytes_be(&tip.value) * max_amount(l2_gas_bounds)
+}
+
+/// Worst-case STRK debit of a V3 transaction, in integer arithmetic: each
+/// resource's max_amount * max_price_per_unit, plus the maximum tip. The tip
+/// is signed along with the bounds, so it counts towards what the user
+/// approves; adding it on top bounds the charge whether or not the network
+/// takes it within max_price_per_unit.
+fn max_fees_v3(tip: &FieldElement, bounds: [&FieldElement; 3]) -> String {
+    let price = |b: &FieldElement| BigUint::from_bytes_be(&b.value[16..32]);
+
+    // bounds[1] is L2 gas.
+    let mut total = max_tip_v3(tip, bounds[1]);
+    for b in bounds {
+        total += max_amount(b) * price(b);
+    }
+    strk(total)
+}
+
+/// The tip gets a line of its own when there is one, as the most it can add
+/// to the fee. It is shown whenever it is non-zero, even when no L2 gas is
+/// allowed and it cannot cost anything, so that a signed tip always shows on
+/// screen. Transactions without a tip, which is most of them, review exactly
+/// as they did before.
+fn tip_v3(tip: &FieldElement, l2_gas_bounds: &FieldElement) -> Option<String> {
+    (*tip != FieldElement::ZERO).then(|| strk(max_tip_v3(tip, l2_gas_bounds)))
 }
 
 /// What the review UI can do with a call.
@@ -45,8 +100,8 @@ pub fn show_tx(ctx: &mut Ctx) -> Result<Option<bool>, TxError> {
     let tx = &mut ctx.tx;
     match tx {
         Transaction::None => Ok(None),
-        Transaction::DeployAccountV3(tx) => Ok(show_tx_deploy_account_v3(tx)),
-        Transaction::DeployAccountV1(tx) => Ok(show_tx_deploy_account_v1(tx)),
+        Transaction::DeployAccountV3(tx) => show_tx_deploy_account_v3(tx),
+        Transaction::DeployAccountV1(tx) => show_tx_deploy_account_v1(tx),
         Transaction::InvokeV3(tx) => show_tx_invoke_v3(tx),
         Transaction::InvokeV1(tx) => show_tx_invoke_v1(tx),
     }
@@ -67,17 +122,13 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Result<Option<bool>, TxError> 
             to.insert_str(0, "0x");
             let amount = call.calldata[1].to_dec_string(Some(ERC20_TOKENS[idx].decimals));
 
-            let max_fees = FieldElement::from(&tx.l1_gas_bounds.value[8..16])
-                * FieldElement::from(&tx.l1_gas_bounds.value[16..32])
-                + FieldElement::from(&tx.l2_gas_bounds.value[8..16])
-                    * FieldElement::from(&tx.l2_gas_bounds.value[16..32])
-                + FieldElement::from(&tx.l1_data_gas_bounds.value[8..16])
-                    * FieldElement::from(&tx.l1_data_gas_bounds.value[16..32]);
+            let max_fees_str = max_fees_v3(
+                &tx.tip,
+                [&tx.l1_gas_bounds, &tx.l2_gas_bounds, &tx.l1_data_gas_bounds],
+            );
+            let tip = tip_v3(&tx.tip, &tx.l2_gas_bounds);
 
-            let mut max_fees_str = max_fees.to_dec_string(Some(18));
-            max_fees_str.push_str(" STRK");
-
-            let my_fields = [
+            let mut my_fields = Vec::from([
                 Field {
                     name: "From",
                     value: sender.as_str(),
@@ -98,7 +149,13 @@ fn show_tx_invoke_v3(tx: &InvokeTransactionV3) -> Result<Option<bool>, TxError> 
                     name: "Max Fees",
                     value: max_fees_str.as_str(),
                 },
-            ];
+            ]);
+            if let Some(tip) = &tip {
+                my_fields.push(Field {
+                    name: "Max Tip",
+                    value: tip.as_str(),
+                });
+            }
 
             // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
             #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
@@ -187,79 +244,90 @@ fn show_tx_invoke_v1(tx: &InvokeTransactionV1) -> Result<Option<bool>, TxError> 
     }
 }
 
-fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Option<bool> {
-    let mut contract_address = tx.contract_address.to_hex_string();
-    contract_address.insert_str(0, "0x");
-
-    let mut class_hash = tx.class_hash.to_hex_string();
-    class_hash.insert_str(0, "0x");
-
-    let max_fees = FieldElement::from(&tx.l1_gas_bounds.value[8..16])
-        * FieldElement::from(&tx.l1_gas_bounds.value[16..32])
-        + FieldElement::from(&tx.l2_gas_bounds.value[8..16])
-            * FieldElement::from(&tx.l2_gas_bounds.value[16..32])
-        + FieldElement::from(&tx.l1_data_gas_bounds.value[8..16])
-            * FieldElement::from(&tx.l1_data_gas_bounds.value[16..32]);
-
-    let mut fees = max_fees.to_dec_string(Some(18));
-    fees.push_str(" STRK");
-
-    let my_fields = [
-        Field {
-            name: "Deploy account",
-            value: contract_address.as_str(),
-        },
-        Field {
-            name: "Max Fees",
-            value: fees.as_str(),
-        },
-        Field {
-            name: "Class Hash",
-            value: class_hash.as_str(),
-        },
-    ];
-
-    // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
-    #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
-    const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_small.gif", NBGL));
-    #[cfg(any(target_os = "stax", target_os = "flex"))]
-    const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_64x64.gif", NBGL));
-    #[cfg(target_os = "apex_p")]
-    const APP_ICON: NbglGlyph = NbglGlyph::from_include(include_gif!("starknet_48x48.png", NBGL));
-
-    let review = NbglReview::new()
-        .tx_type(TransactionType::Transaction)
-        .titles("Review transaction", "", "Sign Transaction ?")
-        .glyph(&APP_ICON);
-
-    Some(review.show(&my_fields))
+fn show_tx_deploy_account_v3(tx: &DeployAccountTransactionV3) -> Result<Option<bool>, TxError> {
+    let fees = max_fees_v3(
+        &tx.tip,
+        [&tx.l1_gas_bounds, &tx.l2_gas_bounds, &tx.l1_data_gas_bounds],
+    );
+    show_deploy_account(
+        &tx.contract_address,
+        &tx.class_hash,
+        &tx.contract_address_salt,
+        &tx.constructor_calldata,
+        &fees,
+        tip_v3(&tx.tip, &tx.l2_gas_bounds),
+    )
 }
 
-fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Option<bool> {
-    // display contract_address, fees and class_hash
-    let mut contract_address = tx.contract_address.to_hex_string();
-    contract_address.insert_str(0, "0x");
-
-    let mut class_hash = tx.class_hash.to_hex_string();
-    class_hash.insert_str(0, "0x");
-
+fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Result<Option<bool>, TxError> {
     let mut fees = tx.max_fee.to_dec_string(Some(18));
     fees.push_str(" ETH");
+    show_deploy_account(
+        &tx.contract_address,
+        &tx.class_hash,
+        &tx.contract_address_salt,
+        &tx.constructor_calldata,
+        &fees,
+        None,
+    )
+}
 
-    let my_fields = [
+/// The constructor arguments decide who controls the deployed account (owner
+/// key, guardian, recovery), and the salt goes into its address, so both are
+/// signed and both are shown. The address itself comes from the host: it is
+/// only displayed once it matches the one those values actually deploy to.
+fn show_deploy_account(
+    contract_address: &FieldElement,
+    class_hash: &FieldElement,
+    salt: &FieldElement,
+    constructor_calldata: &[FieldElement],
+    fees: &str,
+    tip: Option<String>,
+) -> Result<Option<bool>, TxError> {
+    if transaction::contract_address(*class_hash, *salt, constructor_calldata) != *contract_address
+    {
+        return Err(TxError::ContractAddressMismatch);
+    }
+
+    let contract_address = hex(contract_address);
+    let class_hash = hex(class_hash);
+    let salt = hex(salt);
+    let args: Vec<(String, String)> = constructor_calldata
+        .iter()
+        .enumerate()
+        .map(|(i, d)| (format!("Constructor arg {}", i + 1), hex(d)))
+        .collect();
+
+    let mut my_fields = Vec::from([
         Field {
             name: "Deploy account",
             value: contract_address.as_str(),
         },
         Field {
             name: "Max Fees",
-            value: fees.as_str(),
+            value: fees,
         },
-        Field {
-            name: "Class Hash",
-            value: class_hash.as_str(),
-        },
-    ];
+    ]);
+    if let Some(tip) = &tip {
+        my_fields.push(Field {
+            name: "Max Tip",
+            value: tip.as_str(),
+        });
+    }
+    my_fields.push(Field {
+        name: "Class Hash",
+        value: class_hash.as_str(),
+    });
+    my_fields.push(Field {
+        name: "Salt",
+        value: salt.as_str(),
+    });
+    for (name, value) in &args {
+        my_fields.push(Field {
+            name: name.as_str(),
+            value: value.as_str(),
+        });
+    }
 
     // Load glyph from file with include_gif macro. Creates an NBGL compatible glyph.
     #[cfg(any(target_os = "nanosplus", target_os = "nanox"))]
@@ -274,7 +342,7 @@ fn show_tx_deploy_account_v1(tx: &DeployAccountTransactionV1) -> Option<bool> {
         .titles("Review transaction", "", "Sign Transaction ?")
         .glyph(&APP_ICON);
 
-    Some(review.show(&my_fields))
+    Ok(Some(review.show(&my_fields)))
 }
 
 pub fn show_hash(ctx: &mut Ctx, is_tx_hash: bool) -> bool {
@@ -422,8 +490,8 @@ fn support_clear_sign(call: &Call) -> ClearSign {
 
     // transfer(recipient, amount: u256) serializes to exactly 3 felts. Check
     // both the announced length and what was actually stored: calldata sent in
-    // a SetCallStep::Add chunk is hashed but never pushed to call.calldata, so
-    // the two can differ. Any other length cannot deserialize into the
+    // a SetCallStep::Add chunk is counted and hashed but not kept in
+    // call.calldata, so the two can differ. Any other length cannot deserialize into the
     // entrypoint on chain, so the transaction is refused rather than signed.
     if call.nb_calldata != 3 || call.calldata.len() != 3 {
         return ClearSign::Invalid;

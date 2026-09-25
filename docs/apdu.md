@@ -37,6 +37,21 @@ The general structure of a request and response is as followed:
 | 0x6e03      | Bad Len                 |
 | 0x6e04      | User Cancelled          |
 | 0xe000      | Panic                   |
+| 0xff03      | Bad state: APDU out of sequence, or inconsistent with the transaction sent so far. The signing request is dropped |
+| 0xff04      | Invalid fees: the fee APDU does not hold a tip and resource bounds in their wire format. The signing request is dropped |
+| 0xff05      | Contract address mismatch: the Deploy Account address is not the one derived from the class hash, salt and constructor calldata. The signing request is dropped |
+| 0xff06      | Too many constructor arguments: more than 8 constructor calldata. The signing request is dropped |
+| 0xff07      | Too many calls: a call beyond the announced number of calls. The signing request is dropped |
+
+### Transaction signing sequence
+
+The four transaction-signing instructions (INS 0x03 to 0x06) stream a transaction over several APDUs:
+
+- `P1 = 0x00` starts a new request and resets any request in progress.
+- Every following P1 is sent **once and in order** (`0x01`, `0x02`, ...). Only the last P1 of the instruction repeats, for as long as it streams calls or constructor calldata.
+- Any other APDU (a skipped or replayed stage, or a stage of another instruction) is refused with `0xff03`, and so is any payload the app cannot accept. Either way the request is dropped: the host has to start again from `P1 = 0x00`.
+- A request produces at most one signature. Once the transaction has been reviewed, whatever the outcome, the request is over.
+- Counts (number of calls, number of calldata) are sent as a felt but must fit in 32 bits.
 
 
 ## Commands definitions
@@ -194,11 +209,21 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1) | Instruction ID              | 0x03              |
 | P1               | byte (1) | Payload desc                | 0x02              |
 | P2               | byte (1) | ignored                     | 0x00              |
-| L                | byte (1) | Bytes in payload            | 0x80              |
+| L                | byte (1) | Bytes in payload            | 0x60 or 0x80      |
 | TIP              | byte (32)| tip                         | (depends)         |
 | L1 FEE           | byte (32)| l1_gas_bounds               | (depends)         |
 | L2 FEE           | byte (32)| l2_gas_bounds               | (depends)         |
-| L1 DATA          | byte (32)| l1_data_gas_bounds          | (depends)         |
+| L1 DATA          | byte (32)| l1_data_gas_bounds (optional) | (depends)       |
+
+The payload is 3 or 4 felts (`L` = 0x60 or 0x80): the tip, then the L1 gas, L2 gas and optional L1 data gas resource bounds. The tip must fit in a `u64`. Each resource bound packs, big-endian:
+
+| Bytes  | Content                                                              |
+|--------|----------------------------------------------------------------------|
+| 0..8   | resource name, right-aligned: `L1_GAS`, `L2_GAS`, `L1_DATA`, in that order |
+| 8..16  | max_amount (`u64`)                                                   |
+| 16..32 | max_price_per_unit (`u128`)                                          |
+
+Any other payload is refused with `0xff04`.
 
 #### Response
 
@@ -238,7 +263,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #4: Number of Calls
+#### Command #5: Number of Calls
 
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
@@ -255,7 +280,16 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #5: Call
+#### Command #6: Call
+
+Each call is sent as a `New Call` APDU (`P2 = 0x00`), followed by as many `Add calldata` APDUs (`P2 = 0x01`) as its calldata needs. The app refuses with `0xff03`:
+
+- an `Add calldata` APDU when no call is in progress, or when the current call already has all its announced calldata;
+- a `New Call` APDU while the current call still expects calldata;
+- more calldata than announced in `NB CALLDATA`, a felt that is not canonical (`>= P`), or a payload that is not a whole number of felts;
+- any other `P2` value.
+
+A call beyond the announced number of calls is refused with `0xff07`.
 
 ##### New Call
 
@@ -263,7 +297,7 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x05              |
+| P1               | byte (1)   | Payload desc                                   | 0x06              |
 | P2               | byte (1)   | New call                                       | 0x00              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | TO               | bytes (32) | to                                             | (depends)         |
@@ -286,31 +320,8 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 |------------------|------------|------------------------------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier                         | 0x5A              |
 | INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x05              |
+| P1               | byte (1)   | Payload desc                                   | 0x06              |
 | P2               | byte (1)   | Add calldata                                   | 0x01              |
-| L                | byte (1)   | Bytes in payload                               | (depends)         |
-| calldata         | bytes (32) | calldata #0                                    | (depends)         |
-| calldata         | bytes (32) | calldata #1                                    | (depends)         |
-| calldata         | bytes (32) | calldata #2                                    | (depends)         |
-| calldata         | bytes (32) | calldata #3                                    | (depends)         |
-| calldata         | bytes (32) | calldata #4                                    | (depends)         |
-| calldata         | bytes (32) | calldata #5                                    | (depends)         |
-| calldata         | bytes (32) | calldata #6                                    | (depends)         |
-
-#### Response
-
-| Field    | Type      | Content     | Note                                  |
-|----------|-----------|-------------|---------------------------------------|
-| SW1-SW2  | byte (2)  | Return code | see list of return codes              |
-
-##### End of calldata for the current Call
-
-| Field            | Type       | Content                                        | Expected          |
-|------------------|------------|------------------------------------------------|-------------------|
-| CLA              | byte (1)   | Application Identifier                         | 0x5A              |
-| INS              | byte (1)   | Instruction ID                                 | 0x03              |
-| P1               | byte (1)   | Payload desc                                   | 0x05              |
-| P2               | byte (1)   | Last calldata                                  | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -366,6 +377,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 
 #### Command #1: Send DEPLOY_ACCOUNT Tx fields
 
+All six fields must be canonical felts (`< P`); anything else is refused with `0xff03`. `CONTRACT ADDR` must be the address Starknet derives from `CLASS HASH`, `SALT` and the constructor calldata with the zero deployer: the app recomputes it once the transaction is complete and refuses a mismatch with `0xff05`. The review shows the address, the fees, the class hash, the salt and every constructor argument.
+
 
 | Field            | Type     | Content                     | Expected          |
 |------------------|----------|-----------------------------|-------------------|
@@ -396,11 +409,21 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | INS              | byte (1) | Instruction ID              | 0x05              |
 | P1               | byte (1) | Payload desc                | 0x02              |
 | P2               | byte (1) | ignored                     | 0x00              |
-| L                | byte (1) | Bytes in payload            |                   |
+| L                | byte (1) | Bytes in payload            | 0x60 or 0x80      |
 | TIP              | byte (32)| tip                         | (depends)         |
 | L1 FEE           | byte (32)| l1_gas_bounds               | (depends)         |
 | L2 FEE           | byte (32)| l2_gas_bounds               | (depends)         |
-| L1 DATA          | byte (32)| l1_data_gas_bounds          | (depends)         |
+| L1 DATA          | byte (32)| l1_data_gas_bounds (optional) | (depends)       |
+
+The payload is 3 or 4 felts (`L` = 0x60 or 0x80): the tip, then the L1 gas, L2 gas and optional L1 data gas resource bounds. The tip must fit in a `u64`. Each resource bound packs, big-endian:
+
+| Bytes  | Content                                                              |
+|--------|----------------------------------------------------------------------|
+| 0..8   | resource name, right-aligned: `L1_GAS`, `L2_GAS`, `L1_DATA`, in that order |
+| 8..16  | max_amount (`u64`)                                                   |
+| 16..32 | max_price_per_unit (`u128`)                                          |
+
+Any other payload is refused with `0xff04`.
 
 #### Response
 
@@ -427,6 +450,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 
 #### Command #4: Number of constructor calldata
 
+At most 8 constructor calldata are accepted, since every one of them is shown on screen; more is refused with `0xff06`.
+
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
 | CLA              | byte (1)   | Application Identifier      | 0x5A              |
@@ -443,6 +468,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
 #### Command #5: Constructor calldata
+
+Chunks of at most 7 felts, until the announced number of calldata is reached. A constructor without arguments is sent as a single empty chunk (`L` = 0). The app refuses with `0xff03` more calldata than announced, a non-canonical felt, or an empty chunk while calldata is still expected.
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|
@@ -542,6 +569,15 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 
 #### Command #3: Call
 
+Each call is sent as a `New Call` APDU (`P2 = 0x00`), followed by as many `Add calldata` APDUs (`P2 = 0x01`) as its calldata needs. The app refuses with `0xff03`:
+
+- an `Add calldata` APDU when no call is in progress, or when the current call already has all its announced calldata;
+- a `New Call` APDU while the current call still expects calldata;
+- more calldata than announced in `NB CALLDATA`, a felt that is not canonical (`>= P`), or a payload that is not a whole number of felts;
+- any other `P2` value.
+
+A call beyond the announced number of calls is refused with `0xff07`.
+
 ##### New Call
 
 | Field            | Type       | Content                                        | Expected          |
@@ -573,29 +609,6 @@ This command will return the hash and signature of a Starknet INVOKE Tx version 
 | INS              | byte (1)   | Instruction ID                                 | 0x04              |
 | P1               | byte (1)   | Payload desc                                   | 0x03              |
 | P2               | byte (1)   | Add calldata                                   | 0x01              |
-| L                | byte (1)   | Bytes in payload                               | (depends)         |
-| calldata         | bytes (32) | calldata #0                                    | (depends)         |
-| calldata         | bytes (32) | calldata #1                                    | (depends)         |
-| calldata         | bytes (32) | calldata #2                                    | (depends)         |
-| calldata         | bytes (32) | calldata #3                                    | (depends)         |
-| calldata         | bytes (32) | calldata #4                                    | (depends)         |
-| calldata         | bytes (32) | calldata #5                                    | (depends)         |
-| calldata         | bytes (32) | calldata #6                                    | (depends)         |
-
-#### Response
-
-| Field    | Type      | Content     | Note                                  |
-|----------|-----------|-------------|---------------------------------------|
-| SW1-SW2  | byte (2)  | Return code | see list of return codes              |
-
-##### End of calldata for the current Call
-
-| Field            | Type       | Content                                        | Expected          |
-|------------------|------------|------------------------------------------------|-------------------|
-| CLA              | byte (1)   | Application Identifier                         | 0x5A              |
-| INS              | byte (1)   | Instruction ID                                 | 0x04              |
-| P1               | byte (1)   | Payload desc                                   | 0x03              |
-| P2               | byte (1)   | End of calldata                                | 0x02              |
 | L                | byte (1)   | Bytes in payload                               | (depends)         |
 | calldata         | bytes (32) | calldata #0                                    | (depends)         |
 | calldata         | bytes (32) | calldata #1                                    | (depends)         |
@@ -651,6 +664,8 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 
 #### Command #1: Send DEPLOY_ACCOUNT Tx fields
 
+All six fields must be canonical felts (`< P`); anything else is refused with `0xff03`. `CONTRACT ADDR` must be the address Starknet derives from `CLASS HASH`, `SALT` and the constructor calldata with the zero deployer: the app recomputes it once the transaction is complete and refuses a mismatch with `0xff05`. The review shows the address, the fees, the class hash, the salt and every constructor argument.
+
 | Field            | Type     | Content                     | Expected          |
 |------------------|----------|-----------------------------|-------------------|
 | CLA              | byte (1) | Application Identifier      | 0x5A              |
@@ -672,7 +687,9 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #4: Number of constructor calldata
+#### Command #2: Number of constructor calldata
+
+At most 8 constructor calldata are accepted, since every one of them is shown on screen; more is refused with `0xff06`.
 
 | Field            | Type       | Content                     | Expected          |
 |------------------|------------|-----------------------------|-------------------|
@@ -689,7 +706,9 @@ This command will return the hash and signature of a Starknet DEPLOY_ACCOUNT Tx 
 |----------|-----------|-------------|---------------------------------------|
 | SW1-SW2  | byte (2)  | Return code | see list of return codes              |
 
-#### Command #5: Constructor calldata
+#### Command #3: Constructor calldata
+
+Chunks of at most 7 felts, until the announced number of calldata is reached. A constructor without arguments is sent as a single empty chunk (`L` = 0). The app refuses with `0xff03` more calldata than announced, a non-canonical felt, or an empty chunk while calldata is still expected.
 
 | Field            | Type       | Content                                        | Expected          |
 |------------------|------------|------------------------------------------------|-------------------|

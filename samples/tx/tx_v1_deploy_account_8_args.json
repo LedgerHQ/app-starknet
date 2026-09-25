@@ -1,0 +1,19 @@
+{
+    "version": "0x1",
+    "contract_address": "0x07d842389dceb9b9ae9daab70607d8b7aa9d51b888ab968a42742e688f345b2f",
+    "class_hash": "0x01c0bb51e2ce73dc007601a1e7725453627254016c28f118251a71bbb0507fcb",
+    "max_fee": "0xE8D4A51000",
+    "chain_id": "0x534e5f4d41494e",
+    "nonce": "0x0",
+    "contract_address_salt": "0x01f0bb51e2ce73dc007601a1e77254536272540162a8c118251a71bbb0507faf",
+    "constructor_calldata": [
+        "0x1",
+        "0x2",
+        "0x3",
+        "0x4",
+        "0x5",
+        "0x6",
+        "0x7",
+        "0x8"
+    ]
+}

@@ -1,6 +1,6 @@
 {
     "version": "0x3",
-    "contract_address": "0x016d12c2c06057995bd961c0eb75ffdbf6710f9776abaa1278234ed4d43bccc9",
+    "contract_address": "0x01fa5352cfd662921668a7c2a574ceb0264268b4b5d7d9f3747c9bcdb09fda4f",
     "tip": "0x0",
     "resource_bounds": {
       "l2_gas": {
